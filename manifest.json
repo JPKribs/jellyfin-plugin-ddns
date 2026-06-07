@@ -1,0 +1,12 @@
+[
+  {
+    "guid": "8150dce5-6153-4924-a985-a6927be95baa",
+    "name": "Dynamic DNS",
+    "overview": "Keep your DNS records pointed at your server's current public IP.",
+    "description": "Dynamic DNS keeps one or more DNS records pointed at your Jellyfin server's current public IP. It runs in-process as a scheduled task and updates Cloudflare, DuckDNS, or any dyndns2-compatible provider over outbound HTTP/S.",
+    "imageUrl": "https://raw.githubusercontent.com/JPKribs/jellyfin-plugin-ddns/refs/heads/master/Jellyfin.Plugin.DynamicDns/Assets/Logo.png",
+    "owner": "JPKribs",
+    "category": "Administration",
+    "versions": []
+  }
+]

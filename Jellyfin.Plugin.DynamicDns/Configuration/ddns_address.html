@@ -1,0 +1,94 @@
+<div id="DynamicDnsAddressPage" data-role="page"
+     class="page type-interior pluginConfigurationPage withTabs"
+     data-require="emby-input,emby-button,emby-select,emby-checkbox"
+     data-controller="__plugin/ddns_address.js">
+    <div data-role="content">
+        <div class="content-primary">
+            <form id="DynamicDnsAddressForm">
+                <div class="verticalSection verticalSection-extrabottompadding">
+
+                    <!-- Page title -->
+                    <div class="sectionTitleContainer flex align-items-center">
+                        <h1 class="sectionTitle">Address</h1>
+                    </div>
+
+                    <div class="fieldDescription">
+                        Updates your public DNS record when your server's public IP address changes.
+                        This runs on a schedule and updates your provider over outbound HTTPS. Choose which IP
+                        versions to maintain and how the public IP is detected. Set the update interval in
+                        <strong>Scheduled Tasks</strong> under <strong>Update Dynamic DNS</strong>.
+                    </div>
+
+                    <!-- Detected public IP -->
+                    <div class="inputContainer">
+                        <label for="currentIp">Public IP</label>
+                        <input is="emby-input" type="text" id="currentIp" class="jpk-readonly" readonly disabled />
+                    </div>
+
+                    <!-- Update now -->
+                    <div class="inputContainer">
+                        <button is="emby-button" type="button" id="btnRunNow" class="raised jpk-icon-btn emby-button" title="Update now">
+                            <span class="material-icons" aria-hidden="true">sync</span>
+                            <span>Update now</span>
+                        </button>
+                        <span id="runStatus" class="jpk-status-text"></span>
+                    </div>
+
+                    <!-- IP versions -->
+                    <div class="jpk-collapsible-section">
+                        <button type="button" class="jpk-collapsible-header collapsed" aria-expanded="false" aria-controls="versionsContent" data-target="versionsContent">
+                            <span class="jpk-collapsible-title">IP Versions</span>
+                            <span class="jpk-collapsible-icon">&#9660;</span>
+                        </button>
+                        <div id="versionsContent" class="jpk-collapsible-content collapsed">
+                            <div class="checkboxContainer">
+                                <label class="emby-checkbox-label">
+                                    <input type="checkbox" is="emby-checkbox" id="enableIPv4" />
+                                    <span class="checkboxLabel">IPv4 A Records</span>
+                                </label>
+                            </div>
+                            <div class="checkboxContainer">
+                                <label class="emby-checkbox-label">
+                                    <input type="checkbox" is="emby-checkbox" id="enableIPv6" />
+                                    <span class="checkboxLabel">IPv6 AAAA Records</span>
+                                </label>
+                            </div>
+                            <div class="fieldDescription">Applies to every record. Disabling a version stops it being detected or updated.</div>
+                        </div>
+                    </div>
+
+                    <!-- IP detection -->
+                    <div class="jpk-collapsible-section">
+                        <button type="button" class="jpk-collapsible-header collapsed" aria-expanded="false" aria-controls="detectionContent" data-target="detectionContent">
+                            <span class="jpk-collapsible-title">IP Detection</span>
+                            <span class="jpk-collapsible-icon">&#9660;</span>
+                        </button>
+                        <div id="detectionContent" class="jpk-collapsible-content collapsed">
+                            <div class="inputContainer">
+                                <label for="ipv4Url">IPv4 Detection URL</label>
+                                <input is="emby-input" type="text" id="ipv4Url" autocomplete="off" />
+                                <div class="fieldDescription">An endpoint that returns your public IPv4 as plain text.</div>
+                            </div>
+                            <div class="inputContainer">
+                                <label for="ipv6Url">IPv6 Detection URL</label>
+                                <input is="emby-input" type="text" id="ipv6Url" autocomplete="off" />
+                                <div class="fieldDescription">An endpoint that returns your public IPv6 as plain text.</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Save -->
+                    <div class="inputContainer">
+                        <button is="emby-button" type="button" id="btnSaveAddress" class="raised jpk-button-submit block">
+                            <span>Save</span>
+                        </button>
+                        <span id="addressStatus" class="jpk-status-text"></span>
+                    </div>
+
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <link rel="stylesheet" href="configurationpage?name=ddns_jpkribs_shared.css">
+</div>

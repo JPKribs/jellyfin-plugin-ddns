@@ -1,0 +1,163 @@
+<div id="DynamicDnsDomainsPage" data-role="page"
+     class="page type-interior pluginConfigurationPage withTabs"
+     data-require="emby-input,emby-button,emby-select,emby-checkbox"
+     data-controller="__plugin/ddns_domains.js">
+    <div data-role="content">
+        <div class="content-primary">
+            <form id="DynamicDnsDomainsForm">
+                <div class="verticalSection verticalSection-extrabottompadding">
+
+                    <!-- Page title -->
+                    <div class="sectionTitleContainer flex align-items-center">
+                        <h1 class="sectionTitle">Domains</h1>
+                    </div>
+
+                    <div class="fieldDescription">
+                        Updates your public DNS record when your server's public IP address changes.
+                        You can configure multiple DDNS providers to update or multiple subdomains.
+                        Credentials are encrypted at rest, but <strong>please still use the most
+                        limited token a provider allows</strong>.
+                    </div>
+
+                    <!-- Record health summary -->
+                    <div id="recordHealth" class="jpk-cards"></div>
+
+                    <!-- Record selector -->
+                    <div class="jpk-selector">
+                        <div class="selectContainer">
+                            <label class="selectLabel" for="selectRecord">Record</label>
+                            <select is="emby-select" id="selectRecord" class="emby-select-withcolor"></select>
+                        </div>
+                        <div class="jpk-selector-actions">
+                            <button is="emby-button" type="button" id="btnNewRecord" class="raised jpk-icon-btn jpk-button-submit" title="New record">
+                                <span class="material-icons" aria-hidden="true">add</span>
+                                <span>New</span>
+                            </button>
+                            <button is="emby-button" type="button" id="btnEnable" class="raised jpk-icon-btn" title="Toggle enabled">
+                                <span class="material-icons" aria-hidden="true">play_arrow</span>
+                                <span id="enableLabel">Enabled</span>
+                            </button>
+                            <button is="emby-button" type="button" id="btnDeleteRecord" class="raised jpk-icon-btn jpk-button-destructive" title="Delete record">
+                                <span class="material-icons" aria-hidden="true">delete</span>
+                                <span>Delete</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Empty state -->
+                    <div id="emptyState" class="jpk-empty-section hidden">No records yet. Click <strong>New</strong> to add one.</div>
+
+                    <!-- Record editor -->
+                    <div id="recordEditor" class="hidden">
+                        <div class="inputContainer">
+                            <label for="recName">Name</label>
+                            <input is="emby-input" type="text" id="recName" autocomplete="off" placeholder="Home" />
+                        </div>
+
+                        <div class="selectContainer">
+                            <label class="selectLabel" for="recProvider">Provider</label>
+                            <select is="emby-select" id="recProvider" class="emby-select-withcolor"></select>
+                        </div>
+
+                        <div id="providerHint" class="jpk-warn"></div>
+
+                        <div class="inputContainer">
+                            <label for="recHostname">Hostname / domain</label>
+                            <input is="emby-input" type="text" id="recHostname" autocomplete="off" placeholder="home.example.com" />
+                        </div>
+
+                        <div class="inputContainer">
+                            <label for="recLogin">Login / username / key</label>
+                            <input is="emby-input" type="text" id="recLogin" autocomplete="off" />
+                        </div>
+                        <div class="inputContainer">
+                            <label for="recPassword">Password / token / secret</label>
+                            <input is="emby-input" type="password" id="recPassword" autocomplete="off" />
+                        </div>
+                        <div class="inputContainer">
+                            <label for="recZone">Zone if required</label>
+                            <input is="emby-input" type="text" id="recZone" autocomplete="off" placeholder="example.com" />
+                        </div>
+                        <div class="inputContainer">
+                            <label for="recServer">Server override</label>
+                            <input is="emby-input" type="text" id="recServer" autocomplete="off" placeholder="leave blank for provider default" />
+                        </div>
+                        <div class="inputContainer">
+                            <label for="recTtl">TTL in seconds. 1 means automatic when supported</label>
+                            <input is="emby-input" type="number" id="recTtl" min="1" step="1" />
+                        </div>
+
+                        <!-- Advanced options -->
+                        <div class="jpk-collapsible-section">
+                            <button type="button" class="jpk-collapsible-header collapsed" aria-expanded="false" aria-controls="advancedContent" data-target="advancedContent">
+                                <span class="jpk-collapsible-title">Advanced options</span>
+                                <span class="jpk-collapsible-icon">&#9660;</span>
+                            </button>
+                            <div id="advancedContent" class="jpk-collapsible-content collapsed">
+                                <div class="checkboxContainer">
+                                    <label class="emby-checkbox-label">
+                                        <input type="checkbox" is="emby-checkbox" id="recProxied" />
+                                        <span class="checkboxLabel">Proxied for Cloudflare</span>
+                                    </label>
+                                </div>
+                                <div class="checkboxContainer">
+                                    <label class="emby-checkbox-label">
+                                        <input type="checkbox" is="emby-checkbox" id="recWildcard" />
+                                        <span class="checkboxLabel">Wildcard for the dyndns family</span>
+                                    </label>
+                                </div>
+                                <div class="checkboxContainer">
+                                    <label class="emby-checkbox-label">
+                                        <input type="checkbox" is="emby-checkbox" id="recStatic" />
+                                        <span class="checkboxLabel">Static DNS service for dyndns1 and dslreports</span>
+                                    </label>
+                                </div>
+                                <div class="inputContainer">
+                                    <label for="recMx">MX host for the dyndns family</label>
+                                    <input is="emby-input" type="text" id="recMx" autocomplete="off" />
+                                </div>
+                                <div class="checkboxContainer">
+                                    <label class="emby-checkbox-label">
+                                        <input type="checkbox" is="emby-checkbox" id="recBackupMx" />
+                                        <span class="checkboxLabel">Backup MX</span>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Last update status -->
+                        <div id="recStatusCard" class="jpk-record-card hidden">
+                            <div class="jpk-record-row">
+                                <span class="jpk-record-label">Last action</span>
+                                <span id="stAction" class="jpk-mono"></span>
+                            </div>
+                            <div class="jpk-record-row">
+                                <span class="jpk-record-label">Last result</span>
+                                <span id="stLast" class="jpk-mono"></span>
+                            </div>
+                            <div class="jpk-record-row">
+                                <span class="jpk-record-label">Last checked</span>
+                                <span id="stChecked" class="jpk-mono"></span>
+                            </div>
+                            <div class="jpk-record-row">
+                                <span class="jpk-record-label">Last IPv4 / IPv6</span>
+                                <span id="stIps" class="jpk-mono"></span>
+                            </div>
+                        </div>
+
+                        <!-- Save record -->
+                        <div class="inputContainer">
+                            <button is="emby-button" type="button" id="btnSaveRecord" data-theme="b" class="raised jpk-button-submit block">
+                                <span>Save record</span>
+                            </button>
+                            <span id="recordStatus" class="jpk-status-text"></span>
+                        </div>
+                    </div>
+
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <link rel="stylesheet" href="configurationpage?name=ddns_jpkribs_shared.css">
+</div>

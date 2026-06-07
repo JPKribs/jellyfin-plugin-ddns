@@ -1,0 +1,19 @@
+---
+name: "Dynamic DNS"
+guid: "8150dce5-6153-4924-a985-a6927be95baa"
+version: "10.11.1.0"
+targetAbi: "10.11.0.0"
+framework: "net9.0"
+overview: "Keep your DNS records pointed at your server's current public IP."
+description: >
+  Keeps one or more DNS records pointed at your Jellyfin server's current public IP. 
+  Runs entirely in-process as a scheduled task and updates. Great for anyone who wants 
+  to run their entire stack entirely through Jellyfin without external programs or dependencies.
+category: "Administration"
+imageUrl: "https://raw.githubusercontent.com/JPKribs/jellyfin-plugin-ddns/refs/heads/master/Jellyfin.Plugin.DynamicDns/Assets/Logo.png"
+owner: "JPKribs"
+artifacts:
+- "Jellyfin.Plugin.DynamicDns.dll"
+changelog:
+  features:
+  - Initial release!
