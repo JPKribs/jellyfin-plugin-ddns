@@ -9,6 +9,14 @@
     "category": "Administration",
     "versions": [
       {
+        "version": "10.11.1.1",
+        "changelog": "## Fixes\r\n- Remove URL from logging",
+        "targetAbi": "10.11.0.0",
+        "sourceUrl": "https://github.com/JPKribs/jellyfin-plugin-ddns/releases/download/v10.11.1.1/jellyfin-plugin-ddns-10.11.1.1.zip",
+        "checksum": "71884fd08a8242f172958a6a56f1e000",
+        "timestamp": "2026-06-07T06:14:09Z"
+      },
+      {
         "version": "10.11.1.0",
         "changelog": "## Initial release\r\n\r\nThis plugin acts as a DDNS resolver using Jellyfin as its host. A lot of this work will look very similar to [ddclient](https://github.com/ddclient/ddclient) which was a huge help and inspiration for this plugin. This takes the work they've taken and wraps it into a Jellyfin plugin for server owners don't want to manage more than one application. ",
         "targetAbi": "10.11.0.0",
