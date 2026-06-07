@@ -130,7 +130,7 @@ public abstract class DnsProviderBase : IDnsProvider
         var result = await JpkHttp.SendAsync(_httpClientFactory, method, url, cancellationToken, headers, body, contentType, login, password).ConfigureAwait(false);
         if (result.Status == 0)
         {
-            Logger.LogWarning("{Provider} request to {Url} failed: {Detail}", Kind, Redact(url), result.Body);
+            Logger.LogWarning("{Provider} request failed: {Detail}", Kind, result.Body);
         }
 
         return result;
