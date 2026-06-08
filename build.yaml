@@ -1,7 +1,7 @@
 ---
 name: "Dynamic DNS"
 guid: "8150dce5-6153-4924-a985-a6927be95baa"
-version: "10.11.2.0"
+version: "10.11.2.1"
 targetAbi: "10.11.0.0"
 framework: "net9.0"
 overview: "Keep your DNS records pointed at your server's current public IP."

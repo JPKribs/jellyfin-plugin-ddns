@@ -1,6 +1,6 @@
 # ![Dynamic DNS](Jellyfin.Plugin.DynamicDns/Assets/Logo.png)
 
-A simple Jellyfin plugin that keeps your DNS records pointed at your server's current public IP. It runs entirely inside Jellyfin as a scheduled task and updates your DNS provider over outbound HTTP/S.
+**A simple Jellyfin plugin that keeps your DNS records pointed at your server's current public IP. It runs entirely inside Jellyfin as a scheduled task and updates your DNS provider over outbound HTTP/S.**
 
 ## Considerations Before Using
 
