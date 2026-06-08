@@ -2,51 +2,37 @@
 
 A simple Jellyfin plugin that keeps your DNS records pointed at your server's current public IP. It runs entirely inside Jellyfin as a scheduled task and updates your DNS provider over outbound HTTP/S.
 
----
-
-**All plugins are made for my personal use cases. I've made these publicly available for anyone who has the same use cases and can benefit from this work. I have no desire to advertise or market for these plugins as these are for personal usage only.**
-
-**Thank you,**
-
-*Joe Kribs*
-
----
-
 ## Considerations Before Using
 
 This plugin exists to simplify some of the networking around Jellyfin and to minimize the number of external applications that you need to run this. Please keep in mind that **this centralizes your setup around Jellyfin**. If you run into issues with Jellyfin, your DDNS will be offline as well. If you rely on your DDNS for administrative access to your system, I would recommend an external solution so your access isn't lost if Jellyfin goes down.
 
----
-
 ## How It Works
-
-Dynamic DNS runs entirely inside Jellyfin using the same runtime and resources as the server. When the plugin loads, Jellyfin registers a scheduled task that detects the server's public IP on an interval and updates each configured record over outbound HTTP/S.
 
 ### Adding a record
 
-Each record has a name, a provider, a hostname, and the credentials that provider needs. The `Domains` tab shows only the fields a provider actually uses and labels them in that provider's own terms, so you enter exactly what is required and nothing more. Records live in the plugin configuration, so they are captured by your normal Jellyfin config backups.
+Each record has a name, a provider, a hostname, and the credentials that provider needs. The `Domains` tab shows only the fields a provider actually uses to try and minimize confusion. Records live in the plugin configuration, so they are captured by your normal Jellyfin config backups.
 
-If a record's hostname sits behind a proxy or CDN, turn on `Treat as Proxied Address`. The plugin then compares against the last IP it pushed rather than live DNS, since DNS cannot reveal the origin, and pairing it with `Force Update` on the `Address` tab re-sends the record periodically in case it was changed elsewhere.
+If a record's hostname sits behind a proxy or CDN, turn on `Treat as Proxied Address`. The plugin then compares against the last IP it pushed rather than live DNS, since the DNS will return the proxied address. It's recommended to pair that with `Force Update` on the `Address` tab, which re-sends the record periodically in case it was changed from elsewhere.
 
 ### Address families and detection
 
-Each record chooses its address families with `Update IPv4 (A)` and `Update IPv6 (AAAA)` on the `Domains` tab, and a family is detected only when a record updates it. Detection reads your public IP from endpoints that return it as plain text. The `IPv4 Detection URLs` and `IPv6 Detection URLs` fields list every endpoint, one per line, each tried in order until one returns a valid address, so a single endpoint being down or rate limiting does not stall updates. Add or remove endpoints freely, and a blank field falls back to the built in defaults. The `Address` tab also shows the current public IP and an `Update Now` button that runs the task immediately. If detection finds only an internal address, which usually means the server has no public IP, the `Address` tab shows a warning so you know nothing was published. An address counts as internal when it falls in a private, loopback, link local, CGNAT, or other reserved range, and you can turn off `Skip Update if Internal` to publish such an address anyway.
+Each record chooses its address families with `Update IPv4 (A)` and `Update IPv6 (AAAA)` on the `Domains` tab. Detection reads your public IP from endpoints that return it as plain text. The `IPv4 Detection URLs` and `IPv6 Detection URLs` fields list every endpoint, one per line. Only `https` endpoints are used, since a tampered reply could point your DNS at the wrong address. This process attempts to find two endpoints that agree on the address before submitting that IP. It falls back to only a single provider if there is only one active provider available.
+
+The `Address` tab also shows the current public IP and an `Update Now` button that runs the task immediately. If detection finds only an internal address, which usually means the server has no public IP, the `Address` tab shows a warning so you know nothing was published. An address counts as internal when it falls in a private, loopback, link local, CGNAT, or other reserved range, and you can turn off `Skip Update if Internal` to publish such an address anyway.
 
 ### How updates run
 
-The scheduled task named `Update Dynamic DNS` runs every 15 minutes and on startup by default, and you set the interval under `Scheduled Tasks`. On each run the plugin detects the public IP, looks up what each hostname currently resolves to in DNS, and pushes the detected IP to any record whose DNS does not already serve it. Because the check is against live DNS rather than a value the plugin stored, a record changed from another source is corrected on the next run. Each record shows its last action, updated, unchanged, or failed, and when it was last checked.
+The scheduled task named `Update Dynamic DNS` runs every 15 minutes and on startup by default, but you can set the interval under `Scheduled Tasks`. On each run the plugin detects the public IP, looks up what each hostname currently resolves to in DNS, and pushes the detected IP to any record whose DNS does not already serve it. Each record shows its last action, updated, unchanged, or failed, and when it was last checked.
 
-If you want a record refreshed even when DNS already matches, choose an interval under `Force Update` in the `Update Behavior` section of the `Address` tab. When that long has passed since the last successful push, the plugin re-sends the current IP, which keeps the record alive on providers that age out stale entries. `Force Update` is `Off` by default, so records are pushed only when DNS does not already serve your detected IP.
+If you want a record refreshed even when DNS already matches, choose an interval under `Force Update` in the `Update Behavior` section of the `Address` tab. When that period has passed since the last successful push, the plugin re-sends the current IP, which keeps the record alive on providers that age out stale entries. `Force Update` is `Off` by default, so records are pushed only when DNS does not already serve your detected IP.
 
-If a record keeps failing, for example because a token is wrong, the plugin pauses it after a set number of failures in a row and then retries it only once each backoff window, so a misconfiguration does not keep hammering your provider and risk a rate limit or ban. Both the failure count and the window are set under `Update Behavior` and default to three failures and twenty four hours. The record card shows when a record is backing off and when it will next be tried.
+If a record keeps failing, for example because a token is wrong, the plugin pauses it after a set number of failures in a row and then retries it only once each backoff window, so a misconfiguration does not keep spamming your provider and risk a rate limit or ban. Both the failure count and the window are set under `Update Behavior` and default to three failures and twenty four hours. The record card shows when a record is backing off and when it will next be tried.
 
-Set the scheduled interval longer than your record TTL. If a run happens before the change has propagated, your resolver may still answer with the old address and the record can be pushed again needlessly.
+**Set the scheduled interval longer than your record TTL.** If a run happens before the change has propagated, your resolver may still answer with the old address and the record can be pushed again needlessly.
 
-If your server resolves its own hostname through a local resolver that answers with an internal address, which is common in a split horizon setup using a router or an ad blocking resolver or a hosts file, the live DNS check cannot see your public record. The plugin handles this on its own: 
+If your server resolves its own hostname through a local resolver that answers with an internal address, which is common in a split horizon setup using a router or an ad blocking resolver or a hosts file, the live DNS check cannot see your public record. The plugin handles this by comparing the IP against the last IP it pushed instead of that answer, so an unchanged IP is not re-pushed every run. 
 
-When the hostname resolves to a private address it compares against the last IP it pushed instead of that answer, so an unchanged IP is not re-pushed every run. 
-
-You can still turn on `Treat as Proxied Address` to force that comparison for a record at all times, for example a Cloudflare record behind the orange cloud.
+You can still turn on `Treat as Proxied Address` to force that comparison for a record at all times (E.G. Cloudflare's Proxy).
 
 ### Record health
 
@@ -58,14 +44,14 @@ The `Domains` tab summarizes every record at a glance.
 
 ### Providers
 
-Dynamic DNS supports 45 providers, from the common dyndns2 services such as No IP and DuckDNS through to full APIs such as Cloudflare, GoDaddy, Gandi, Hetzner, Porkbun, and NS1. Choose a provider and the form adapts to it. Adding a provider is a single class that the plugin discovers automatically at startup, so there is no list to maintain. See [CONTRIBUTING.md](docs/contributors/CONTRIBUTING.md) & [PROVIDERS.md](docs/contributors/PROVIDERS.md) for how to add one.
+Dynamic DNS supports 45 providers based on the great work done by [ddclient](https://github.com/ddclient/ddclient). They are the recommdended tool for an external, standlone DDNS solution! See [CONTRIBUTING.md](docs/contributors/CONTRIBUTING.md) & [PROVIDERS.md](docs/contributors/PROVIDERS.md) for how to add more providers.
 
-Provider implementations are based on [ddclient](https://github.com/ddclient/ddclient) and port its protocol logic for each service. *I have only personally tested Cloudflare so please let me know if any of these do not work as appropriately.*
+*I have only personally tested Cloudflare so please let me know if any of these do not work as appropriately.*
 
-## Security model
+## Security
 
 * **Administrators only** - Records can be authored only by administrators, and the `Update Now` endpoint is gated by Jellyfin's administrator policy.
-* **Encrypted** - Credentials are encrypted the moment you save them, in the plugin configuration with ASP.NET Core Data Protection, so they are never written to disk in plain text and backups do not hold them in the clear. The key lives in the Jellyfin data directory, so still use the most limited token or scoped key a provider offers. Your encrypted data is only as secure as your Jellyfin configuration.
+* **Encrypted** - Credentials are encrypted in the plugin configuration with ASP.NET Core Data Protection, so they are never written to disk in plain text. The key lives in the Jellyfin data directory, **so still use the most limited token or scoped key a provider offers.** Your encrypted data is only as secure as your Jellyfin configuration!
 * **Outbound only** - All provider traffic is outbound HTTP/S. The plugin opens no listeners and needs no special permissions, and credentials are never written to logs.
 
 ## Storage
@@ -76,7 +62,7 @@ Everything the plugin keeps lives inside your Jellyfin data directory, so a norm
 * Records, settings, and encrypted credentials: `plugins/configurations/Jellyfin.Plugin.DynamicDns.xml`
 * The encryption key for those credentials: `plugins/configurations/Jellyfin.Plugin.DynamicDns.Keys/`
 
-Those paths are relative to your Jellyfin data directory. On a default Linux install that root is `~/.local/share/jellyfin`. In Docker it is the data volume you mounted, often under `/config`.
+Those paths are relative to your Jellyfin data directory.
 
 The encryption key sits beside the configuration it protects, both inside the data volume, so they persist together across container restarts and image rebuilds. Resetting this folder will require that you re-authenticate your tokens, usernames, and passwords.
 
