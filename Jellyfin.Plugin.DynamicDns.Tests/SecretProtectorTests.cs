@@ -62,7 +62,7 @@ public class SecretProtectorTests
     [Fact]
     public void WithSecrets_DoesNotMutateOriginalRecord()
     {
-        var original = new DnsRecord { Login = "enc:v1:blob", Password = "enc:v1:blob" };
+        var original = new DNSRecord { Login = "enc:v1:blob", Password = "enc:v1:blob" };
         var live = original.WithSecrets("user", "pass");
 
         Assert.Equal("user", live.Login);

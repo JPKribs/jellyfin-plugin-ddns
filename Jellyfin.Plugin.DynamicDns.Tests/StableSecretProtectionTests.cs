@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using Jellyfin.Plugin.DynamicDns.Services;
+using Jellyfin.Plugin.DynamicDns.Utilities;
 using JPKribs.Jellyfin.Base;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -17,7 +18,7 @@ namespace Jellyfin.Plugin.DynamicDns.Tests;
 public class StableSecretProtectionTests
 {
     private static string TempKeyDir() =>
-        Path.Combine(Path.GetTempPath(), "ddns-keys-" + Guid.NewGuid().ToString("N"));
+        Path.Join(Path.GetTempPath(), "ddns-keys-" + Guid.NewGuid().ToString("N"));
 
     [Fact]
     public void Build_RoundTripsWithKeysInTheGivenDirectory()
@@ -82,7 +83,7 @@ public class StableSecretProtectionTests
         var file = Path.GetTempFileName();
         try
         {
-            Assert.Null(StableSecretProtection.Build(Path.Combine(file, "keys"), NullLogger.Instance));
+            Assert.Null(StableSecretProtection.Build(Path.Join(file, "keys"), NullLogger.Instance));
         }
         finally
         {

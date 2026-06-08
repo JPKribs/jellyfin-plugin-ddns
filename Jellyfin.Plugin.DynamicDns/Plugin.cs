@@ -1,6 +1,6 @@
 using System;
 using System.Collections.Generic;
-using Jellyfin.Plugin.DynamicDns.Models;
+using Jellyfin.Plugin.DynamicDns.Configuration;
 using JPKribs.Jellyfin.Base;
 using MediaBrowser.Common.Configuration;
 using MediaBrowser.Model.Plugins;

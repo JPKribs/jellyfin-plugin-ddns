@@ -25,6 +25,11 @@
                         <input is="emby-input" type="text" id="currentIp" class="jpk-readonly" readonly disabled />
                     </div>
 
+                    <!-- detection warning -->
+                    <div class="inputContainer">
+                        <div id="detectionWarning" class="fieldDescription jpk-bad" style="display:none;"></div>
+                    </div>
+
                     <!-- Update now -->
                     <div class="inputContainer">
                         <button is="emby-button" type="button" id="btnRunNow" class="raised jpk-icon-btn emby-button" title="Update now">
@@ -32,29 +37,6 @@
                             <span>Update now</span>
                         </button>
                         <span id="runStatus" class="jpk-status-text"></span>
-                    </div>
-
-                    <!-- IP versions -->
-                    <div class="jpk-collapsible-section">
-                        <button type="button" class="jpk-collapsible-header collapsed" aria-expanded="false" aria-controls="versionsContent" data-target="versionsContent">
-                            <span class="jpk-collapsible-title">IP Versions</span>
-                            <span class="jpk-collapsible-icon">&#9660;</span>
-                        </button>
-                        <div id="versionsContent" class="jpk-collapsible-content collapsed">
-                            <div class="checkboxContainer">
-                                <label class="emby-checkbox-label">
-                                    <input type="checkbox" is="emby-checkbox" id="enableIPv4" />
-                                    <span class="checkboxLabel">IPv4 A Records</span>
-                                </label>
-                            </div>
-                            <div class="checkboxContainer">
-                                <label class="emby-checkbox-label">
-                                    <input type="checkbox" is="emby-checkbox" id="enableIPv6" />
-                                    <span class="checkboxLabel">IPv6 AAAA Records</span>
-                                </label>
-                            </div>
-                            <div class="fieldDescription">Applies to every record. Disabling a version stops it being detected or updated.</div>
-                        </div>
                     </div>
 
                     <!-- IP detection -->
@@ -65,14 +47,73 @@
                         </button>
                         <div id="detectionContent" class="jpk-collapsible-content collapsed">
                             <div class="inputContainer">
-                                <label for="ipv4Url">IPv4 Detection URL</label>
-                                <input is="emby-input" type="text" id="ipv4Url" autocomplete="off" />
-                                <div class="fieldDescription">An endpoint that returns your public IPv4 as plain text.</div>
+                                <label for="ipv4Url">IPv4 Detection URLs</label>
+                                <textarea id="ipv4Url" class="emby-input" autocomplete="off" rows="4"></textarea>
+                                <div class="fieldDescription">Every endpoint used to detect your public IPv4, one per line, tried in order until one returns a valid address. Add or remove any. Leave blank to use the built in defaults.</div>
                             </div>
                             <div class="inputContainer">
-                                <label for="ipv6Url">IPv6 Detection URL</label>
-                                <input is="emby-input" type="text" id="ipv6Url" autocomplete="off" />
-                                <div class="fieldDescription">An endpoint that returns your public IPv6 as plain text.</div>
+                                <label for="ipv6Url">IPv6 Detection URLs</label>
+                                <textarea id="ipv6Url" class="emby-input" autocomplete="off" rows="4"></textarea>
+                                <div class="fieldDescription">Every endpoint used to detect your public IPv6, one per line, tried in order until one returns a valid address. Add or remove any. Leave blank to use the built in defaults.</div>
+                            </div>
+                            <div class="checkboxContainer">
+                                <label class="emby-checkbox-label">
+                                    <input type="checkbox" is="emby-checkbox" id="skipInternal" />
+                                    <span class="checkboxLabel">Skip update if internal</span>
+                                </label>
+                            </div>
+                            <div class="fieldDescription">An address is treated as internal when it falls in a private, loopback, link local, CGNAT, or other reserved range. Disable this setting if your IP is being misclassified as internal.</div>
+                        </div>
+                    </div>
+
+                    <!-- update behavior -->
+                    <div class="jpk-collapsible-section">
+                        <button type="button" class="jpk-collapsible-header collapsed" aria-expanded="false" aria-controls="behaviorContent" data-target="behaviorContent">
+                            <span class="jpk-collapsible-title">Update Behavior</span>
+                            <span class="jpk-collapsible-icon">&#9660;</span>
+                        </button>
+                        <div id="behaviorContent" class="jpk-collapsible-content collapsed">
+                            <div class="selectContainer">
+                                <label class="selectLabel" for="forceUpdateHours">Force update</label>
+                                <select id="forceUpdateHours" class="jpk-selector-dropdown">
+                                    <option value="0">Off</option>
+                                    <option value="1">Every 1 hour</option>
+                                    <option value="3">Every 3 hours</option>
+                                    <option value="6">Every 6 hours</option>
+                                    <option value="12">Every 12 hours</option>
+                                    <option value="18">Every 18 hours</option>
+                                    <option value="24">Every 24 hours</option>
+                                    <option value="48">Every 48 hours</option>
+                                    <option value="72">Every 72 hours</option>
+                                    <option value="168">Weekly</option>
+                                </select>
+                                <div class="fieldDescription">Submits your IP to your provider even when DNS already matches. Best used for proxied DNS entries where only local lookups can occur to prevent duplicate updates.</div>
+                            </div>
+                            <div class="selectContainer">
+                                <label class="selectLabel" for="backoffAfterFailures">Back off after failures</label>
+                                <select id="backoffAfterFailures" class="jpk-selector-dropdown">
+                                    <option value="0">Off</option>
+                                    <option value="3">3 failures</option>
+                                    <option value="5">5 failures</option>
+                                    <option value="10">10 failures</option>
+                                </select>
+                            </div>
+                            <div class="fieldDescription">Consecutive failures for a record before it's paused. This prevents a wrong configuration from spamming a provider and risking a ban.</div>
+                            <div class="selectContainer">
+                                <label class="selectLabel" for="backoffHours">Back off duration</label>
+                                <select id="backoffHours" class="jpk-selector-dropdown">
+                                    <option value="1">1 hour</option>
+                                    <option value="6">6 hours</option>
+                                    <option value="12">12 hours</option>
+                                    <option value="24">24 hours</option>
+                                    <option value="48">48 hours</option>
+                                </select>
+                            </div>
+                            <div class="fieldDescription">How long a paused record waits before it is tried again. If it fails again it backs off for the same period.</div>
+                            <div class="inputContainer">
+                                <label for="requestTimeout">Request timeout (seconds)</label>
+                                <input is="emby-input" type="number" id="requestTimeout" min="1" step="1" autocomplete="off" />
+                                <div class="fieldDescription">How long each detection or provider request may take before it is abandoned.</div>
                             </div>
                         </div>
                     </div>

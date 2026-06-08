@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Jellyfin.Plugin.DynamicDns.Models;
 using Jellyfin.Plugin.DynamicDns.Providers;
+using Jellyfin.Plugin.DynamicDns.Providers.Implementations;
 using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
 
@@ -31,7 +32,7 @@ public class PorkbunProviderTests
         return new PorkbunProvider(factory, NullLogger<PorkbunProvider>.Instance);
     }
 
-    private static DnsRecord Record() => new()
+    private static DNSRecord Record() => new()
     {
         Hostname = "home.example.com",
         Login = "apikey",
@@ -44,7 +45,7 @@ public class PorkbunProviderTests
     {
         var provider = Provider("{\"status\":\"ERROR\",\"message\":\"nope\"}");
 
-        var result = await provider.UpdateAsync(Record(), new DetectedIp { IPv4 = "1.2.3.4" }, CancellationToken.None);
+        var result = await provider.UpdateAsync(Record(), new DetectedIP { IPv4 = "1.2.3.4" }, CancellationToken.None);
 
         Assert.False(result.Success);
     }
@@ -54,7 +55,7 @@ public class PorkbunProviderTests
     {
         var provider = Provider("{\"status\":\"SUCCESS\"}");
 
-        var result = await provider.UpdateAsync(Record(), new DetectedIp { IPv4 = "1.2.3.4" }, CancellationToken.None);
+        var result = await provider.UpdateAsync(Record(), new DetectedIP { IPv4 = "1.2.3.4" }, CancellationToken.None);
 
         Assert.True(result.Success);
     }
