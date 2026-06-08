@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Net;
+using System.Net.Sockets;
 
 namespace Jellyfin.Plugin.DynamicDns.Models;
 
@@ -46,6 +47,31 @@ public sealed class DNSResolution
         foreach (var address in _addresses)
         {
             if (address.Equals(target))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// Returns whether DNS serves any public address of the given family. When it does not, a successful
+    /// lookup that returned only private addresses is a split horizon resolver and cannot be trusted to
+    /// reflect the public record, so the caller should compare against the last pushed address instead.
+    /// </summary>
+    /// <param name="family">The address family to check.</param>
+    /// <returns>True when at least one resolved address of that family is public.</returns>
+    public bool ServesPublic(AddressFamily family)
+    {
+        if (!Succeeded)
+        {
+            return false;
+        }
+
+        foreach (var address in _addresses)
+        {
+            if (address.AddressFamily == family && IPAddressClassifier.IsPublic(address))
             {
                 return true;
             }

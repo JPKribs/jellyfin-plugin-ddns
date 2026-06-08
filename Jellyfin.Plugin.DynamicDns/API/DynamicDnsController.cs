@@ -7,6 +7,7 @@ using Jellyfin.Plugin.DynamicDns.Configuration;
 using Jellyfin.Plugin.DynamicDns.Models;
 using Jellyfin.Plugin.DynamicDns.Providers;
 using Jellyfin.Plugin.DynamicDns.Services;
+using Jellyfin.Plugin.DynamicDns.Utilities;
 using JPKribs.Jellyfin.Base;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -21,7 +22,7 @@ namespace Jellyfin.Plugin.DynamicDns.Api;
 [Authorize(Policy = "RequiresElevation")]
 [Route("DynamicDns")]
 [Produces("application/json")]
-public class DynamicDnsController : ControllerBase
+public class DynamicDNSController : ControllerBase
 {
     // Stand-in returned to the browser for a stored credential and recognized on save as "unchanged".
     // It is deliberately not a value a real credential could take, so a saved record round-trips without
@@ -34,13 +35,13 @@ public class DynamicDnsController : ControllerBase
     private readonly IEnumerable<IDNSProvider> _providers;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="DynamicDnsController"/> class.
+    /// Initializes a new instance of the <see cref="DynamicDNSController"/> class.
     /// </summary>
     /// <param name="updateService">The update service.</param>
     /// <param name="statusStore">The runtime status store.</param>
     /// <param name="secrets">The secret protector for credentials at rest.</param>
     /// <param name="providers">The registered DNS providers, used to drive the provider dropdown and fields.</param>
-    public DynamicDnsController(DNSUpdateService updateService, StatusStoreService statusStore, SecretProtector secrets, IEnumerable<IDNSProvider> providers)
+    public DynamicDNSController(DNSUpdateService updateService, StatusStoreService statusStore, SecretProtector secrets, IEnumerable<IDNSProvider> providers)
     {
         _updateService = updateService;
         _statusStore = statusStore;
@@ -114,36 +115,7 @@ public class DynamicDnsController : ControllerBase
 
         plugin.MutateConfiguration(current =>
         {
-            var previous = current.Records
-                .Where(r => !string.IsNullOrEmpty(r.Id))
-                .GroupBy(r => r.Id, StringComparer.Ordinal)
-                .ToDictionary(g => g.Key, g => g.First(), StringComparer.Ordinal);
-
-            var usedIds = new HashSet<string>(StringComparer.Ordinal);
-            var merged = new List<DNSRecord>(incoming.Records.Count);
-            foreach (var record in incoming.Records)
-            {
-                // Match the existing record by id. A missing or duplicate id gets a fresh unique one so two
-                // records never collapse together or cross assign credentials.
-                if (string.IsNullOrEmpty(record.Id) || !usedIds.Add(record.Id))
-                {
-                    do
-                    {
-                        record.Id = Guid.NewGuid().ToString("N");
-                    }
-                    while (!usedIds.Add(record.Id));
-                }
-
-                previous.TryGetValue(record.Id, out var prior);
-
-                // Encrypt a freshly typed secret. Keep the stored value when unchanged or left blank.
-                record.Login = ResolveSecret(record.Login, prior?.Login);
-                record.Password = ResolveSecret(record.Password, prior?.Password);
-
-                merged.Add(record);
-            }
-
-            current.Records = merged;
+            current.Records = RecordMerge.Apply(current.Records, incoming.Records, ResolveSecret, () => Guid.NewGuid().ToString("N"));
             current.IPv4DetectionUrl = incoming.IPv4DetectionUrl ?? string.Empty;
             current.IPv6DetectionUrl = incoming.IPv6DetectionUrl ?? string.Empty;
             current.ForceUpdateHours = Math.Max(0, incoming.ForceUpdateHours);

@@ -24,29 +24,33 @@ Dynamic DNS runs entirely inside Jellyfin using the same runtime and resources a
 
 ### Adding a record
 
-Each record has a name, a provider, a hostname, and the credentials that provider needs. The Domains tab shows only the fields a provider actually uses and labels them in that provider's own terms, so you enter exactly what is required and nothing more. Records live in the plugin configuration, so they are captured by your normal Jellyfin config backups.
+Each record has a name, a provider, a hostname, and the credentials that provider needs. The `Domains` tab shows only the fields a provider actually uses and labels them in that provider's own terms, so you enter exactly what is required and nothing more. Records live in the plugin configuration, so they are captured by your normal Jellyfin config backups.
 
-If a record's hostname sits behind a proxy or CDN, turn on Treat as proxied address. The plugin then compares against the last IP it pushed rather than live DNS, since DNS cannot reveal the origin, and pairing it with `Force Update` on the Address tab re-sends the record periodically in case it was changed elsewhere.
+If a record's hostname sits behind a proxy or CDN, turn on `Treat as Proxied Address`. The plugin then compares against the last IP it pushed rather than live DNS, since DNS cannot reveal the origin, and pairing it with `Force Update` on the `Address` tab re-sends the record periodically in case it was changed elsewhere.
 
-### IP versions and detection
+### Address families and detection
 
-The Address tab controls addressing for every record. IPv4 A records and IPv6 AAAA records can each be turned on or off, and turning a version off stops it being detected or updated. Detection reads your public IP from endpoints that return it as plain text. The field lists every endpoint it will use, one per line, and each is tried in order until one returns a valid address, so a single endpoint being down or rate limiting does not stall updates. Add or remove endpoints freely, and a blank field falls back to the built in defaults. The Address tab also shows the current public IP and an Update now button that runs the task immediately. If detection finds only an internal address, which usually means the server has no public IP, the Address tab shows a warning so you know nothing was published. An address counts as internal when it falls in a private, loopback, link local, CGNAT, or other reserved range, and you can turn off Skip update if internal to publish such an address anyway.
+Each record chooses its address families with `Update IPv4 (A)` and `Update IPv6 (AAAA)` on the `Domains` tab, and a family is detected only when a record updates it. Detection reads your public IP from endpoints that return it as plain text. The `IPv4 Detection URLs` and `IPv6 Detection URLs` fields list every endpoint, one per line, each tried in order until one returns a valid address, so a single endpoint being down or rate limiting does not stall updates. Add or remove endpoints freely, and a blank field falls back to the built in defaults. The `Address` tab also shows the current public IP and an `Update Now` button that runs the task immediately. If detection finds only an internal address, which usually means the server has no public IP, the `Address` tab shows a warning so you know nothing was published. An address counts as internal when it falls in a private, loopback, link local, CGNAT, or other reserved range, and you can turn off `Skip Update if Internal` to publish such an address anyway.
 
 ### How updates run
 
-The scheduled task named Update Dynamic DNS runs every 15 minutes and on startup by default, and you set the interval under Scheduled Tasks. On each run the plugin detects the public IP, looks up what each hostname currently resolves to in DNS, and pushes the detected IP to any record whose DNS does not already serve it. Because the check is against live DNS rather than a value the plugin stored, a record changed from another source is corrected on the next run. Each record shows its last action, updated, unchanged, or failed, and when it was last checked.
+The scheduled task named `Update Dynamic DNS` runs every 15 minutes and on startup by default, and you set the interval under `Scheduled Tasks`. On each run the plugin detects the public IP, looks up what each hostname currently resolves to in DNS, and pushes the detected IP to any record whose DNS does not already serve it. Because the check is against live DNS rather than a value the plugin stored, a record changed from another source is corrected on the next run. Each record shows its last action, updated, unchanged, or failed, and when it was last checked.
 
-If you want a record refreshed even when DNS already matches, choose an interval under Force update in the Update Behavior section of the Address tab. When that long has passed since the last successful push, the plugin re-sends the current IP, which keeps the record alive on providers that age out stale entries. Force update is Off by default, so records are pushed only when DNS does not already serve your detected IP.
+If you want a record refreshed even when DNS already matches, choose an interval under `Force Update` in the `Update Behavior` section of the `Address` tab. When that long has passed since the last successful push, the plugin re-sends the current IP, which keeps the record alive on providers that age out stale entries. `Force Update` is `Off` by default, so records are pushed only when DNS does not already serve your detected IP.
 
-If a record keeps failing, for example because a token is wrong, the plugin pauses it after a set number of failures in a row and then retries it only once each backoff window, so a misconfiguration does not keep hammering your provider and risk a rate limit or ban. Both the failure count and the window are set under Update Behavior and default to three failures and twenty four hours. The record card shows when a record is backing off and when it will next be tried.
+If a record keeps failing, for example because a token is wrong, the plugin pauses it after a set number of failures in a row and then retries it only once each backoff window, so a misconfiguration does not keep hammering your provider and risk a rate limit or ban. Both the failure count and the window are set under `Update Behavior` and default to three failures and twenty four hours. The record card shows when a record is backing off and when it will next be tried.
 
 Set the scheduled interval longer than your record TTL. If a run happens before the change has propagated, your resolver may still answer with the old address and the record can be pushed again needlessly.
 
-If your server resolves its own hostname through a local resolver that answers with an internal address, which is common in a split horizon setup using a router or an ad blocking resolver or a hosts file, the live DNS check will never match your public IP and the record is pushed on every run. For those records turn on Treat as proxied address so the plugin compares against the last IP it pushed instead of DNS, and turn on Force update so the record is still refreshed on a schedule.
+If your server resolves its own hostname through a local resolver that answers with an internal address, which is common in a split horizon setup using a router or an ad blocking resolver or a hosts file, the live DNS check cannot see your public record. The plugin handles this on its own: 
+
+When the hostname resolves to a private address it compares against the last IP it pushed instead of that answer, so an unchanged IP is not re-pushed every run. 
+
+You can still turn on `Treat as Proxied Address` to force that comparison for a record at all times, for example a Cloudflare record behind the orange cloud.
 
 ### Record health
 
-The Domains tab summarizes every record at a glance.
+The `Domains` tab summarizes every record at a glance.
 
 * **Healthy** - The last update succeeded within the last 24 hours.
 * **Unhealthy** - A published record has not updated successfully in the last 24 hours.
@@ -116,7 +120,7 @@ Targets **Jellyfin 10.11.x** on `net9.0` with ABI `10.11.0.0`.
 
 ### Verification Check
 
-* After restart, open the Dynamic DNS page from the dashboard, add a record, choose its provider, and use Update now to confirm it reaches your provider.
+* After restart, open the Dynamic DNS page from the dashboard, add a record, choose its provider, and use `Update Now` to confirm it reaches your provider.
 
 ---
 

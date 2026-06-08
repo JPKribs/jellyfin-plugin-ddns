@@ -1,4 +1,5 @@
 using System;
+using System.Net.Sockets;
 using Jellyfin.Plugin.DynamicDns.Models;
 
 namespace Jellyfin.Plugin.DynamicDns.Utilities;
@@ -37,18 +38,13 @@ public static class UpdatePolicy
         bool needsPush;
         if (record.Proxied)
         {
-            // A proxied record (Cloudflare orange cloud) resolves to the proxy, not the origin, so DNS
-            // cannot reveal the real IP. Compare against the last address we pushed for these instead.
-            var v4Changed = wantsV4 && !string.Equals(ip.IPv4, record.LastIPv4, StringComparison.OrdinalIgnoreCase);
-            var v6Changed = wantsV6 && !string.Equals(ip.IPv6, record.LastIPv6, StringComparison.OrdinalIgnoreCase);
-            needsPush = v4Changed || v6Changed || !record.LastSuccess;
+            needsPush = ProxiedNeedsPush(record, ip, wantsV4, wantsV6);
         }
         else
         {
-            // Push when DNS does not already serve the detected address for an enabled family. A failed
-            // lookup serves nothing, so a missing record or a transient resolver error pushes rather than
-            // skips, which is the safe direction.
-            needsPush = (wantsV4 && !dns.Serves(ip.IPv4)) || (wantsV6 && !dns.Serves(ip.IPv6));
+            needsPush =
+                (wantsV4 && FamilyNeedsPush(ip.IPv4, record.LastIPv4, record.LastSuccess, dns, AddressFamily.InterNetwork))
+                || (wantsV6 && FamilyNeedsPush(ip.IPv6, record.LastIPv6, record.LastSuccess, dns, AddressFamily.InterNetworkV6));
         }
 
         if (needsPush)
@@ -68,5 +64,33 @@ public static class UpdatePolicy
         }
 
         return UpdateDecision.SkipUnchanged;
+    }
+
+    // For one family: DNS already serving the detected IP means nothing to do. A different public address
+    // means the record changed elsewhere, so push. A private answer (split horizon) or no answer cannot
+    // confirm the public record, so compare the detected IP against the last one pushed instead, which
+    // stops a server whose local DNS returns an internal address from re-pushing every run.
+    private static bool FamilyNeedsPush(string? detected, string? lastPushed, bool lastSuccess, DNSResolution dns, AddressFamily family)
+    {
+        if (dns.Serves(detected))
+        {
+            return false;
+        }
+
+        if (dns.ServesPublic(family))
+        {
+            return true;
+        }
+
+        return !string.Equals(detected, lastPushed, StringComparison.OrdinalIgnoreCase) || !lastSuccess;
+    }
+
+    // A proxied record resolves to the proxy, not the origin, so DNS cannot reveal the real IP. Compare the
+    // detected IP against the last address pushed for the enabled families.
+    private static bool ProxiedNeedsPush(DNSRecord record, DetectedIP ip, bool wantsV4, bool wantsV6)
+    {
+        var v4Changed = wantsV4 && !string.Equals(ip.IPv4, record.LastIPv4, StringComparison.OrdinalIgnoreCase);
+        var v6Changed = wantsV6 && !string.Equals(ip.IPv6, record.LastIPv6, StringComparison.OrdinalIgnoreCase);
+        return v4Changed || v6Changed || !record.LastSuccess;
     }
 }

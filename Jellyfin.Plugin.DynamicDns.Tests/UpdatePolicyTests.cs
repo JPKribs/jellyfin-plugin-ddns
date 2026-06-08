@@ -60,6 +60,34 @@ public class UpdatePolicyTests
     }
 
     [Fact]
+    public void SplitHorizon_PrivateDNSAnswer_UnchangedIp_Skips()
+    {
+        // A local resolver answers the hostname with an internal address, so DNS never matches the public
+        // IP. With the detected IP equal to the last pushed one, the record must not be re-pushed.
+        var record = new DNSRecord { UpdateIPv4 = true, LastIPv4 = "1.2.3.4", LastSuccess = true };
+        var decision = Decide(record, new DetectedIP { IPv4 = "1.2.3.4" }, Serving("10.100.0.2"));
+        Assert.Equal(UpdateDecision.SkipUnchanged, decision);
+    }
+
+    [Fact]
+    public void SplitHorizon_PrivateDNSAnswer_FirstRun_Updates()
+    {
+        // Same split horizon, but nothing has been pushed yet, so the record is established.
+        var record = new DNSRecord { UpdateIPv4 = true };
+        var decision = Decide(record, new DetectedIP { IPv4 = "1.2.3.4" }, Serving("10.100.0.2"));
+        Assert.Equal(UpdateDecision.Update, decision);
+    }
+
+    [Fact]
+    public void SplitHorizon_PrivateDNSAnswer_DetectedIpChanged_Updates()
+    {
+        // The public IP actually changed, so even with a split horizon answer the record is pushed.
+        var record = new DNSRecord { UpdateIPv4 = true, LastIPv4 = "1.2.3.4", LastSuccess = true };
+        var decision = Decide(record, new DetectedIP { IPv4 = "5.6.7.8" }, Serving("10.100.0.2"));
+        Assert.Equal(UpdateDecision.Update, decision);
+    }
+
+    [Fact]
     public void NoUsableAddress_SkipsNoAddress()
     {
         // IPv4 wanted but none detected, and IPv6 is not enabled.

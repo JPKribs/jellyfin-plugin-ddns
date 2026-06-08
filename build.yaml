@@ -16,9 +16,12 @@ artifacts:
 - "Jellyfin.Plugin.DynamicDns.dll"
 changelog:
   developer:
-  - Bump base to 2026.6.22
+  - Bump base to 2026.6.23
   - Fix encryption of tokens to ensure they will not break between versions
   - Migrate everything so it lives in the provider for ease of maintenance
   - Reorganize files
   documentation:
   - Creates Provider documentation per ddclient
+  fixes:
+  - Check the DNS for current IP instead of always resending
+  - If the current DNS is internal, use the previous IP sent (previous behavior)

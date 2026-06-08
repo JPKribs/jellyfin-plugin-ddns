@@ -1,4 +1,5 @@
 using System.Net;
+using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
 using Jellyfin.Plugin.DynamicDns.Services;
@@ -43,6 +44,17 @@ public class DNSResolutionTests
     public void Failed_ServesNothing()
     {
         Assert.False(DNSResolution.Failed.Serves("1.2.3.4"));
+    }
+
+    [Fact]
+    public void ServesPublic_TrueOnlyForAPublicAddressOfTheFamily()
+    {
+        Assert.True(DNSResolution.Resolved(new[] { IPAddress.Parse("1.2.3.4") }).ServesPublic(AddressFamily.InterNetwork));
+        // A private answer is a split horizon resolver, so it does not count as serving the public record.
+        Assert.False(DNSResolution.Resolved(new[] { IPAddress.Parse("10.100.0.2") }).ServesPublic(AddressFamily.InterNetwork));
+        // Right family only: a public v4 does not satisfy a v6 question.
+        Assert.False(DNSResolution.Resolved(new[] { IPAddress.Parse("1.2.3.4") }).ServesPublic(AddressFamily.InterNetworkV6));
+        Assert.False(DNSResolution.Failed.ServesPublic(AddressFamily.InterNetwork));
     }
 
     [Fact]
