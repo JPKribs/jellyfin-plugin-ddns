@@ -122,6 +122,13 @@ public class DNSRecord
     public DateTime? BackoffUntilUtc { get; set; }
 
     /// <summary>
+    /// Returns a shallow copy of the record. Used to snapshot the configuration for an update pass so
+    /// the run never mutates the live configuration objects.
+    /// </summary>
+    /// <returns>A shallow copy.</returns>
+    public DNSRecord Clone() => (DNSRecord)MemberwiseClone();
+
+    /// <summary>
     /// Returns a shallow copy with the supplied (decrypted) credentials. Used transiently when handing a
     /// record to a provider, so the decrypted secrets never replace the encrypted values held in config.
     /// </summary>
@@ -130,7 +137,7 @@ public class DNSRecord
     /// <returns>A transient copy carrying the decrypted credentials.</returns>
     public DNSRecord WithSecrets(string login, string password)
     {
-        var copy = (DNSRecord)MemberwiseClone();
+        var copy = Clone();
         copy.Login = login;
         copy.Password = password;
         return copy;

@@ -93,32 +93,21 @@ public sealed class DNSUpdateService : IDisposable
 
     private async Task<DNSUpdateOutcome> RunCoreAsync(Plugin plugin, DNSUpdateOutcome outcome, CancellationToken cancellationToken)
     {
-        var config = plugin.ReadConfiguration(c => c);
+        // Backstop only. Every save path encrypts (the dashboard endpoint and the UpdateConfiguration
+        // override on the generic endpoint), but a config written before those hooks existed, or edited
+        // directly on disk, is still caught here so a plaintext secret is never left bare.
+        plugin.MutateConfiguration(c => CredentialEncryption.ProtectAll(c.Records, _secrets));
 
-        // Backstop only. Credentials are encrypted at save time, but if a plaintext secret ever reaches the
-        // config (for example through the generic config endpoint) encrypt it here so it is not left bare.
-        plugin.MutateConfiguration(c =>
+        // Snapshot the configuration under the lock so a save during the run cannot swap or mutate what
+        // this pass iterates. Status written during the run lands on the clones, never on live config.
+        var config = plugin.ReadConfiguration(Snapshot);
+
+        if (plugin.SecretsPlaintext)
         {
-            var changed = false;
-            foreach (var r in c.Records)
-            {
-                var login = _secrets.Protect(r.Login);
-                if (!string.Equals(login, r.Login, StringComparison.Ordinal))
-                {
-                    r.Login = login;
-                    changed = true;
-                }
-
-                var password = _secrets.Protect(r.Password);
-                if (!string.Equals(password, r.Password, StringComparison.Ordinal))
-                {
-                    r.Password = password;
-                    changed = true;
-                }
-            }
-
-            return changed;
-        });
+            outcome.Warnings.Add(
+                "Credential encryption is unavailable on this host, so provider credentials are stored "
+                + "in plaintext. Check the server log for details.");
+        }
 
         var status = _statusStore.Load();
         var timeout = TimeSpan.FromSeconds(config.RequestTimeoutSeconds > 0 ? config.RequestTimeoutSeconds : 15);
@@ -232,9 +221,21 @@ public sealed class DNSUpdateService : IDisposable
             outcome.Records.Add(result);
         }
 
-        PersistStatus(status, config, enabled, statusUpdates, ip, backoffThreshold, backoffWindow);
+        PersistStatus(status, plugin, enabled, statusUpdates, ip, backoffThreshold, backoffWindow);
         return outcome;
     }
+
+    private static PluginConfiguration Snapshot(PluginConfiguration config) => new()
+    {
+        Records = config.Records.ConvertAll(r => r.Clone()),
+        IPv4DetectionUrl = config.IPv4DetectionUrl,
+        IPv6DetectionUrl = config.IPv6DetectionUrl,
+        ForceUpdateHours = config.ForceUpdateHours,
+        SkipInternalAddresses = config.SkipInternalAddresses,
+        BackoffAfterFailures = config.BackoffAfterFailures,
+        BackoffHours = config.BackoffHours,
+        RequestTimeoutSeconds = config.RequestTimeoutSeconds
+    };
 
     private async Task<DNSUpdateResult> PushAsync(
         IDNSProvider provider,
@@ -269,7 +270,7 @@ public sealed class DNSUpdateService : IDisposable
 
     private void PersistStatus(
         StatusData status,
-        PluginConfiguration config,
+        Plugin plugin,
         List<DNSRecord> enabled,
         Dictionary<string, RecordOutcome> statusUpdates,
         DetectedIP ip,
@@ -287,8 +288,9 @@ public sealed class DNSUpdateService : IDisposable
             status.Records[record.Id] = RecordStatus.FromRecord(record);
         }
 
-        // Drop status for records that no longer exist so the store does not grow without bound.
-        var validIds = new HashSet<string>(config.Records.Select(r => r.Id), StringComparer.Ordinal);
+        // Drop status for records that no longer exist so the store does not grow without bound. The ids
+        // are read fresh rather than from the run's snapshot so a record added mid-run is not pruned.
+        var validIds = plugin.ReadConfiguration(c => new HashSet<string>(c.Records.Select(r => r.Id), StringComparer.Ordinal));
         foreach (var key in status.Records.Keys.Where(k => !validIds.Contains(k)).ToList())
         {
             status.Records.Remove(key);

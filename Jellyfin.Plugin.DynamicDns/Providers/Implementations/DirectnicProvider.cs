@@ -103,12 +103,14 @@ public sealed class DirectnicProvider : DNSProviderBase
         }
     }
 
-    private static string ResolveGatewayUrl(DNSRecord record, string configured)
+    private string ResolveGatewayUrl(DNSRecord record, string configured)
     {
         var trimmed = configured.Trim();
         if (trimmed.StartsWith("http://", StringComparison.OrdinalIgnoreCase)
             || trimmed.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
         {
+            // The gateway URL embeds the update token, so plain http exposes it in transit.
+            WarnIfPlainHttp(trimmed);
             return trimmed;
         }
 

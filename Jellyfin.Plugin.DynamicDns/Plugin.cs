@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using Jellyfin.Plugin.DynamicDns.Configuration;
+using Jellyfin.Plugin.DynamicDns.Utilities;
 using JPKribs.Jellyfin.Base;
 using MediaBrowser.Common.Configuration;
 using MediaBrowser.Model.Plugins;
@@ -14,6 +16,9 @@ namespace Jellyfin.Plugin.DynamicDns;
 /// </summary>
 public class Plugin : PluginBase<Plugin, PluginConfiguration>
 {
+    private readonly Lazy<SecretProtector> _secrets;
+    private bool _secretsPlaintext;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="Plugin"/> class.
     /// </summary>
@@ -26,8 +31,31 @@ public class Plugin : PluginBase<Plugin, PluginConfiguration>
         ILogger<Plugin> logger)
         : base(applicationPaths, xmlSerializer)
     {
+        ArgumentNullException.ThrowIfNull(applicationPaths);
         ArgumentNullException.ThrowIfNull(logger);
+        _secrets = new Lazy<SecretProtector>(() => CreateSecretProtector(applicationPaths, logger));
         logger.LogInformation("Dynamic DNS plugin initialized");
+    }
+
+    /// <summary>
+    /// Gets the protector that encrypts record credentials at rest. The plugin owns the single instance
+    /// so the generic configuration endpoint (handled in <see cref="UpdateConfiguration"/>) and the DI
+    /// consumers share one protector and one key ring.
+    /// </summary>
+    public SecretProtector Secrets => _secrets.Value;
+
+    /// <summary>
+    /// Gets a value indicating whether credentials are being stored in plaintext because the Data
+    /// Protection key store could not be initialized. Surfaced on the dashboard so the degradation is
+    /// visible to the administrator, not just the server log.
+    /// </summary>
+    public bool SecretsPlaintext
+    {
+        get
+        {
+            _ = _secrets.Value;
+            return _secretsPlaintext;
+        }
     }
 
     /// <inheritdoc />
@@ -38,6 +66,23 @@ public class Plugin : PluginBase<Plugin, PluginConfiguration>
 
     /// <inheritdoc />
     public override string Description => "Keep your DNS records pointed at your server's current public IP.";
+
+    /// <summary>
+    /// Encrypts incoming credentials before the configuration is persisted. The dashboard's own save
+    /// endpoint already encrypts, but Jellyfin's generic plugin configuration endpoint bypasses it, and
+    /// without this hook a secret saved there would sit in the XML in plaintext until the next update
+    /// run's backstop caught it.
+    /// </summary>
+    /// <param name="configuration">The incoming configuration.</param>
+    public override void UpdateConfiguration(BasePluginConfiguration configuration)
+    {
+        if (configuration is PluginConfiguration config)
+        {
+            CredentialEncryption.ProtectAll(config.Records, Secrets);
+        }
+
+        base.UpdateConfiguration(configuration);
+    }
 
     /// <inheritdoc />
     public override IEnumerable<PluginPageInfo> GetPages()
@@ -78,5 +123,13 @@ public class Plugin : PluginBase<Plugin, PluginConfiguration>
         {
             yield return page;
         }
+    }
+
+    private SecretProtector CreateSecretProtector(IApplicationPaths paths, ILogger logger)
+    {
+        var keyDirectory = Path.Join(paths.PluginConfigurationsPath, "Jellyfin.Plugin.DynamicDns.Keys");
+        var provider = StableSecretProtection.Build(keyDirectory, logger);
+        _secretsPlaintext = provider is null;
+        return new SecretProtector("Jellyfin.Plugin.DynamicDns.Secrets.v1", logger, provider);
     }
 }

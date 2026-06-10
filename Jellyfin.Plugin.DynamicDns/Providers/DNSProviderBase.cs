@@ -98,12 +98,16 @@ public abstract class DNSProviderBase : IDNSProvider
 
     /// <summary>
     /// Returns the configured server override, or the provider default, with an <c>https://</c> scheme.
+    /// A bare host gets <c>https://</c>. An explicit <c>http://</c> override is honored for hosts that
+    /// terminate TLS elsewhere, but it is logged since credentials sent to it travel in the clear.
     /// </summary>
     /// <param name="record">The record.</param>
     /// <param name="defaultServer">The provider default server/base.</param>
     /// <returns>A URL base beginning with a scheme.</returns>
-    protected static string ServerBase(DNSRecord record, string defaultServer)
+    protected string ServerBase(DNSRecord record, string defaultServer)
     {
+        ArgumentNullException.ThrowIfNull(record);
+
         var server = string.IsNullOrWhiteSpace(record.Server) ? defaultServer : record.Server.Trim();
         if (!server.StartsWith("http://", StringComparison.OrdinalIgnoreCase)
             && !server.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
@@ -111,7 +115,30 @@ public abstract class DNSProviderBase : IDNSProvider
             server = "https://" + server;
         }
 
+        WarnIfPlainHttp(server);
         return server.TrimEnd('/');
+    }
+
+    /// <summary>
+    /// Logs when a request URL uses plain http, since credentials sent with it are not encrypted in
+    /// transit. The push still proceeds because the override is an explicit administrator choice. Only
+    /// the authority is logged because some providers embed the update secret in the URL path or query.
+    /// </summary>
+    /// <param name="url">The URL about to be used.</param>
+    protected void WarnIfPlainHttp(string url)
+    {
+        if (string.IsNullOrEmpty(url) || !url.StartsWith("http://", StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        var host = Uri.TryCreate(url, UriKind.Absolute, out var parsed)
+            ? parsed.GetLeftPart(UriPartial.Authority)
+            : "http://<unparseable>";
+        Logger.LogWarning(
+            "{Provider} is updating over plain http ({Host}); credentials sent with this request are not encrypted in transit.",
+            Kind,
+            host);
     }
 
     /// <summary>

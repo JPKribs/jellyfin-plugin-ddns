@@ -62,6 +62,9 @@ public sealed class CloudNsProvider : DNSProviderBase
             return DNSUpdateResult.Fail("ClouDNS DynURL must be a full http(s) URL.");
         }
 
+        // The DynURL embeds the update secret, so plain http exposes it in transit.
+        WarnIfPlainHttp(dynUrl);
+
         return await ApplyPerFamilyAsync(
             record,
             ip,

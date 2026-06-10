@@ -27,13 +27,22 @@ public class PluginServiceRegistrator : IPluginServiceRegistrator
             serviceCollection.AddSingleton(typeof(IDNSProvider), provider);
         }
 
-        // Encrypts DNS provider credentials at rest. Keys live in a fixed directory
-        // under the Jellyfin data folder with a pinned application name. Otherwise a
-        // host launch-context change (app update, desktop-app vs service, Docker)
-        // shifts the Data Protection discriminator (and default key location) and
-        // every stored secret fails to decrypt. See StableSecretProtection.
+        // Encrypts DNS provider credentials at rest. The Plugin instance owns the single protector so
+        // the generic configuration endpoint (handled inside Plugin.UpdateConfiguration) and the DI
+        // consumers share one key ring. The fallback below builds an equivalent protector from the same
+        // key directory, which only matters if resolution somehow precedes plugin construction.
+        // Keys live in a fixed directory under the Jellyfin data folder with a pinned application name.
+        // Otherwise a host launch-context change (app update, desktop-app vs service, Docker) shifts the
+        // Data Protection discriminator (and default key location) and every stored secret fails to
+        // decrypt. See StableSecretProtection.
         serviceCollection.AddSingleton(sp =>
         {
+            var plugin = Plugin.Instance;
+            if (plugin is not null)
+            {
+                return plugin.Secrets;
+            }
+
             var logger = sp.GetRequiredService<ILoggerFactory>().CreateLogger("Jellyfin.Plugin.DynamicDns.SecretProtector");
             IDataProtectionProvider? provider = null;
 
