@@ -18,6 +18,15 @@ public sealed class StatusData
     /// <summary>Gets or sets the detection warning from the most recent run, or empty when detection was clean.</summary>
     public string DetectionMessage { get; set; } = string.Empty;
 
+    /// <summary>Gets or sets the number of consecutive runs where a needed public IP could not be detected.</summary>
+    public int ConsecutiveDetectionFailures { get; set; }
+
+    /// <summary>Gets or sets a value indicating whether the unhealthy detection warning has been written to the activity log for the current failure streak.</summary>
+    public bool DetectionUnhealthyLogged { get; set; }
+
+    /// <summary>Gets or sets a value indicating whether the plaintext credential warning has been written to the activity log for the current encryption outage.</summary>
+    public bool PlaintextWarningLogged { get; set; }
+
     /// <summary>Gets or sets the per record status, keyed by record id.</summary>
     public Dictionary<string, RecordStatus> Records { get; set; } = new(StringComparer.Ordinal);
 }

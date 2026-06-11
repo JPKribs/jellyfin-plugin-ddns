@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using Jellyfin.Plugin.DynamicDns.Configuration;
+using Jellyfin.Plugin.DynamicDns.Services;
 using Jellyfin.Plugin.DynamicDns.Utilities;
 using JPKribs.Jellyfin.Base;
 using MediaBrowser.Common.Configuration;
@@ -79,6 +80,12 @@ public class Plugin : PluginBase<Plugin, PluginConfiguration>
         if (configuration is PluginConfiguration config)
         {
             CredentialEncryption.ProtectAll(config.Records, Secrets);
+
+            // The dashboard save audits in its own endpoint, and this generic path is the only other
+            // place records can change. Diffing after ProtectAll compares stored forms, so a ciphertext
+            // echoed back by a client is unchanged while a newly entered credential is a fresh
+            // encryption. Configuration can be null on the very first save before any file exists.
+            ConfigurationAudit.LogRecordChanges(ActivityLogger.Instance, Configuration?.Records, config.Records);
         }
 
         base.UpdateConfiguration(configuration);

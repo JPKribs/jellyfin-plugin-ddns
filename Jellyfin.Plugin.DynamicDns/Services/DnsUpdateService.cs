@@ -21,6 +21,10 @@ public sealed class DNSUpdateService : IDisposable
     // Action label written when a record is paused by the failure backoff policy.
     private const string BackingOffAction = "Backing off";
 
+    // Consecutive failed detections before the activity log gets an unhealthy warning. Four runs is
+    // about an hour on the default fifteen minute schedule, long enough to skip transient blips.
+    private const int UnhealthyDetectionRuns = 4;
+
     // Only one update pass runs at a time, so a manual run and the scheduled run never overlap.
     private readonly SemaphoreSlim _runLock = new(1, 1);
 
@@ -29,6 +33,7 @@ public sealed class DNSUpdateService : IDisposable
     private readonly StatusStoreService _statusStore;
     private readonly Dictionary<DNSProviderKind, IDNSProvider> _providers;
     private readonly SecretProtector _secrets;
+    private readonly ActivityLogger _activity;
     private readonly ILogger<DNSUpdateService> _logger;
 
     /// <summary>
@@ -39,6 +44,7 @@ public sealed class DNSUpdateService : IDisposable
     /// <param name="statusStore">The store that holds runtime status outside the configuration.</param>
     /// <param name="providers">The registered DNS providers.</param>
     /// <param name="secrets">The secret protector for credentials at rest.</param>
+    /// <param name="activity">The activity log writer.</param>
     /// <param name="logger">The logger.</param>
     public DNSUpdateService(
         IPDetectionService ipDetection,
@@ -46,6 +52,7 @@ public sealed class DNSUpdateService : IDisposable
         StatusStoreService statusStore,
         IEnumerable<IDNSProvider> providers,
         SecretProtector secrets,
+        ActivityLogger activity,
         ILogger<DNSUpdateService> logger)
     {
         ArgumentNullException.ThrowIfNull(providers);
@@ -53,6 +60,7 @@ public sealed class DNSUpdateService : IDisposable
         _dnsLookup = dnsLookup;
         _statusStore = statusStore;
         _secrets = secrets;
+        _activity = activity;
         _logger = logger;
         _providers = providers.ToDictionary(p => p.Kind);
     }
@@ -102,14 +110,30 @@ public sealed class DNSUpdateService : IDisposable
         // this pass iterates. Status written during the run lands on the clones, never on live config.
         var config = plugin.ReadConfiguration(Snapshot);
 
+        var status = _statusStore.Load();
+
         if (plugin.SecretsPlaintext)
         {
             outcome.Warnings.Add(
                 "Credential encryption is unavailable on this host, so provider credentials are stored "
                 + "in plaintext. Check the server log for details.");
-        }
 
-        var status = _statusStore.Load();
+            // One activity log warning per encryption outage, not one per run.
+            if (!status.PlaintextWarningLogged)
+            {
+                status.PlaintextWarningLogged = true;
+                _activity.Log(
+                    "Dynamic DNS is storing credentials in plaintext",
+                    "DynamicDNS.PlaintextCredentials",
+                    "Credential encryption is unavailable on this host. Check the server log for details.",
+                    LogLevel.Warning);
+            }
+        }
+        else
+        {
+            // Encryption is working again, so a future outage warns anew.
+            status.PlaintextWarningLogged = false;
+        }
         var timeout = TimeSpan.FromSeconds(config.RequestTimeoutSeconds > 0 ? config.RequestTimeoutSeconds : 15);
 
         var enabled = config.Records.Where(r => r.Enabled).ToList();
@@ -136,6 +160,13 @@ public sealed class DNSUpdateService : IDisposable
         status.DetectedIPv4 = ip.IPv4 ?? string.Empty;
         status.DetectedIPv6 = ip.IPv6 ?? string.Empty;
         status.DetectionMessage = string.Join(" ", outcome.Warnings);
+
+        // Detection health only matters once records exist, since with none configured there is
+        // nothing the missing address would have updated.
+        if (enabled.Count > 0)
+        {
+            UpdateDetectionHealth(status, (needV4 && ip.IPv4 is null) || (needV6 && ip.IPv6 is null), outcome);
+        }
 
         var forceInterval = config.ForceUpdateHours > 0 ? TimeSpan.FromHours(config.ForceUpdateHours) : TimeSpan.Zero;
         var backoffThreshold = config.BackoffAfterFailures;
@@ -221,8 +252,98 @@ public sealed class DNSUpdateService : IDisposable
             outcome.Records.Add(result);
         }
 
+        LogOutcomes(enabled, outcome, ip);
         PersistStatus(status, plugin, enabled, statusUpdates, ip, backoffThreshold, backoffWindow);
         return outcome;
+    }
+
+    /// <summary>
+    /// Tracks detection health across runs so a persistent inability to find a public IP surfaces once
+    /// in the activity log rather than on every run, with a recovery entry when detection returns.
+    /// </summary>
+    private void UpdateDetectionHealth(StatusData status, bool detectionFailed, DNSUpdateOutcome outcome)
+    {
+        if (detectionFailed)
+        {
+            status.ConsecutiveDetectionFailures++;
+            if (status.ConsecutiveDetectionFailures >= UnhealthyDetectionRuns && !status.DetectionUnhealthyLogged)
+            {
+                status.DetectionUnhealthyLogged = true;
+                _activity.Log(
+                    "Dynamic DNS has been unable to detect a public IP",
+                    "DynamicDNS.DetectionUnhealthy",
+                    "Detection has failed for " + status.ConsecutiveDetectionFailures
+                    + " runs in a row. " + string.Join(" ", outcome.Warnings),
+                    LogLevel.Warning);
+            }
+
+            return;
+        }
+
+        if (status.DetectionUnhealthyLogged)
+        {
+            _activity.Log(
+                "Dynamic DNS public IP detection recovered",
+                "DynamicDNS.DetectionRecovered",
+                "Detection succeeded after " + status.ConsecutiveDetectionFailures + " failed runs.");
+        }
+
+        status.ConsecutiveDetectionFailures = 0;
+        status.DetectionUnhealthyLogged = false;
+    }
+
+    /// <summary>
+    /// Writes activity log entries for the records that actually contacted their provider. Skips stay
+    /// silent, a successful push is informational, and a failed push is an error. Backoff caps how many
+    /// error entries one broken record can produce before it pauses.
+    /// </summary>
+    private void LogOutcomes(List<DNSRecord> enabled, DNSUpdateOutcome outcome, DetectedIP ip)
+    {
+        foreach (var result in outcome.Records)
+        {
+            if (result.Skipped)
+            {
+                continue;
+            }
+
+            if (result.Success)
+            {
+                var record = enabled.Find(r => string.Equals(r.Id, result.Id, StringComparison.Ordinal));
+                _activity.Log(
+                    "Dynamic DNS updated " + result.Hostname + NewAddressSummary(record, ip),
+                    "DynamicDNS.RecordUpdated",
+                    result.Message);
+            }
+            else
+            {
+                _activity.Log(
+                    "Dynamic DNS update failed for " + result.Hostname,
+                    "DynamicDNS.RecordFailed",
+                    result.Message,
+                    LogLevel.Error);
+            }
+        }
+    }
+
+    private static string NewAddressSummary(DNSRecord? record, DetectedIP ip)
+    {
+        if (record is null)
+        {
+            return string.Empty;
+        }
+
+        var parts = new List<string>(2);
+        if (record.WantsIPv4(ip))
+        {
+            parts.Add(ip.IPv4!);
+        }
+
+        if (record.WantsIPv6(ip))
+        {
+            parts.Add(ip.IPv6!);
+        }
+
+        return parts.Count == 0 ? string.Empty : " to " + string.Join(" and ", parts);
     }
 
     private static PluginConfiguration Snapshot(PluginConfiguration config) => new()
@@ -284,7 +405,20 @@ public sealed class DNSUpdateService : IDisposable
                 continue;
             }
 
+            // A record crossing into backoff this run gets one warning entry. While it stays paused the
+            // timestamp is already set, so the streak produces no further entries until it recovers.
+            var wasBackingOff = record.BackoffUntilUtc is not null;
             ApplyOutcome(record, result, ip, backoffThreshold, backoffWindow);
+            if (!wasBackingOff && record.BackoffUntilUtc is not null)
+            {
+                _activity.Log(
+                    "Dynamic DNS paused updates for " + record.Hostname,
+                    "DynamicDNS.RecordBackoff",
+                    "Paused after " + record.ConsecutiveFailures + " consecutive failures. The next attempt is after "
+                    + record.BackoffUntilUtc.Value.ToString("u", CultureInfo.InvariantCulture) + ".",
+                    LogLevel.Warning);
+            }
+
             status.Records[record.Id] = RecordStatus.FromRecord(record);
         }
 

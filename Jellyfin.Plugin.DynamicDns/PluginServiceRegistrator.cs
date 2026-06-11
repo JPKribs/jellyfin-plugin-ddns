@@ -55,6 +55,7 @@ public class PluginServiceRegistrator : IPluginServiceRegistrator
 
             return new SecretProtector("Jellyfin.Plugin.DynamicDns.Secrets.v1", logger, provider);
         });
+        serviceCollection.AddSingleton<ActivityLogger>();
         serviceCollection.AddSingleton<IPDetectionService>();
         serviceCollection.AddSingleton<DNSLookupService>();
         serviceCollection.AddSingleton<StatusStoreService>();

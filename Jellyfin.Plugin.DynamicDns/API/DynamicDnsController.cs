@@ -32,6 +32,7 @@ public class DynamicDNSController : ControllerBase
     private readonly DNSUpdateService _updateService;
     private readonly StatusStoreService _statusStore;
     private readonly SecretProtector _secrets;
+    private readonly ActivityLogger _activity;
     private readonly IEnumerable<IDNSProvider> _providers;
 
     /// <summary>
@@ -40,12 +41,14 @@ public class DynamicDNSController : ControllerBase
     /// <param name="updateService">The update service.</param>
     /// <param name="statusStore">The runtime status store.</param>
     /// <param name="secrets">The secret protector for credentials at rest.</param>
+    /// <param name="activity">The activity log writer.</param>
     /// <param name="providers">The registered DNS providers, used to drive the provider dropdown and fields.</param>
-    public DynamicDNSController(DNSUpdateService updateService, StatusStoreService statusStore, SecretProtector secrets, IEnumerable<IDNSProvider> providers)
+    public DynamicDNSController(DNSUpdateService updateService, StatusStoreService statusStore, SecretProtector secrets, ActivityLogger activity, IEnumerable<IDNSProvider> providers)
     {
         _updateService = updateService;
         _statusStore = statusStore;
         _secrets = secrets;
+        _activity = activity;
         _providers = providers;
     }
 
@@ -113,9 +116,15 @@ public class DynamicDNSController : ControllerBase
             return NotFound();
         }
 
+        // The merge replaces the record list and never mutates the stored record objects, so the prior
+        // list captured here still holds the pre save values for the audit diff after the mutation.
+        List<DNSRecord>? before = null;
+        List<DNSRecord>? after = null;
         plugin.MutateConfiguration(current =>
         {
+            before = current.Records;
             current.Records = RecordMerge.Apply(current.Records, incoming.Records, ResolveSecret, () => Guid.NewGuid().ToString("N"));
+            after = current.Records;
             current.IPv4DetectionUrl = incoming.IPv4DetectionUrl ?? string.Empty;
             current.IPv6DetectionUrl = incoming.IPv6DetectionUrl ?? string.Empty;
             current.ForceUpdateHours = Math.Max(0, incoming.ForceUpdateHours);
@@ -126,6 +135,8 @@ public class DynamicDNSController : ControllerBase
 
             return true;
         });
+
+        ConfigurationAudit.LogRecordChanges(_activity, before, after);
 
         var status = _statusStore.Load();
         return Ok(plugin.ReadConfiguration(c => Redact(c, status)));
