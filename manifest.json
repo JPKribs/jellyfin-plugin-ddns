@@ -9,6 +9,14 @@
     "category": "Administration",
     "versions": [
       {
+        "version": "10.11.3.1",
+        "changelog": "## Developer\r\n- Bump Base to 2026.7.12\r\n- Use ActivityLogger from Base 2026.7.12\r\n- Use BackoffPolicy from Base 2026.7.12",
+        "targetAbi": "10.11.0.0",
+        "sourceUrl": "https://github.com/JPKribs/jellyfin-plugin-ddns/releases/download/v10.11.3.1/jellyfin-plugin-ddns-10.11.3.1.zip",
+        "checksum": "052a540f5834a7b7097c6977a0d16599",
+        "timestamp": "2026-07-11T23:30:21Z"
+      },
+      {
         "version": "10.11.3.0",
         "changelog": "## Feature\r\n- Output logging to Activity Logs for better visibility",
         "targetAbi": "10.11.0.0",
