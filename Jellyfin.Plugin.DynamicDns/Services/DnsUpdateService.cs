@@ -189,7 +189,7 @@ public sealed class DNSUpdateService : IDisposable
             };
 
             var now = DateTime.UtcNow;
-            if (BackoffPolicy.IsBackingOff(record, backoffThreshold, now))
+            if (RecordBackoff.IsBackingOff(record, backoffThreshold, now))
             {
                 result.Skipped = true;
                 result.Success = false;
@@ -453,7 +453,7 @@ public sealed class DNSUpdateService : IDisposable
             return;
         }
 
-        BackoffPolicy.ApplyAttempt(record, result.Success, backoffThreshold, backoffWindow, now);
+        RecordBackoff.ApplyAttempt(record, result.Success, backoffThreshold, backoffWindow, now);
 
         if (result.Success)
         {

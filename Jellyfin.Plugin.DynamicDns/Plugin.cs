@@ -85,7 +85,7 @@ public class Plugin : PluginBase<Plugin, PluginConfiguration>
             // place records can change. Diffing after ProtectAll compares stored forms, so a ciphertext
             // echoed back by a client is unchanged while a newly entered credential is a fresh
             // encryption. Configuration can be null on the very first save before any file exists.
-            ConfigurationAudit.LogRecordChanges(ActivityLogger.Instance, Configuration?.Records, config.Records);
+            ConfigurationAudit.LogRecordChanges(ActivityLoggerAccessor.Instance, Configuration?.Records, config.Records);
         }
 
         base.UpdateConfiguration(configuration);

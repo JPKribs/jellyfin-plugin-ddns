@@ -5,6 +5,7 @@ using Jellyfin.Plugin.DynamicDns.Utilities;
 using JPKribs.Jellyfin.Base;
 using MediaBrowser.Controller;
 using MediaBrowser.Controller.Plugins;
+using MediaBrowser.Model.Activity;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -55,7 +56,14 @@ public class PluginServiceRegistrator : IPluginServiceRegistrator
 
             return new SecretProtector("Jellyfin.Plugin.DynamicDns.Secrets.v1", logger, provider);
         });
-        serviceCollection.AddSingleton<ActivityLogger>();
+        serviceCollection.AddSingleton<ActivityLogger>(sp =>
+        {
+            var log = new ActivityLogger(
+                sp.GetRequiredService<IActivityManager>(),
+                sp.GetRequiredService<ILogger<ActivityLogger>>());
+            ActivityLoggerAccessor.Instance = log;
+            return log;
+        });
         serviceCollection.AddSingleton<IPDetectionService>();
         serviceCollection.AddSingleton<DNSLookupService>();
         serviceCollection.AddSingleton<StatusStoreService>();

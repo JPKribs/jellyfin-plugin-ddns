@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Jellyfin.Plugin.DynamicDns.Models;
-using Jellyfin.Plugin.DynamicDns.Services;
+using JPKribs.Jellyfin.Base;
 
 namespace Jellyfin.Plugin.DynamicDns.Utilities;
 
