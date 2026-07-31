@@ -32,7 +32,7 @@ public sealed class DslReports1Provider : DNSProviderBase
     public override string Label => "DSLReports";
 
     /// <inheritdoc />
-    public override string Hint => "Login and Password are your DSLReports credentials.";
+    public override string Hint => "Login and Password are your DSLReports credentials. This protocol carries IPv4 only.";
 
     /// <inheritdoc />
     public override ProviderFields Fields => new()
@@ -41,8 +41,12 @@ public sealed class DslReports1Provider : DNSProviderBase
         Login = "Username",
         Password = "Password",
         Server = true,
+        IPv6 = false,
         Advanced = new[] { "static" },
     };
+
+    /// <inheritdoc />
+    public override bool SupportsIPv6 => false;
 
     /// <inheritdoc />
     public override async Task<DNSUpdateResult> UpdateAsync(DNSRecord record, DetectedIP ip, CancellationToken cancellationToken)

@@ -28,17 +28,23 @@ log() {
     esac
 }
 
-# Get version from build.yaml (single source of truth)
-get_plugin_version() {
+# Read one top-level scalar from build.yaml. Takes everything after the first colon so a value
+# containing a colon survives, trims surrounding whitespace, and strips one layer of quotes.
+read_yaml_value() {
+    local key="$1"
     local build_file="build.yaml"
 
-    if [[ -f "$build_file" ]]; then
-        # Extract version value, handling both quoted and unquoted formats
-        local version=$(grep '^version:' "$build_file" | cut -d':' -f2 | tr -d ' "')
-        if [[ -n "$version" ]]; then
-            echo "$version"
-            return
-        fi
+    [[ -f "$build_file" ]] || return 0
+    sed -n "s/^${key}:[[:space:]]*//p" "$build_file" | head -n 1 \
+        | sed -e 's/[[:space:]]*$//' -e 's/^"\(.*\)"$/\1/' -e "s/^'\(.*\)'\$/\1/"
+}
+
+# Get version from build.yaml (single source of truth)
+get_plugin_version() {
+    local version=$(read_yaml_value "version")
+    if [[ -n "$version" ]]; then
+        echo "$version"
+        return
     fi
 
     # Four-part fallback: a 3-part version would normalize the assembly version
@@ -48,17 +54,14 @@ get_plugin_version() {
 
 # Get plugin info from build.yaml
 get_plugin_info() {
-    local build_file="build.yaml"
     local name="Dynamic DNS"
     local guid="8150dce5-6153-4924-a985-a6927be95baa"
 
-    if [[ -f "$build_file" ]]; then
-        local extracted_name=$(grep '^name:' "$build_file" | cut -d':' -f2 | tr -d ' "')
-        local extracted_guid=$(grep '^guid:' "$build_file" | cut -d':' -f2 | tr -d ' "')
+    local extracted_name=$(read_yaml_value "name")
+    local extracted_guid=$(read_yaml_value "guid")
 
-        [[ -n "$extracted_name" ]] && name="$extracted_name"
-        [[ -n "$extracted_guid" ]] && guid="$extracted_guid"
-    fi
+    [[ -n "$extracted_name" ]] && name="$extracted_name"
+    [[ -n "$extracted_guid" ]] && guid="$extracted_guid"
 
     echo "$name|$guid"
 }
@@ -220,7 +223,7 @@ main() {
         log "INFO" "Bundling plugin image: Logo.png"
         cp "$logo_src" "$temp_dir/Logo.png"
 
-        local target_abi=$(grep '^targetAbi:' build.yaml | cut -d':' -f2 | tr -d ' "')
+        local target_abi=$(read_yaml_value "targetAbi")
         [[ -z "$target_abi" ]] && target_abi="10.11.0.0"
         local meta_timestamp=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 

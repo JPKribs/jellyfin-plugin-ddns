@@ -12,13 +12,19 @@ namespace Jellyfin.Plugin.DynamicDns.Providers.Implementations;
 
 /// <summary>
 /// Hetzner Cloud DNS API. Port of ddclient's <c>nic_hetzner_update</c>: for each enabled record type it
-/// looks up the existing rrset, then either sets its records or creates a new rrset, and polls the
-/// returned action until it reports success. Set password to a Hetzner Cloud API token. Login is unused.
+/// looks up the existing rrset, then either sets its records or creates a new rrset, and briefly polls the
+/// returned action. An action still pending after the polls counts as success, since Hetzner has accepted
+/// the change and applies it asynchronously. Set password to a Hetzner Cloud API token. Login is unused.
 /// </summary>
 public sealed class HetznerProvider : DNSProviderBase
 {
     private const string DefaultServer = "api.hetzner.cloud/v1";
-    private const int MaxStatusTries = 5;
+
+    // The whole update runs inside the plugin's request timeout (fifteen seconds by default), so the
+    // polls are short and few. A still-pending action is treated as accepted rather than burning the
+    // budget waiting, which would misreport an accepted update as a timeout and feed the backoff.
+    private const int MaxStatusTries = 3;
+    private static readonly TimeSpan PollDelay = TimeSpan.FromSeconds(2);
 
     /// <summary>Initializes a new instance of the <see cref="HetznerProvider"/> class.</summary>
     /// <param name="httpClientFactory">The HTTP client factory.</param>
@@ -136,8 +142,11 @@ public sealed class HetznerProvider : DNSProviderBase
         else
         {
             actionUrl = server + "/zones/" + Uri.EscapeDataString(zone) + "/rrsets";
-            // hostname is user-supplied. JSON-encode it so a name with a quote/backslash can't corrupt the body.
-            body = "{\"name\":" + JsonSerializer.Serialize(hostname) + ",\"type\":\"" + type + "\",\"ttl\":" + ttl.ToString(System.Globalization.CultureInfo.InvariantCulture) + ",\"records\":[{\"value\":\"" + ipValue + "\"}]}";
+            // The 1 "automatic" sentinel omits the ttl so the zone default applies, rather than creating
+            // the rrset with a literal one-second TTL. hostname is user-supplied, so it is JSON-encoded
+            // to keep a name with a quote/backslash from corrupting the body.
+            var ttlPart = ttl > 1 ? ",\"ttl\":" + ttl.ToString(System.Globalization.CultureInfo.InvariantCulture) : string.Empty;
+            body = "{\"name\":" + JsonSerializer.Serialize(hostname) + ",\"type\":\"" + type + "\"" + ttlPart + ",\"records\":[{\"value\":\"" + ipValue + "\"}]}";
         }
 
         var apply = await SendAsync(HttpMethod.Post, actionUrl, cancellationToken, headers, body).ConfigureAwait(false);
@@ -182,10 +191,12 @@ public sealed class HetznerProvider : DNSProviderBase
                 break;
             }
 
-            await Task.Delay(TimeSpan.FromSeconds(10), cancellationToken).ConfigureAwait(false);
+            await Task.Delay(PollDelay, cancellationToken).ConfigureAwait(false);
         }
 
-        return (false, "update failed (timeout while checking action " + actionId + ")");
+        // Hetzner accepted the action and has not reported an error, so the change is applying
+        // asynchronously. Report success rather than a false timeout the backoff would count.
+        return (true, "set to " + ipValue + " (action " + actionId + " accepted, still applying)");
     }
 
     private static bool HasRrset(string body)

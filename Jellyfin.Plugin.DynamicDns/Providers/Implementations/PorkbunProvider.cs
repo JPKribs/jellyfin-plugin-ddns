@@ -93,8 +93,19 @@ public sealed class PorkbunProvider : DNSProviderBase
                 return DNSUpdateResult.Fail("hostname must contain a domain, or set a zone (root-domain).");
             }
 
-            subDomain = record.Hostname.Substring(0, dot);
-            domain = record.Hostname.Substring(dot + 1);
+            // A two-label hostname is the apex domain itself, not a subdomain of the TLD. Deeper
+            // hostnames split on the first dot; set the zone explicitly for multi-label subdomains or
+            // multi-label TLDs like .co.uk.
+            if (record.Hostname.IndexOf('.', dot + 1) < 0)
+            {
+                subDomain = string.Empty;
+                domain = record.Hostname;
+            }
+            else
+            {
+                subDomain = record.Hostname.Substring(0, dot);
+                domain = record.Hostname.Substring(dot + 1);
+            }
         }
 
         var server = ServerBase(record, DefaultServer);

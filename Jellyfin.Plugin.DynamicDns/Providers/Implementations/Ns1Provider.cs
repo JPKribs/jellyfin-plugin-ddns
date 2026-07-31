@@ -95,7 +95,7 @@ public sealed class Ns1Provider : DNSProviderBase
         }
 
         var server = ServerBase(record, DefaultServer);
-        var ttl = record.Ttl > 1 ? record.Ttl : 300;
+        var ttl = ResolveTtl(record);
         var headers = BuildHeaders(record.Login);
 
         return await ApplyPerFamilyAsync(
@@ -138,7 +138,15 @@ public sealed class Ns1Provider : DNSProviderBase
             exists = HasType(get.Body);
         }
 
-        var body = "{\"answers\":[{\"answer\":[\"" + ipValue + "\"]}],\"ttl\":" + ttl.ToString(CultureInfo.InvariantCulture) + "}";
+        // A create (PUT) must also carry the zone, domain, and type, or NS1 rejects it and a record
+        // that does not exist yet can never be created. The update (POST) body needs only the answers.
+        var answers = "\"answers\":[{\"answer\":[\"" + ipValue + "\"]}],\"ttl\":" + ttl.ToString(CultureInfo.InvariantCulture);
+        var body = exists
+            ? "{" + answers + "}"
+            : "{\"zone\":" + JsonSerializer.Serialize(domain)
+                + ",\"domain\":" + JsonSerializer.Serialize(host)
+                + ",\"type\":\"" + rrtype + "\","
+                + answers + "}";
         var method = exists ? HttpMethod.Post : HttpMethod.Put;
 
         var update = await SendAsync(method, server + path, cancellationToken, headers, body).ConfigureAwait(false);

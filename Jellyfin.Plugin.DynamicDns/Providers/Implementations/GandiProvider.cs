@@ -53,6 +53,9 @@ public sealed class GandiProvider : DNSProviderBase
         Ttl = true,
     };
 
+    /// <summary>Gandi LiveDNS rejects rrset TTLs below 300 seconds, so the "automatic" sentinel resolves to that minimum.</summary>
+    protected override int DefaultTtl => 300;
+
     /// <inheritdoc />
     public override async Task<DNSUpdateResult> UpdateAsync(DNSRecord record, DetectedIP ip, CancellationToken cancellationToken)
     {
@@ -89,7 +92,7 @@ public sealed class GandiProvider : DNSProviderBase
         return await ApplyPerFamilyAsync(
             record,
             ip,
-            (type, address, ct) => UpdateTypeAsync(baseUrl, type, address, record.Ttl, headers, ct),
+            (type, address, ct) => UpdateTypeAsync(baseUrl, type, address, ResolveTtl(record), headers, ct),
             cancellationToken).ConfigureAwait(false);
     }
 

@@ -8,4 +8,6 @@ Set the record's **Provider** to **OVH**, then fill these fields.
 
 OVH uses DynHost credentials, which you create per record in the OVH panel, not your main OVH API keys.
 
+DynHost carries a single IPv4 address, so the IPv6 (AAAA) toggle is hidden for it.
+
 _Ported from ddclient's `nic_ovh_update`._

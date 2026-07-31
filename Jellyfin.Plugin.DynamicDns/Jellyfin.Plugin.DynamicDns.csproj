@@ -24,6 +24,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <InternalsVisibleTo Include="Jellyfin.Plugin.DynamicDns.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
     <!-- Admin dashboard pages (tabs) -->
     <EmbeddedResource Include="Configuration\ddns_domains.html" />
     <EmbeddedResource Include="Configuration\ddns_domains.js" />

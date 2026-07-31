@@ -24,7 +24,7 @@ export default function (view) {
     var FIELDS = {};
 
     // Fallback spec showing every field for an unrecognized provider.
-    var DEFAULT_FIELDS = { h: 'Hostname', l: 'Login', p: 'Password', z: 'Zone', s: true, t: true, a: ['wildcard', 'static', 'mx', 'backupmx'] };
+    var DEFAULT_FIELDS = { h: 'Hostname', l: 'Login', p: 'Password', z: 'Zone', s: true, t: true, v6: true, a: ['wildcard', 'static', 'mx', 'backupmx'] };
 
     var config = null;
     var records = [];
@@ -55,7 +55,7 @@ export default function (view) {
                 var f = p.fields || {};
                 FIELDS[p.value] = {
                     h: f.Hostname || null, l: f.Login || null, p: f.Password || null,
-                    z: f.Zone || null, s: !!f.Server, t: !!f.Ttl, a: f.Advanced || []
+                    z: f.Zone || null, s: !!f.Server, t: !!f.Ttl, v6: f.IPv6 !== false, a: f.Advanced || []
                 };
             });
             _providersLoaded = true;
@@ -173,7 +173,9 @@ export default function (view) {
         setField('recPassword', spec.p);
         setField('recZone', spec.z);
         setField('recServer', spec.s === true ? 'Server override' : (spec.s || null));
-        setField('recTtl', spec.t ? 'TTL in seconds. 1 means automatic when supported' : null);
+        setField('recTtl', spec.t ? 'TTL in seconds. 1 uses the provider default' : null);
+        // Single-address protocols cannot push an AAAA record, so the IPv6 toggle is hidden for them.
+        setCheck('recUpdateIPv6', spec.v6 !== false);
         setCheck('recWildcard', adv.indexOf('wildcard') >= 0);
         setCheck('recStatic', adv.indexOf('static') >= 0);
         setField('recMx', adv.indexOf('mx') >= 0 ? 'MX host for the dyndns family' : null);

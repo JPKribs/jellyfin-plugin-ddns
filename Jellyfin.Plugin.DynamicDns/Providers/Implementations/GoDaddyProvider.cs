@@ -52,6 +52,9 @@ public sealed class GoDaddyProvider : DNSProviderBase
         Ttl = true,
     };
 
+    /// <summary>GoDaddy rejects record TTLs below 600 seconds, so the "automatic" sentinel resolves to that minimum.</summary>
+    protected override int DefaultTtl => 600;
+
     /// <inheritdoc />
     public override async Task<DNSUpdateResult> UpdateAsync(DNSRecord record, DetectedIP ip, CancellationToken cancellationToken)
     {
@@ -81,7 +84,7 @@ public sealed class GoDaddyProvider : DNSProviderBase
         return await ApplyPerFamilyAsync(
             record,
             ip,
-            (type, address, ct) => PushAsync(server, zone, hostname, type, address, record.Ttl, authorization, ct),
+            (type, address, ct) => PushAsync(server, zone, hostname, type, address, ResolveTtl(record), authorization, ct),
             cancellationToken).ConfigureAwait(false);
     }
 

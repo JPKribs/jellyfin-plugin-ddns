@@ -138,6 +138,18 @@ public sealed class DNSUpdateService : IDisposable
 
         var enabled = config.Records.Where(r => r.Enabled).ToList();
 
+        // Single-address protocols cannot push an AAAA record, so IPv6 is cleared on those records up
+        // front (these are the run's snapshot clones, never the stored configuration). Detection, the
+        // update decision, and the status bookkeeping then all agree no IPv6 push is pending, instead of
+        // endlessly re-pushing because an address the protocol cannot deliver never matches DNS.
+        foreach (var record in enabled)
+        {
+            if (record.UpdateIPv6 && _providers.TryGetValue(record.Provider, out var p) && !p.SupportsIPv6)
+            {
+                record.UpdateIPv6 = false;
+            }
+        }
+
         // The families to detect follow the records. IPv4 is also detected when there are no records yet,
         // so the dashboard can still show the current address.
         var needV4 = enabled.Count == 0 || enabled.Any(r => r.UpdateIPv4);
@@ -248,6 +260,8 @@ public sealed class DNSUpdateService : IDisposable
             result.Success = providerResult.Success;
             result.Action = providerResult.Success ? "Updated" : "Failed";
             result.Message = providerResult.Message;
+            result.IPv4Applied = providerResult.IPv4Applied;
+            result.IPv6Applied = providerResult.IPv6Applied;
             statusUpdates[record.Id] = result;
             outcome.Records.Add(result);
         }
@@ -433,7 +447,8 @@ public sealed class DNSUpdateService : IDisposable
         _statusStore.Save(status);
     }
 
-    private static void ApplyOutcome(DNSRecord record, RecordOutcome result, DetectedIP ip, int backoffThreshold, TimeSpan backoffWindow)
+    // Internal (not private) so the outcome bookkeeping matrix is testable without a full run.
+    internal static void ApplyOutcome(DNSRecord record, RecordOutcome result, DetectedIP ip, int backoffThreshold, TimeSpan backoffWindow)
     {
         var now = DateTime.UtcNow;
         record.LastStatus = result.Message;
@@ -453,22 +468,29 @@ public sealed class DNSUpdateService : IDisposable
             return;
         }
 
-        RecordBackoff.ApplyAttempt(record, result.Success, backoffThreshold, backoffWindow, now);
+        // A partial success (one family pushed, the other rejected) still reaches the provider and is
+        // accepted by it, so it must not walk a record into backoff and silence the family that works.
+        // The overall result stays failed, which surfaces the broken family and retries it next run.
+        var v4Applied = result.IPv4Applied ?? (result.Success && record.WantsIPv4(ip));
+        var v6Applied = result.IPv6Applied ?? (result.Success && record.WantsIPv6(ip));
+        RecordBackoff.ApplyAttempt(record, result.Success || v4Applied || v6Applied, backoffThreshold, backoffWindow, now);
+
+        // Record only the addresses that actually landed, per family, so a family the provider rejected
+        // (or cannot carry) is never marked as pushed and silently skipped forever after.
+        if (v4Applied)
+        {
+            record.LastIPv4 = ip.IPv4!;
+        }
+
+        if (v6Applied)
+        {
+            record.LastIPv6 = ip.IPv6!;
+        }
 
         if (result.Success)
         {
-            // A real push succeeded, so reset the force update clock and record the addresses.
+            // Every enabled family succeeded, so reset the force update clock.
             record.LastUpdateUtc = now;
-
-            if (record.WantsIPv4(ip))
-            {
-                record.LastIPv4 = ip.IPv4!;
-            }
-
-            if (record.WantsIPv6(ip))
-            {
-                record.LastIPv6 = ip.IPv6!;
-            }
         }
     }
 }

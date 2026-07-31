@@ -16,7 +16,7 @@ namespace Jellyfin.Plugin.DynamicDns.Providers.Implementations;
 /// Spaceship (port of ddclient's <c>nic_spaceship_update</c>). Authenticates via the
 /// <c>X-Api-Key</c> / <c>X-Api-Secret</c> headers: set login to the API key and password to the API
 /// secret. Zone is the domain. The subdomain is derived from the hostname (<c>@</c> for the apex).
-/// Per record type it lists the zone's records, deletes existing matches, then PUTs the new value.
+/// Per record type it lists the zone's records, PUTs the new value, then deletes the stale matches.
 /// </summary>
 public sealed class SpaceshipProvider : DNSProviderBase
 {
@@ -49,6 +49,9 @@ public sealed class SpaceshipProvider : DNSProviderBase
         Server = true,
         Ttl = true,
     };
+
+    /// <summary>ddclient defaults Spaceship records to a 1800 second TTL, so the "automatic" sentinel resolves to that.</summary>
+    protected override int DefaultTtl => 1800;
 
     /// <inheritdoc />
     public override async Task<DNSUpdateResult> UpdateAsync(DNSRecord record, DetectedIP ip, CancellationToken cancellationToken)
@@ -92,8 +95,19 @@ public sealed class SpaceshipProvider : DNSProviderBase
                 return DNSUpdateResult.Fail("cannot infer zone from '" + record.Hostname + "': no dot in hostname; set a zone.");
             }
 
-            subdomain = record.Hostname.Substring(0, dot);
-            domain = record.Hostname.Substring(dot + 1);
+            // A two-label hostname is the apex domain itself, not a subdomain of the TLD. Deeper
+            // hostnames split on the first dot; set the zone explicitly for multi-label subdomains or
+            // multi-label TLDs like .co.uk.
+            if (record.Hostname.IndexOf('.', dot + 1) < 0)
+            {
+                subdomain = "@";
+                domain = record.Hostname;
+            }
+            else
+            {
+                subdomain = record.Hostname.Substring(0, dot);
+                domain = record.Hostname.Substring(dot + 1);
+            }
         }
 
         var server = ServerBase(record, DefaultServer);
@@ -103,7 +117,7 @@ public sealed class SpaceshipProvider : DNSProviderBase
         return await ApplyPerFamilyAsync(
             record,
             ip,
-            (type, address, ct) => SetRecordAsync(basePath, headers, subdomain, type, address, record.Ttl, ct),
+            (type, address, ct) => SetRecordAsync(basePath, headers, subdomain, type, address, ResolveTtl(record), ct),
             cancellationToken).ConfigureAwait(false);
     }
 
@@ -171,8 +185,35 @@ public sealed class SpaceshipProvider : DNSProviderBase
             return (false, "failed to parse record list");
         }
 
+        // Already serving exactly the target address: nothing to write.
+        if (addresses.Count == 1 && string.Equals(addresses[0], ipValue, StringComparison.OrdinalIgnoreCase))
+        {
+            return (true, "already set to " + ipValue);
+        }
+
+        // Write the new record before touching the old ones. If this PUT fails, the existing records are
+        // still in place, so a transient error leaves the hostname stale rather than deleted entirely.
+        var putBody = "{\"force\":true,\"items\":[" + RecordObject(rrtype, subdomain, ipValue, ttl) + "]}";
+        var put = await SendAsync(
+            HttpMethod.Put,
+            basePath,
+            cancellationToken,
+            headers,
+            body: putBody).ConfigureAwait(false);
+        if (!put.Ok)
+        {
+            return (false, "update failed (HTTP " + put.Status + Detail(put.Body) + ")");
+        }
+
+        // Now remove the stale addresses. The new record already resolves, so a failed delete leaves an
+        // extra stale entry beside it and the run is marked failed so the cleanup is retried next pass.
         foreach (var address in addresses)
         {
+            if (string.Equals(address, ipValue, StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
             var delBody = "[" + RecordObject(rrtype, subdomain, address, null) + "]";
             var del = await SendAsync(
                 HttpMethod.Delete,
@@ -182,21 +223,11 @@ public sealed class SpaceshipProvider : DNSProviderBase
                 body: delBody).ConfigureAwait(false);
             if (!del.Ok)
             {
-                return (false, "delete failed (HTTP " + del.Status + Detail(del.Body) + ")");
+                return (false, "set to " + ipValue + ", but removing stale " + address + " failed (HTTP " + del.Status + Detail(del.Body) + ")");
             }
         }
 
-        // force=true replaces any state remaining after the deletes.
-        var putBody = "{\"force\":true,\"items\":[" + RecordObject(rrtype, subdomain, ipValue, ttl) + "]}";
-        var put = await SendAsync(
-            HttpMethod.Put,
-            basePath,
-            cancellationToken,
-            headers,
-            body: putBody).ConfigureAwait(false);
-        return put.Ok
-            ? (true, "set to " + ipValue)
-            : (false, "update failed (HTTP " + put.Status + Detail(put.Body) + ")");
+        return (true, "set to " + ipValue);
     }
 
     private static List<string> ExistingAddresses(string body, string rrtype, string subdomain)

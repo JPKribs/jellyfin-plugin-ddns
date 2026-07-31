@@ -11,9 +11,11 @@ namespace Jellyfin.Plugin.DynamicDns.Providers.Implementations;
 
 /// <summary>
 /// Dinahosting (port of ddclient's <c>nic_dinahosting_update</c>). Basic-auth GET against the dinahosting
-/// API using <see cref="DNSRecord.Login"/>/<see cref="DNSRecord.Password"/>. <see cref="DNSRecord.Hostname"/>
-/// is split into the first label (host) and the remainder (domain), and the <c>Domain_Zone_UpdateType</c>
-/// command sets the A or AAAA record. <see cref="DNSRecord.Server"/> overrides the API host.
+/// API using <see cref="DNSRecord.Login"/>/<see cref="DNSRecord.Password"/>. <see cref="DNSRecord.Zone"/>,
+/// when set, is the domain and the rest of the hostname is the host label; otherwise the hostname is
+/// split on its first dot (with a two-label hostname treated as the apex domain). The
+/// <c>Domain_Zone_UpdateType</c> command sets the A or AAAA record. <see cref="DNSRecord.Server"/>
+/// overrides the API host.
 /// </summary>
 public sealed class DinahostingProvider : DNSProviderBase
 {
@@ -35,7 +37,7 @@ public sealed class DinahostingProvider : DNSProviderBase
     public override string Label => "Dinahosting";
 
     /// <inheritdoc />
-    public override string Hint => "Login and Password are your Dinahosting credentials. Hostname is host.domain.";
+    public override string Hint => "Login and Password are your Dinahosting credentials. Hostname is host.domain. Zone is optional and names the domain when the hostname has more than two labels.";
 
     /// <inheritdoc />
     public override ProviderFields Fields => new()
@@ -43,6 +45,7 @@ public sealed class DinahostingProvider : DNSProviderBase
         Hostname = "Host and domain",
         Login = "Username",
         Password = "Password",
+        Zone = "Domain",
         Server = true,
     };
 
@@ -62,14 +65,47 @@ public sealed class DinahostingProvider : DNSProviderBase
             return DNSUpdateResult.Fail("A hostname is required.");
         }
 
-        var dot = record.Hostname.IndexOf('.', StringComparison.Ordinal);
-        if (dot <= 0 || dot >= record.Hostname.Length - 1)
+        string hostname;
+        string domain;
+        if (!string.IsNullOrWhiteSpace(record.Zone))
         {
-            return DNSUpdateResult.Fail("Hostname must be fully qualified (host.domain.tld).");
+            domain = record.Zone.Trim();
+            if (string.Equals(record.Hostname, domain, StringComparison.OrdinalIgnoreCase))
+            {
+                hostname = string.Empty;
+            }
+            else if (record.Hostname.EndsWith("." + domain, StringComparison.OrdinalIgnoreCase))
+            {
+                hostname = record.Hostname.Substring(0, record.Hostname.Length - domain.Length - 1);
+            }
+            else
+            {
+                return DNSUpdateResult.Fail("hostname does not end with the zone value: " + domain);
+            }
+        }
+        else
+        {
+            var dot = record.Hostname.IndexOf('.', StringComparison.Ordinal);
+            if (dot <= 0 || dot >= record.Hostname.Length - 1)
+            {
+                return DNSUpdateResult.Fail("Hostname must be fully qualified (host.domain.tld).");
+            }
+
+            // A two-label hostname is the apex domain itself, not a host inside the TLD. Deeper
+            // hostnames split on the first dot; set the zone explicitly for multi-label subdomains or
+            // multi-label TLDs like .co.uk.
+            if (record.Hostname.IndexOf('.', dot + 1) < 0)
+            {
+                hostname = string.Empty;
+                domain = record.Hostname;
+            }
+            else
+            {
+                hostname = record.Hostname.Substring(0, dot);
+                domain = record.Hostname.Substring(dot + 1);
+            }
         }
 
-        var hostname = record.Hostname.Substring(0, dot);
-        var domain = record.Hostname.Substring(dot + 1);
         var server = ServerBase(record, DefaultServer);
 
         return await ApplyPerFamilyAsync(

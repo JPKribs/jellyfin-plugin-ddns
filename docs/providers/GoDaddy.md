@@ -7,4 +7,6 @@ Set the record's **Provider** to **GoDaddy**, then fill these fields.
 - **Password**: your GoDaddy API Secret. Create a Production key at developer.godaddy.com/keys.
 - **Zone**: the domain, such as example.com.
 
+A TTL of `1` (the default) sends GoDaddy's 600 second minimum. Values above 1 are sent as entered.
+
 _Ported from ddclient's `nic_godaddy_update`._

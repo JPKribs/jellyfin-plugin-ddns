@@ -33,7 +33,7 @@ public sealed class DynDns1Provider : DNSProviderBase
     public override string Label => "DynDNS v1 (legacy)";
 
     /// <inheritdoc />
-    public override string Hint => "Legacy DynDNS v1. Login and Password are your credentials.";
+    public override string Hint => "Legacy DynDNS v1. Login and Password are your credentials. This protocol carries IPv4 only.";
 
     /// <inheritdoc />
     public override ProviderFields Fields => new()
@@ -42,8 +42,12 @@ public sealed class DynDns1Provider : DNSProviderBase
         Login = "Username",
         Password = "Password",
         Server = true,
+        IPv6 = false,
         Advanced = new[] { "wildcard", "static", "mx", "backupmx" },
     };
+
+    /// <inheritdoc />
+    public override bool SupportsIPv6 => false;
 
     /// <inheritdoc />
     public override async Task<DNSUpdateResult> UpdateAsync(DNSRecord record, DetectedIP ip, CancellationToken cancellationToken)

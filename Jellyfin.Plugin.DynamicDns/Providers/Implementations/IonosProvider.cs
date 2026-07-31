@@ -93,7 +93,7 @@ public sealed class IonosProvider : DNSProviderBase
             return DNSUpdateResult.Fail("zone records lookup failed (HTTP " + recordsReply.Status + ").");
         }
 
-        var ttl = record.Ttl > 1 ? record.Ttl : 300;
+        var ttl = ResolveTtl(record);
         var recordsBody = recordsReply.Body;
         var hostname = record.Hostname;
 

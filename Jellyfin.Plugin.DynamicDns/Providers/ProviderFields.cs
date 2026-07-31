@@ -28,6 +28,13 @@ public sealed class ProviderFields
     /// <summary>Gets a value indicating whether the optional TTL field is shown.</summary>
     public bool Ttl { get; init; }
 
+    /// <summary>
+    /// Gets a value indicating whether the IPv6 (AAAA) toggle is shown. Mirrors
+    /// <see cref="IDNSProvider.SupportsIPv6"/> so the dashboard hides the toggle for single-address
+    /// protocols that cannot push an AAAA record.
+    /// </summary>
+    public bool IPv6 { get; init; } = true;
+
     /// <summary>Gets the advanced flags this provider supports, such as wildcard, static, mx, backupmx.</summary>
     public IReadOnlyList<string> Advanced { get; init; } = Array.Empty<string>();
 }

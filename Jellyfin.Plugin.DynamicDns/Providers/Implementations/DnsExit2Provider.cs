@@ -64,6 +64,9 @@ public sealed class DnsExit2Provider : DNSProviderBase
         Ttl = true,
     };
 
+    /// <summary>ddclient defaults this protocol's TTL to 5, so the 1 "automatic" sentinel resolves to that.</summary>
+    protected override int DefaultTtl => 5;
+
     /// <inheritdoc />
     public override async Task<DNSUpdateResult> UpdateAsync(DNSRecord record, DetectedIP ip, CancellationToken cancellationToken)
     {
@@ -96,8 +99,7 @@ public sealed class DnsExit2Provider : DNSProviderBase
             return DNSUpdateResult.Fail("No record type enabled or no matching IP detected.");
         }
 
-        // ddclient uses a TTL default of 5 for this protocol.
-        var ttl = record.Ttl > 0 ? record.Ttl : 5;
+        var ttl = ResolveTtl(record);
 
         var body = BuildBody(record.Password, zone, name, ttl, ipv4, ipv6);
         var url = ServerBase(record, DefaultServer) + Path;

@@ -66,6 +66,24 @@ public sealed class DdnsFmProvider : DNSProviderBase
             + "&domain=" + Uri.EscapeDataString(record.Hostname)
             + "&myip=" + Uri.EscapeDataString(value);
         var result = await SendAsync(HttpMethod.Get, url, cancellationToken).ConfigureAwait(false);
-        return result.Ok ? (true, "set to " + value) : (false, "HTTP " + result.Status);
+        if (!result.Ok)
+        {
+            return (false, "HTTP " + result.Status);
+        }
+
+        // The service answers with dyndns-style status tokens, so an HTTP 200 carrying an error body
+        // (bad key, unknown domain) must not be recorded as a successful push.
+        var status = FirstToken(result.Body);
+        if (string.Equals(status, "good", StringComparison.OrdinalIgnoreCase))
+        {
+            return (true, "set to " + value);
+        }
+
+        if (string.Equals(status, "nochg", StringComparison.OrdinalIgnoreCase))
+        {
+            return (true, "unchanged: already set to " + value);
+        }
+
+        return (false, "server said: " + FirstLine(result.Body));
     }
 }

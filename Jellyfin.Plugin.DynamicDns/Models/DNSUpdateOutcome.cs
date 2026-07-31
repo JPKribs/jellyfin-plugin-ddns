@@ -27,6 +27,12 @@ public sealed class RecordOutcome
 
     /// <summary>Gets or sets the run outcome: <c>Updated</c>, <c>Unchanged</c>, <c>No address</c>, or <c>Failed</c>.</summary>
     public string Action { get; set; } = string.Empty;
+
+    /// <summary>Gets or sets the per-family IPv4 outcome: <c>null</c> when no IPv4 push was attempted or the provider does not report per family.</summary>
+    public bool? IPv4Applied { get; set; }
+
+    /// <summary>Gets or sets the per-family IPv6 outcome: <c>null</c> when no IPv6 push was attempted or the provider does not report per family.</summary>
+    public bool? IPv6Applied { get; set; }
 }
 
 /// <summary>

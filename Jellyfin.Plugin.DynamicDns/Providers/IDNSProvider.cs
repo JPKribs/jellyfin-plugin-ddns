@@ -30,6 +30,13 @@ public interface IDNSProvider
     ProviderFields Fields { get; }
 
     /// <summary>
+    /// Gets a value indicating whether this provider can push an AAAA (IPv6) record. Single-address
+    /// protocols that only carry one IPv4 value return false, so the update cycle never records an IPv6
+    /// address as pushed when the protocol cannot deliver it.
+    /// </summary>
+    bool SupportsIPv6 { get; }
+
+    /// <summary>
     /// Updates the record so its A/AAAA entries match the detected address(es).
     /// </summary>
     /// <param name="record">The record to update.</param>

@@ -12,8 +12,10 @@ namespace Jellyfin.Plugin.DynamicDns.Providers.Implementations;
 
 /// <summary>
 /// Yandex 360 / PDD (port of ddclient's <c>nic_yandex_update</c>). Authenticates with a
-/// <c>PddToken</c> header, lists the domain's DNS records to find the record id whose
-/// <c>fqdn</c> matches the hostname, then POSTs a form-encoded edit to set its content.
+/// <c>PddToken</c> header, lists the domain's DNS records to find the record whose <c>fqdn</c> and
+/// record type both match, then POSTs a form-encoded edit to set its content. Matching the type keeps
+/// an IPv4 edit from overwriting the AAAA (or an unrelated TXT/MX) at the same name, and lets A and
+/// AAAA update independently.
 /// </summary>
 public sealed class YandexProvider : DNSProviderBase
 {
@@ -66,28 +68,37 @@ public sealed class YandexProvider : DNSProviderBase
             return DNSUpdateResult.Fail("A hostname is required.");
         }
 
-        // ddclient updates a single 'wantip': prefer IPv4 when enabled, else IPv6.
-        var wantIp = record.UpdateIPv4 ? ip.IPv4 : null;
-        wantIp ??= record.UpdateIPv6 ? ip.IPv6 : null;
-        if (wantIp is null)
-        {
-            return DNSUpdateResult.Fail("No record type enabled or no matching IP detected.");
-        }
-
         var serverBase = ServerBase(record, DefaultServer);
         var domain = record.Login.Trim();
+        var hostname = record.Hostname.Trim();
 
         var headers = new List<KeyValuePair<string, string>>
         {
             new("PddToken", record.Password)
         };
 
-        // List records for the domain, then find the id whose fqdn matches the hostname.
+        return await ApplyPerFamilyAsync(
+            record,
+            ip,
+            (type, address, ct) => UpdateTypeAsync(serverBase, domain, headers, hostname, type, address, ct),
+            cancellationToken).ConfigureAwait(false);
+    }
+
+    private async Task<(bool Ok, string Message)> UpdateTypeAsync(
+        string serverBase,
+        string domain,
+        List<KeyValuePair<string, string>> headers,
+        string hostname,
+        string type,
+        string ipValue,
+        CancellationToken cancellationToken)
+    {
+        // List records for the domain, then find the id whose fqdn and type both match the target.
         var listUrl = serverBase + "/api2/admin/dns/list?domain=" + Uri.EscapeDataString(domain);
         var listResult = await SendAsync(HttpMethod.Get, listUrl, cancellationToken, headers: headers).ConfigureAwait(false);
         if (!listResult.Ok)
         {
-            return DNSUpdateResult.Fail("HTTP " + listResult.Status + " while listing records.");
+            return (false, "HTTP " + listResult.Status + " while listing records");
         }
 
         string? recordId;
@@ -100,27 +111,28 @@ public sealed class YandexProvider : DNSProviderBase
                 || !string.Equals(successEl.GetString(), "ok", StringComparison.Ordinal))
             {
                 var error = root.TryGetProperty("error", out var errEl) ? errEl.GetString() : null;
-                return DNSUpdateResult.Fail("Yandex list failed: " + (error ?? "unknown error"));
+                return (false, "list failed: " + (error ?? "unknown error"));
             }
 
-            recordId = FindRecordId(root, record.Hostname);
+            recordId = FindRecordId(root, hostname, type);
         }
         catch (JsonException ex)
         {
             Logger.LogWarning(ex, "{Provider} could not parse the record list response", Kind);
-            return DNSUpdateResult.Fail("Could not parse the Yandex list response.");
+            return (false, "could not parse the list response");
         }
 
         if (string.IsNullOrEmpty(recordId))
         {
-            return DNSUpdateResult.Fail("DNS record ID not found for " + record.Hostname + ".");
+            // The edit endpoint cannot create records, so a missing one must be created at Yandex first.
+            return (false, "no existing " + type + " record found for " + hostname + "; create it at Yandex first");
         }
 
         // Edit the record content to the new IP.
         var editUrl = serverBase + "/api2/admin/dns/edit";
         var body = "domain=" + Uri.EscapeDataString(domain)
             + "&record_id=" + Uri.EscapeDataString(recordId)
-            + "&content=" + Uri.EscapeDataString(wantIp);
+            + "&content=" + Uri.EscapeDataString(ipValue);
 
         var editResult = await SendAsync(
             HttpMethod.Post,
@@ -131,7 +143,7 @@ public sealed class YandexProvider : DNSProviderBase
             contentType: "application/x-www-form-urlencoded").ConfigureAwait(false);
         if (!editResult.Ok)
         {
-            return DNSUpdateResult.Fail("HTTP " + editResult.Status + " while editing record.");
+            return (false, "HTTP " + editResult.Status + " while editing record");
         }
 
         try
@@ -142,19 +154,19 @@ public sealed class YandexProvider : DNSProviderBase
                 || !string.Equals(successEl.GetString(), "ok", StringComparison.Ordinal))
             {
                 var error = root.TryGetProperty("error", out var errEl) ? errEl.GetString() : null;
-                return DNSUpdateResult.Fail("Yandex edit failed: " + (error ?? "unknown error"));
+                return (false, "edit failed: " + (error ?? "unknown error"));
             }
         }
         catch (JsonException ex)
         {
             Logger.LogWarning(ex, "{Provider} could not parse the edit response", Kind);
-            return DNSUpdateResult.Fail("Could not parse the Yandex edit response.");
+            return (false, "could not parse the edit response");
         }
 
-        return DNSUpdateResult.Ok("Updated " + record.Hostname + " to " + wantIp + ".");
+        return (true, "set to " + ipValue);
     }
 
-    private static string? FindRecordId(JsonElement root, string hostname)
+    private static string? FindRecordId(JsonElement root, string hostname, string type)
     {
         if (!root.TryGetProperty("records", out var records) || records.ValueKind != JsonValueKind.Array)
         {
@@ -170,6 +182,8 @@ public sealed class YandexProvider : DNSProviderBase
 
             if (entry.TryGetProperty("fqdn", out var fqdnEl)
                 && string.Equals(fqdnEl.GetString(), hostname, StringComparison.OrdinalIgnoreCase)
+                && entry.TryGetProperty("type", out var typeEl)
+                && string.Equals(typeEl.GetString(), type, StringComparison.OrdinalIgnoreCase)
                 && entry.TryGetProperty("record_id", out var idEl))
             {
                 return idEl.ValueKind == JsonValueKind.Number

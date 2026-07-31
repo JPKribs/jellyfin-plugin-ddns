@@ -40,8 +40,18 @@ public abstract class DNSProviderBase : IDNSProvider
     /// <inheritdoc />
     public abstract ProviderFields Fields { get; }
 
+    /// <inheritdoc />
+    public virtual bool SupportsIPv6 => true;
+
     /// <summary>Gets the logger.</summary>
     protected ILogger Logger { get; }
+
+    /// <summary>
+    /// Gets the TTL sent when the record still carries the <c>1</c> "automatic" sentinel. Providers that
+    /// send a TTL override this with the shortest value their API accepts (or their ddclient default), so
+    /// the sentinel never reaches an API as a literal one-second TTL it would reject.
+    /// </summary>
+    protected virtual int DefaultTtl => 300;
 
     /// <inheritdoc />
     public abstract Task<DNSUpdateResult> UpdateAsync(DNSRecord record, DetectedIP ip, CancellationToken cancellationToken);
@@ -57,7 +67,9 @@ public abstract class DNSProviderBase : IDNSProvider
 
     /// <summary>
     /// Runs <paramref name="update"/> once per enabled+detected family (A then AAAA) and aggregates the
-    /// outcomes into a single result. The provider only writes per-address logic.
+    /// outcomes into a single result. The provider only writes per-address logic. The result carries the
+    /// per-family outcomes so the update cycle records exactly which addresses were pushed: a failing
+    /// family never blocks the bookkeeping (or triggers backoff) for one that succeeded.
     /// </summary>
     /// <param name="record">The record being updated.</param>
     /// <param name="ip">The detected addresses.</param>
@@ -76,11 +88,14 @@ public abstract class DNSProviderBase : IDNSProvider
 
         var parts = new List<string>();
         var allOk = true;
+        bool? v4Ok = null;
+        bool? v6Ok = null;
 
         if (record.UpdateIPv4 && ip.IPv4 is not null)
         {
             var (ok, message) = await update("A", ip.IPv4, cancellationToken).ConfigureAwait(false);
             allOk &= ok;
+            v4Ok = ok;
             parts.Add("IPv4: " + message);
         }
 
@@ -88,12 +103,26 @@ public abstract class DNSProviderBase : IDNSProvider
         {
             var (ok, message) = await update("AAAA", ip.IPv6, cancellationToken).ConfigureAwait(false);
             allOk &= ok;
+            v6Ok = ok;
             parts.Add("IPv6: " + message);
         }
 
         return parts.Count == 0
             ? DNSUpdateResult.Fail("No record type enabled or no matching IP detected.")
-            : new DNSUpdateResult(allOk, string.Join("; ", parts));
+            : new DNSUpdateResult(allOk, string.Join("; ", parts)) { IPv4Applied = v4Ok, IPv6Applied = v6Ok };
+    }
+
+    /// <summary>
+    /// Resolves the TTL to send to a provider. The dashboard documents a TTL of <c>1</c> as "automatic",
+    /// so the sentinel (and anything lower) resolves to <see cref="DefaultTtl"/> instead of being sent as
+    /// a literal one-second TTL most APIs would reject.
+    /// </summary>
+    /// <param name="record">The record whose TTL is resolved.</param>
+    /// <returns>The TTL in seconds to send.</returns>
+    protected int ResolveTtl(DNSRecord record)
+    {
+        ArgumentNullException.ThrowIfNull(record);
+        return record.Ttl > 1 ? record.Ttl : DefaultTtl;
     }
 
     /// <summary>

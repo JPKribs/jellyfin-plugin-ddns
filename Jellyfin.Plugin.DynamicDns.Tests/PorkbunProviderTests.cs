@@ -59,4 +59,29 @@ public class PorkbunProviderTests
 
         Assert.True(result.Success);
     }
+
+    [Fact]
+    public async Task BlankZoneTwoLabelHostname_IsTreatedAsApexNotSubdomainOfTld()
+    {
+        string? retrieveUrl = null;
+        var factory = StubHttp.Factory(req =>
+        {
+            var url = req.RequestUri!.ToString();
+            if (url.Contains("retrieveByNameType", StringComparison.Ordinal))
+            {
+                retrieveUrl = url;
+                return (HttpStatusCode.OK, RetrieveOk);
+            }
+
+            return (HttpStatusCode.OK, "{\"status\":\"SUCCESS\"}");
+        });
+        var provider = new PorkbunProvider(factory, NullLogger<PorkbunProvider>.Instance);
+        var record = Record();
+        record.Hostname = "example.com";
+
+        var result = await provider.UpdateAsync(record, new DetectedIP { IPv4 = "1.2.3.4" }, CancellationToken.None);
+
+        Assert.True(result.Success);
+        Assert.Contains("/retrieveByNameType/example.com/A/", retrieveUrl, StringComparison.Ordinal);
+    }
 }

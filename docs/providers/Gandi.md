@@ -7,4 +7,6 @@ Set the record's **Provider** to **Gandi LiveDNS**, then fill these fields.
 - **Password**: your Gandi API key or Personal Access Token, from your Gandi account under API keys.
 - **Zone**: the domain, such as example.com.
 
+A TTL of `1` (the default) sends Gandi's 300 second minimum. Values above 1 are sent as entered.
+
 _Ported from ddclient's `nic_gandi_update`._

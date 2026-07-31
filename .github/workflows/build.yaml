@@ -16,3 +16,36 @@ on:
 jobs:
   call:
     uses: jellyfin/jellyfin-meta-plugins/.github/workflows/build.yaml@master
+
+  # Releases are zipped by build.sh (via the changelog workflow), not by the JPRM build above, so CI
+  # must exercise that same script or a green build proves nothing about the artifact users install.
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 9.0.x
+
+      - name: Package with build.sh
+        run: |
+          chmod +x build.sh
+          ./build.sh
+
+      - name: Verify package contents
+        run: |
+          set -euo pipefail
+          ZIP=$(ls dist/jellyfin-plugin-ddns-*.zip)
+          unzip -l "$ZIP"
+          unzip -l "$ZIP" | grep -q 'Jellyfin.Plugin.DynamicDns.dll'
+          unzip -l "$ZIP" | grep -q 'meta.json'
+
+      - name: Upload package artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: jellyfin-plugin-ddns-package
+          path: dist/*.zip
+          retention-days: 14

@@ -46,7 +46,7 @@ public sealed class NfsnProvider : DNSProviderBase
     public override string Label => "NearlyFreeSpeech.NET";
 
     /// <inheritdoc />
-    public override string Hint => "Login is the member login. Password is the API key. Zone is the DNS zone.";
+    public override string Hint => "Login is the member login. Password is the API key. Zone is the DNS zone. This protocol carries IPv4 only.";
 
     /// <inheritdoc />
     public override ProviderFields Fields => new()
@@ -57,7 +57,11 @@ public sealed class NfsnProvider : DNSProviderBase
         Zone = "DNS zone",
         Server = true,
         Ttl = true,
+        IPv6 = false,
     };
+
+    /// <inheritdoc />
+    public override bool SupportsIPv6 => false;
 
     /// <inheritdoc />
     public override async Task<DNSUpdateResult> UpdateAsync(DNSRecord record, DetectedIP ip, CancellationToken cancellationToken)
@@ -147,9 +151,9 @@ public sealed class NfsnProvider : DNSProviderBase
             }
         }
 
-        // 3. Add the A record with the new IP. ddclient defaults NFSN to a 300 second TTL, so use that
-        // when the user left the 1 second sentinel.
-        var ttl = record.Ttl > 1 ? record.Ttl : 300;
+        // 3. Add the A record with the new IP. ddclient defaults NFSN to a 300 second TTL, which is
+        // what the "automatic" sentinel resolves to.
+        var ttl = ResolveTtl(record);
         var addPath = "/dns/" + zoneSegment + "/addRR";
         var addBody = FormEncode(new[]
         {

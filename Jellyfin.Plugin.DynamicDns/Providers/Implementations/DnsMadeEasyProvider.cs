@@ -106,6 +106,13 @@ public sealed class DnsMadeEasyProvider : DNSProviderBase
             return (true, "set to " + value);
         }
 
+        // "No update required" means the record already holds this address. That is a healthy outcome
+        // (like dyndns2's nochg), not a failure that should count toward pausing the record.
+        if (returned.Contains("error-record-ip-same", StringComparison.Ordinal))
+        {
+            return (true, "unchanged: already set to " + value);
+        }
+
         var detail = Messages.TryGetValue(returned, out var known)
             ? returned + ": " + known
             : returned;

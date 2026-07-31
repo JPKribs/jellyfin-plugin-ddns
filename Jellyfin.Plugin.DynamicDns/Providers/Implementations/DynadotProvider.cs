@@ -74,8 +74,11 @@ public sealed class DynadotProvider : DNSProviderBase
         }
         else
         {
+            // A two-label hostname is the apex domain itself, not a subdomain of the TLD. Deeper
+            // hostnames split on the first dot; set the zone explicitly for multi-label subdomains or
+            // multi-label TLDs like .co.uk.
             var dot = record.Hostname.IndexOf('.', StringComparison.Ordinal);
-            if (dot > 0)
+            if (dot > 0 && record.Hostname.IndexOf('.', dot + 1) > 0)
             {
                 subDomain = record.Hostname.Substring(0, dot);
                 domain = record.Hostname.Substring(dot + 1);
@@ -94,7 +97,7 @@ public sealed class DynadotProvider : DNSProviderBase
         return await ApplyPerFamilyAsync(
             record,
             ip,
-            (type, address, ct) => PushAsync(server, record.Password, record.Ttl > 1 ? record.Ttl : 300, domain, subDomain, isRoot, containRoot, type, address, ct),
+            (type, address, ct) => PushAsync(server, record.Password, ResolveTtl(record), domain, subDomain, isRoot, containRoot, type, address, ct),
             cancellationToken).ConfigureAwait(false);
     }
 
