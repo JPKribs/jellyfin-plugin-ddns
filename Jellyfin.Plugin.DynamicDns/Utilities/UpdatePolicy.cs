@@ -35,17 +35,10 @@ public static class UpdatePolicy
             return UpdateDecision.SkipNoAddress;
         }
 
-        bool needsPush;
-        if (record.Proxied)
-        {
-            needsPush = ProxiedNeedsPush(record, ip, wantsV4, wantsV6);
-        }
-        else
-        {
-            needsPush =
-                (wantsV4 && FamilyNeedsPush(ip.IPv4, record.LastIPv4, record.LastSuccess, dns, AddressFamily.InterNetwork))
+        var needsPush = record.Proxied
+            ? ProxiedNeedsPush(record, ip, wantsV4, wantsV6)
+            : (wantsV4 && FamilyNeedsPush(ip.IPv4, record.LastIPv4, record.LastSuccess, dns, AddressFamily.InterNetwork))
                 || (wantsV6 && FamilyNeedsPush(ip.IPv6, record.LastIPv6, record.LastSuccess, dns, AddressFamily.InterNetworkV6));
-        }
 
         if (needsPush)
         {

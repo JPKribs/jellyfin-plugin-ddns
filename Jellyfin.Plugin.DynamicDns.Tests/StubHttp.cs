@@ -37,9 +37,13 @@ internal static class StubHttp
         public CannedHandler(Func<HttpRequestMessage, (HttpStatusCode Code, string Body)> responder) => _responder = responder;
 
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+            => Task.FromResult(Respond(request));
+
+        // The response (and the content it owns) is handed to HttpClient, which disposes both.
+        private HttpResponseMessage Respond(HttpRequestMessage request)
         {
             var (code, body) = _responder(request);
-            return Task.FromResult(new HttpResponseMessage(code) { Content = new StringContent(body) });
+            return new HttpResponseMessage(code) { Content = new StringContent(body) };
         }
     }
 }

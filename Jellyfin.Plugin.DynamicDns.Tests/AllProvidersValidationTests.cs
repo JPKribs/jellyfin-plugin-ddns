@@ -43,17 +43,20 @@ public class AllProvidersValidationTests
         {
             var empty = new DNSRecord { UpdateIPv4 = true, UpdateIPv6 = true };
 
-            DNSUpdateResult result;
-            try
+            // Record.ExceptionAsync captures any failure without a catch-all clause of our own, so a
+            // provider that reaches for the network before validating is reported as a test failure
+            // rather than tearing down the run.
+            DNSUpdateResult? result = null;
+            var thrown = await Record.ExceptionAsync(async () =>
+                result = await p.UpdateAsync(empty, ip, CancellationToken.None));
+
+            if (thrown is not null)
             {
-                result = await p.UpdateAsync(empty, ip, CancellationToken.None);
-            }
-            catch (Exception ex)
-            {
-                throw new Xunit.Sdk.XunitException(p.Kind + " attempted a network call before validating: " + ex.Message);
+                throw new Xunit.Sdk.XunitException(p.Kind + " attempted a network call before validating: " + thrown.Message);
             }
 
-            Assert.False(result.Success, p.Kind + " accepted an empty record");
+            Assert.NotNull(result);
+            Assert.False(result!.Success, p.Kind + " accepted an empty record");
         }
     }
 }

@@ -54,9 +54,9 @@ public class StatusStoreServiceTests
             var loaded = store.Load();
             Assert.Equal("203.0.114.5", loaded.DetectedIPv4);
             Assert.Equal("note", loaded.DetectionMessage);
-            Assert.True(loaded.Records.ContainsKey("rec1"));
-            Assert.Equal("Updated", loaded.Records["rec1"].LastAction);
-            Assert.Equal(2, loaded.Records["rec1"].ConsecutiveFailures);
+            Assert.True(loaded.Records.TryGetValue("rec1", out var rec1));
+            Assert.Equal("Updated", rec1!.LastAction);
+            Assert.Equal(2, rec1.ConsecutiveFailures);
 
             // The store file is the JSON file beside the keys, not the config XML.
             Assert.True(File.Exists(Path.Join(dir, "Jellyfin.Plugin.DynamicDns.Status.json")));

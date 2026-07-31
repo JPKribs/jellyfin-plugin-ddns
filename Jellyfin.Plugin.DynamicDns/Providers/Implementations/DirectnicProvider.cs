@@ -110,7 +110,7 @@ public sealed class DirectnicProvider : DNSProviderBase
             || trimmed.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
         {
             // The gateway URL embeds the update token, so plain http exposes it in transit.
-            WarnIfPlainHttp(trimmed);
+            WarnIfPlainHttp(record, trimmed);
             return trimmed;
         }
 

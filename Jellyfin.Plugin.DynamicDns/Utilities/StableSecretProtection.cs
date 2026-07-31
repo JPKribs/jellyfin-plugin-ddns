@@ -58,7 +58,30 @@ public static class StableSecretProtection
             _keyRingContainer = container;
             return container.GetRequiredService<IDataProtectionProvider>();
         }
-        catch (Exception ex)
+        catch (IOException ex)
+        {
+            return Degrade(ex);
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return Degrade(ex);
+        }
+        catch (ArgumentException ex)
+        {
+            return Degrade(ex);
+        }
+        catch (NotSupportedException ex)
+        {
+            return Degrade(ex);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return Degrade(ex);
+        }
+
+        // A key store the host won't give us (bad path, no permission, no Data Protection service) is not
+        // fatal: the caller falls back to plaintext rather than reaching outside the data folder for keys.
+        IDataProtectionProvider? Degrade(Exception ex)
         {
             logger.LogWarning(ex, "Could not initialize plugin-managed Data Protection keys at {Path}; secrets will be stored in plaintext.", keyDirectory);
             return null;

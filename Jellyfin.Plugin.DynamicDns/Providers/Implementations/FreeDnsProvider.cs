@@ -1,5 +1,6 @@
 using System;
 using System.Globalization;
+using System.Linq;
 using System.Net.Http;
 using System.Security.Cryptography;
 using System.Text;
@@ -86,9 +87,8 @@ public sealed class FreeDnsProvider : DNSProviderBase
         var anyRecord = false;
 
         var lines = listReply.Body.Split(LineSeparators, StringSplitOptions.RemoveEmptyEntries);
-        foreach (var line in lines)
+        foreach (var rec in lines.Select(line => line.Split(FieldSeparator)))
         {
-            var rec = line.Split(FieldSeparator);
             if (rec.Length < 3)
             {
                 continue;

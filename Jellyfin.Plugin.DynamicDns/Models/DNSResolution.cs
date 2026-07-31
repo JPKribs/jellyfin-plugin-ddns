@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 
@@ -44,15 +45,7 @@ public sealed class DNSResolution
             return false;
         }
 
-        foreach (var address in _addresses)
-        {
-            if (address.Equals(target))
-            {
-                return true;
-            }
-        }
-
-        return false;
+        return _addresses.Any(address => address.Equals(target));
     }
 
     /// <summary>
@@ -69,14 +62,6 @@ public sealed class DNSResolution
             return false;
         }
 
-        foreach (var address in _addresses)
-        {
-            if (address.AddressFamily == family && IPAddressClassifier.IsPublic(address))
-            {
-                return true;
-            }
-        }
-
-        return false;
+        return _addresses.Any(address => address.AddressFamily == family && IPAddressClassifier.IsPublic(address));
     }
 }

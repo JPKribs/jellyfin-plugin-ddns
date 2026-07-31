@@ -142,12 +142,10 @@ public sealed class DNSUpdateService : IDisposable
         // front (these are the run's snapshot clones, never the stored configuration). Detection, the
         // update decision, and the status bookkeeping then all agree no IPv6 push is pending, instead of
         // endlessly re-pushing because an address the protocol cannot deliver never matches DNS.
-        foreach (var record in enabled)
+        foreach (var record in enabled.Where(r =>
+            r.UpdateIPv6 && _providers.TryGetValue(r.Provider, out var p) && !p.SupportsIPv6))
         {
-            if (record.UpdateIPv6 && _providers.TryGetValue(record.Provider, out var p) && !p.SupportsIPv6)
-            {
-                record.UpdateIPv6 = false;
-            }
+            record.UpdateIPv6 = false;
         }
 
         // The families to detect follow the records. IPv4 is also detected when there are no records yet,

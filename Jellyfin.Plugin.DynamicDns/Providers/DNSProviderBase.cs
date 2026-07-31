@@ -144,30 +144,31 @@ public abstract class DNSProviderBase : IDNSProvider
             server = "https://" + server;
         }
 
-        WarnIfPlainHttp(server);
+        WarnIfPlainHttp(record, server);
         return server.TrimEnd('/');
     }
 
     /// <summary>
     /// Logs when a request URL uses plain http, since credentials sent with it are not encrypted in
-    /// transit. The push still proceeds because the override is an explicit administrator choice. Only
-    /// the authority is logged because some providers embed the update secret in the URL path or query.
+    /// transit. The push still proceeds because the override is an explicit administrator choice. The
+    /// record being updated identifies the offending endpoint; no part of the URL is logged, because
+    /// some providers embed the update secret in its userinfo, path, or query.
     /// </summary>
+    /// <param name="record">The record whose update is about to be sent.</param>
     /// <param name="url">The URL about to be used.</param>
-    protected void WarnIfPlainHttp(string url)
+    protected void WarnIfPlainHttp(DNSRecord record, string url)
     {
+        ArgumentNullException.ThrowIfNull(record);
+
         if (string.IsNullOrEmpty(url) || !url.StartsWith("http://", StringComparison.OrdinalIgnoreCase))
         {
             return;
         }
 
-        var host = Uri.TryCreate(url, UriKind.Absolute, out var parsed)
-            ? parsed.GetLeftPart(UriPartial.Authority)
-            : "http://<unparseable>";
         Logger.LogWarning(
-            "{Provider} is updating over plain http ({Host}); credentials sent with this request are not encrypted in transit.",
+            "{Provider} is updating {Hostname} over plain http; credentials sent with this request are not encrypted in transit.",
             Kind,
-            host);
+            record.Hostname);
     }
 
     /// <summary>

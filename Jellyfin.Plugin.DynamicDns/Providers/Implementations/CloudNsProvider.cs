@@ -63,7 +63,7 @@ public sealed class CloudNsProvider : DNSProviderBase
         }
 
         // The DynURL embeds the update secret, so plain http exposes it in transit.
-        WarnIfPlainHttp(dynUrl);
+        WarnIfPlainHttp(record, dynUrl);
 
         return await ApplyPerFamilyAsync(
             record,
