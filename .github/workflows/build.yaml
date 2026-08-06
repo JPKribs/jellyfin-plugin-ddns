@@ -13,9 +13,14 @@ on:
       - '**/*.md'
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   call:
     uses: jellyfin/jellyfin-meta-plugins/.github/workflows/build.yaml@master
+    with:
+      dotnet-version: 10.0.x
 
   # Releases are zipped by build.sh (via the changelog workflow), not by the JPRM build above, so CI
   # must exercise that same script or a green build proves nothing about the artifact users install.
