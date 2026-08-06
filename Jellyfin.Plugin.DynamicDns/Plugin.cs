@@ -103,7 +103,8 @@ public class Plugin : PluginBase<Plugin, PluginConfiguration>
             EmbeddedResourcePath = $"{ns}.Configuration.ddns_domains.html",
             MenuSection = "server",
             DisplayName = "Dynamic DNS",
-            EnableInMainMenu = false
+            EnableInMainMenu = false,
+            MenuIcon = "dns"
         };
 
         yield return new PluginPageInfo
