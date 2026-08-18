@@ -227,7 +227,7 @@ main() {
         cp "$logo_src" "$temp_dir/Logo.png"
 
         local target_abi=$(read_yaml_value "targetAbi")
-        [[ -z "$target_abi" ]] && target_abi="10.11.0.0"
+        [[ -z "$target_abi" ]] && target_abi="12.0.0.0"
         local meta_timestamp=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 
         # Build the "assemblies" array from the artifacts already copied to temp.
