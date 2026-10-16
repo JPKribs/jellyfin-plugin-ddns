@@ -1,8 +1,6 @@
 using System;
 using System.Collections.Generic;
-using System.IO;
 using Jellyfin.Plugin.DynamicDns.Configuration;
-using Jellyfin.Plugin.DynamicDns.Services;
 using Jellyfin.Plugin.DynamicDns.Utilities;
 using JPKribs.Jellyfin.Base;
 using MediaBrowser.Common.Configuration;
@@ -17,8 +15,13 @@ namespace Jellyfin.Plugin.DynamicDns;
 /// </summary>
 public class Plugin : PluginBase<Plugin, PluginConfiguration>
 {
+    /// <summary>
+    /// The stable name the secret key folder, Data Protection application name, and purpose derive from.
+    /// Changing it makes every stored credential unreadable.
+    /// </summary>
+    internal const string SecretsName = "Jellyfin.Plugin.DynamicDns";
+
     private readonly Lazy<SecretProtector> _secrets;
-    private bool _secretsPlaintext;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="Plugin"/> class.
@@ -34,14 +37,14 @@ public class Plugin : PluginBase<Plugin, PluginConfiguration>
     {
         ArgumentNullException.ThrowIfNull(applicationPaths);
         ArgumentNullException.ThrowIfNull(logger);
-        _secrets = new Lazy<SecretProtector>(() => CreateSecretProtector(applicationPaths, logger));
+        _secrets = new Lazy<SecretProtector>(() => StableSecretProtection.CreateProtector(applicationPaths, SecretsName, logger));
         logger.LogInformation("Dynamic DNS plugin initialized");
     }
 
     /// <summary>
-    /// Gets the protector that encrypts record credentials at rest. The plugin owns the single instance
-    /// so the generic configuration endpoint (handled in <see cref="UpdateConfiguration"/>) and the DI
-    /// consumers share one protector and one key ring.
+    /// Gets the protector that encrypts record credentials at rest. The generic configuration endpoint
+    /// (handled in <see cref="OnConfigurationSaving"/>) uses it, and the DI protector built under the same
+    /// name shares its key ring.
     /// </summary>
     public SecretProtector Secrets => _secrets.Value;
 
@@ -50,14 +53,7 @@ public class Plugin : PluginBase<Plugin, PluginConfiguration>
     /// Protection key store could not be initialized. Surfaced on the dashboard so the degradation is
     /// visible to the administrator, not just the server log.
     /// </summary>
-    public bool SecretsPlaintext
-    {
-        get
-        {
-            _ = _secrets.Value;
-            return _secretsPlaintext;
-        }
-    }
+    public bool SecretsPlaintext => !Secrets.IsAvailable;
 
     /// <inheritdoc />
     public override string Name => "Dynamic DNS";
@@ -74,21 +70,18 @@ public class Plugin : PluginBase<Plugin, PluginConfiguration>
     /// without this hook a secret saved there would sit in the XML in plaintext until the next update
     /// run's backstop caught it.
     /// </summary>
-    /// <param name="configuration">The incoming configuration.</param>
-    public override void UpdateConfiguration(BasePluginConfiguration configuration)
+    /// <param name="incoming">The incoming configuration.</param>
+    /// <param name="stored">The configuration currently in effect.</param>
+    protected override void OnConfigurationSaving(PluginConfiguration incoming, PluginConfiguration stored)
     {
-        if (configuration is PluginConfiguration config)
-        {
-            CredentialEncryption.ProtectAll(config.Records, Secrets);
+        ArgumentNullException.ThrowIfNull(incoming);
+        CredentialEncryption.ProtectAll(incoming.Records, Secrets);
 
-            // The dashboard save audits in its own endpoint, and this generic path is the only other
-            // place records can change. Diffing after ProtectAll compares stored forms, so a ciphertext
-            // echoed back by a client is unchanged while a newly entered credential is a fresh
-            // encryption. Configuration can be null on the very first save before any file exists.
-            ConfigurationAudit.LogRecordChanges(ActivityLoggerAccessor.Instance, Configuration?.Records, config.Records);
-        }
-
-        base.UpdateConfiguration(configuration);
+        // The dashboard save audits in its own endpoint, and this generic path is the only other
+        // place records can change. Diffing after ProtectAll compares stored forms, so a ciphertext
+        // echoed back by a client is unchanged while a newly entered credential is a fresh
+        // encryption. The stored configuration can be null on the very first save before any file exists.
+        ConfigurationAudit.LogRecordChanges(ActivityLogger.Current, stored?.Records, incoming.Records);
     }
 
     /// <inheritdoc />
@@ -130,13 +123,5 @@ public class Plugin : PluginBase<Plugin, PluginConfiguration>
         {
             yield return page;
         }
-    }
-
-    private SecretProtector CreateSecretProtector(IApplicationPaths paths, ILogger logger)
-    {
-        var keyDirectory = Path.Join(paths.PluginConfigurationsPath, "Jellyfin.Plugin.DynamicDns.Keys");
-        var provider = StableSecretProtection.Build(keyDirectory, logger);
-        _secretsPlaintext = provider is null;
-        return new SecretProtector("Jellyfin.Plugin.DynamicDns.Secrets.v1", logger, provider);
     }
 }

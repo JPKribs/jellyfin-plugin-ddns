@@ -1,3 +1,5 @@
+import { createConfigPage, confirmDialog } from './configurationpage?name=ddns_jpkribs_shared.js';
+
 export default function (view) {
     'use strict';
 
@@ -8,13 +10,6 @@ export default function (view) {
     ];
 
     var Shared = null;
-    var setTabs = null;
-    var initCollapsibles = null;
-    var _sharedPromise = import('/web/configurationpage?name=ddns_jpkribs_shared.js').then(function (mod) {
-        Shared = mod.createShared(view, PLUGIN_ID, 'DynamicDns');
-        setTabs = mod.setTabs;
-        initCollapsibles = mod.initCollapsibles;
-    });
 
     // Provider list, hints, and field specs come from the backend (GET DynamicDns/Providers), so each
     // provider drives its own UI from its C# class. p[0] is the enum name and p[1] is the friendly label.
@@ -30,9 +25,6 @@ export default function (view) {
     var records = [];
     var currentIndex = -1;
     var editorEnabled = true;
-    var _bound = false;
-
-    function el(id) { return view.querySelector('#' + id); }
 
     // The plugin's own config endpoints redact stored credentials to a write-only sentinel on read and
     // encrypt freshly typed ones on save, so secrets never round-trip through the browser in the clear.
@@ -78,7 +70,7 @@ export default function (view) {
     }
 
     function renderProviderOptions() {
-        el('recProvider').innerHTML = PROVIDERS.map(function (p) {
+        Shared.getEl('recProvider').innerHTML = PROVIDERS.map(function (p) {
             return '<option value="' + p[0] + '">' + Shared.escapeHtml(p[1]) + '</option>';
         }).join('');
     }
@@ -93,14 +85,14 @@ export default function (view) {
     function renderHealth() {
         var counts = { healthy: 0, unhealthy: 0, unpublished: 0 };
         records.forEach(function (r) { counts[classifyHealth(r)]++; });
-        el('recordHealth').innerHTML =
+        Shared.getEl('recordHealth').innerHTML =
             '<div class="jpk-card green"><span class="jpk-card-count">' + counts.healthy + '</span><span class="jpk-card-label">Healthy</span></div>' +
             '<div class="jpk-card red" title="Failed to update within the last 24 hours"><span class="jpk-card-count">' + counts.unhealthy + '</span><span class="jpk-card-label">Unhealthy</span></div>' +
             '<div class="jpk-card gray"><span class="jpk-card-count">' + counts.unpublished + '</span><span class="jpk-card-label">Unpublished</span></div>';
     }
 
     function renderSelect() {
-        var select = el('selectRecord');
+        var select = Shared.getEl('selectRecord');
         select.innerHTML = records.map(function (r, i) {
             var label = (r.Name || r.Hostname || 'new record') + (r.Enabled === false ? ', disabled' : '');
             return '<option value="' + i + '">' + Shared.escapeHtml(label) + '</option>';
@@ -121,27 +113,27 @@ export default function (view) {
     }
 
     function setEnableVisual(enabled) {
-        var btn = el('btnEnable');
+        var btn = Shared.getEl('btnEnable');
         btn.classList.toggle('jpk-button-submit', enabled);
         btn.classList.toggle('jpk-secondary', !enabled);
-        el('enableLabel').textContent = enabled ? 'Enabled' : 'Disabled';
+        Shared.getEl('enableLabel').textContent = enabled ? 'Enabled' : 'Disabled';
         btn.querySelector('.material-icons').textContent = enabled ? 'play_arrow' : 'pause';
     }
 
     // Provider hint plus a link to that provider's setup doc on GitHub, named after the provider value.
     function applyHint() {
-        var prov = el('recProvider').value;
+        var prov = Shared.getEl('recProvider').value;
         var hint = HINTS[prov] || 'Fill the fields required by this provider.';
         var html = Shared.escapeHtml(hint);
         if (prov) {
             var url = 'https://github.com/JPKribs/jellyfin-plugin-ddns/blob/master/docs/providers/' + encodeURIComponent(prov) + '.md';
             html += ' <a href="' + url + '" target="_blank" rel="noopener">Setup guide</a>';
         }
-        el('providerHint').innerHTML = html;
+        Shared.getEl('providerHint').innerHTML = html;
     }
 
     function setField(id, label) {
-        var container = el(id).closest('.inputContainer');
+        var container = Shared.getEl(id).closest('.inputContainer');
         if (!container) return;
         if (label) {
             var lbl = container.querySelector('label');
@@ -153,14 +145,14 @@ export default function (view) {
     }
 
     function setCheck(id, visible) {
-        var container = el(id).closest('.checkboxContainer');
+        var container = Shared.getEl(id).closest('.checkboxContainer');
         if (container) container.classList.toggle('hidden', !visible);
     }
 
     // Credential inputs are write-only: clear the field and, when a secret is already stored, show a
     // placeholder so the admin knows it is set without the value ever being sent to the browser DOM.
     function setSecretField(id, stored) {
-        var input = el(id);
+        var input = Shared.getEl(id);
         input.value = '';
         input.placeholder = stored ? '••••••••' : '';
     }
@@ -180,36 +172,36 @@ export default function (view) {
         setCheck('recStatic', adv.indexOf('static') >= 0);
         setField('recMx', adv.indexOf('mx') >= 0 ? 'MX host for the dyndns family' : null);
         setCheck('recBackupMx', adv.indexOf('backupmx') >= 0);
-        var section = el('advancedContent').closest('.jpk-collapsible-section');
+        var section = Shared.getEl('advancedContent').closest('.jpk-collapsible-section');
         if (section) section.classList.toggle('hidden', adv.length === 0);
     }
 
     function onProviderChange() {
         applyHint();
-        applyFields(el('recProvider').value);
+        applyFields(Shared.getEl('recProvider').value);
     }
 
     function loadEditor() {
         var r = records[currentIndex];
         if (!r) return;
 
-        el('recName').value = r.Name || '';
-        el('recProvider').value = normalizeProvider(r.Provider);
-        el('recHostname').value = r.Hostname || '';
-        el('recUpdateIPv4').checked = r.UpdateIPv4 !== false;
-        el('recUpdateIPv6').checked = !!r.UpdateIPv6;
+        Shared.getEl('recName').value = r.Name || '';
+        Shared.getEl('recProvider').value = normalizeProvider(r.Provider);
+        Shared.getEl('recHostname').value = r.Hostname || '';
+        Shared.getEl('recUpdateIPv4').checked = r.UpdateIPv4 !== false;
+        Shared.getEl('recUpdateIPv6').checked = !!r.UpdateIPv6;
         // Credentials are write-only: never bind the stored secret back into the form. Show a "saved"
         // placeholder when one exists. The value is kept unless the admin types a replacement.
         setSecretField('recLogin', r.Login);
         setSecretField('recPassword', r.Password);
-        el('recZone').value = r.Zone || '';
-        el('recServer').value = r.Server || '';
-        el('recTtl').value = r.Ttl || 1;
-        el('recProxied').checked = !!r.Proxied;
-        el('recWildcard').checked = !!r.Wildcard;
-        el('recStatic').checked = !!r.Static;
-        el('recMx').value = r.Mx || '';
-        el('recBackupMx').checked = !!r.BackupMx;
+        Shared.getEl('recZone').value = r.Zone || '';
+        Shared.getEl('recServer').value = r.Server || '';
+        Shared.getEl('recTtl').value = r.Ttl || 1;
+        Shared.getEl('recProxied').checked = !!r.Proxied;
+        Shared.getEl('recWildcard').checked = !!r.Wildcard;
+        Shared.getEl('recStatic').checked = !!r.Static;
+        Shared.getEl('recMx').value = r.Mx || '';
+        Shared.getEl('recBackupMx').checked = !!r.BackupMx;
 
         editorEnabled = r.Enabled !== false;
         setEnableVisual(editorEnabled);
@@ -224,7 +216,7 @@ export default function (view) {
         if (!hasStatus) return;
 
         // Denote whether the last run pushed a change, made no change, or failed.
-        var action = el('stAction');
+        var action = Shared.getEl('stAction');
         var act = r.LastAction || '';
         action.textContent = act || '—';
         var actClass = 'jpk-mono';
@@ -232,36 +224,36 @@ export default function (view) {
         else if (act === 'Failed' || act === 'No address') actClass += ' jpk-bad';
         action.className = actClass; // 'Unchanged' (and legacy empty) stay neutral
 
-        var last = el('stLast');
+        var last = Shared.getEl('stLast');
         last.textContent = r.LastStatus || (r.LastSuccess ? 'OK' : 'Unknown');
         last.className = 'jpk-mono ' + (r.LastSuccess ? 'jpk-ok' : 'jpk-bad');
 
         var checked = new Date(r.LastCheckedUtc);
-        el('stChecked').textContent = isNaN(checked.getTime()) ? String(r.LastCheckedUtc) : checked.toLocaleString();
-        el('stIps').textContent = (r.LastIPv4 || 'none') + ' / ' + (r.LastIPv6 || 'none');
+        Shared.getEl('stChecked').textContent = isNaN(checked.getTime()) ? String(r.LastCheckedUtc) : checked.toLocaleString();
+        Shared.getEl('stIps').textContent = (r.LastIPv4 || 'none') + ' / ' + (r.LastIPv6 || 'none');
     }
 
     function readEditorInto(r) {
-        r.Name = el('recName').value.trim();
-        r.Provider = el('recProvider').value;
-        r.Hostname = el('recHostname').value.trim();
-        r.UpdateIPv4 = el('recUpdateIPv4').checked;
-        r.UpdateIPv6 = el('recUpdateIPv6').checked;
+        r.Name = Shared.getEl('recName').value.trim();
+        r.Provider = Shared.getEl('recProvider').value;
+        r.Hostname = Shared.getEl('recHostname').value.trim();
+        r.UpdateIPv4 = Shared.getEl('recUpdateIPv4').checked;
+        r.UpdateIPv6 = Shared.getEl('recUpdateIPv6').checked;
         r.Enabled = editorEnabled;
         // Only overwrite a credential when the admin typed a replacement. A blank field keeps the stored
         // (encrypted) value rather than wiping it.
-        var login = el('recLogin').value.trim();
+        var login = Shared.getEl('recLogin').value.trim();
         if (login) r.Login = login;
-        var password = el('recPassword').value;
+        var password = Shared.getEl('recPassword').value;
         if (password) r.Password = password;
-        r.Zone = el('recZone').value.trim();
-        r.Server = el('recServer').value.trim();
-        r.Ttl = parseInt(el('recTtl').value, 10) || 1;
-        r.Proxied = el('recProxied').checked;
-        r.Wildcard = el('recWildcard').checked;
-        r.Static = el('recStatic').checked;
-        r.Mx = el('recMx').value.trim();
-        r.BackupMx = el('recBackupMx').checked;
+        r.Zone = Shared.getEl('recZone').value.trim();
+        r.Server = Shared.getEl('recServer').value.trim();
+        r.Ttl = parseInt(Shared.getEl('recTtl').value, 10) || 1;
+        r.Proxied = Shared.getEl('recProxied').checked;
+        r.Wildcard = Shared.getEl('recWildcard').checked;
+        r.Static = Shared.getEl('recStatic').checked;
+        r.Mx = Shared.getEl('recMx').value.trim();
+        r.BackupMx = Shared.getEl('recBackupMx').checked;
     }
 
     function persistRecords(okMessage, errMessage) {
@@ -294,34 +286,37 @@ export default function (view) {
         records.push(newRecord());
         currentIndex = records.length - 1;
         renderSelect();
-        el('recName').focus();
+        Shared.getEl('recName').focus();
     }
 
     function deleteRecord() {
         var r = records[currentIndex];
         if (!r) return;
         var label = r.Name || r.Hostname || 'this record';
-        if (!window.confirm('Delete ' + label + '? This cannot be undone.')) return;
-
-        records.splice(currentIndex, 1);
-        currentIndex = -1;
-        persistRecords('Deleted.', 'Delete failed.');
+        confirmDialog('Delete ' + label + '? This cannot be undone.', { confirmText: 'Delete', destructive: true }).then(function (ok) {
+            // The record list can change while the dialog is open, so drop the one that was asked about.
+            var index = records.indexOf(r);
+            if (!ok || index < 0) return;
+            records.splice(index, 1);
+            currentIndex = -1;
+            persistRecords('Deleted.', 'Delete failed.');
+        });
     }
 
     function bind() {
-        el('selectRecord').addEventListener('change', function () {
+        Shared.getEl('selectRecord').addEventListener('change', function () {
             currentIndex = parseInt(this.value, 10);
             loadEditor();
         });
-        el('recProvider').addEventListener('change', onProviderChange);
-        el('btnNewRecord').addEventListener('click', addRecord);
-        el('btnDeleteRecord').addEventListener('click', deleteRecord);
-        el('btnSaveRecord').addEventListener('click', saveRecord);
-        el('btnEnable').addEventListener('click', function () {
+        Shared.getEl('recProvider').addEventListener('change', onProviderChange);
+        Shared.getEl('btnNewRecord').addEventListener('click', addRecord);
+        Shared.getEl('btnDeleteRecord').addEventListener('click', deleteRecord);
+        Shared.getEl('btnSaveRecord').addEventListener('click', saveRecord);
+        Shared.getEl('btnEnable').addEventListener('click', function () {
             editorEnabled = !editorEnabled;
             setEnableVisual(editorEnabled);
         });
-        initCollapsibles(view);
+        Shared.initCollapsibles();
     }
 
     function load() {
@@ -336,11 +331,13 @@ export default function (view) {
         });
     }
 
-    view.addEventListener('viewshow', function () {
-        _sharedPromise.then(function () {
-            setTabs('ddns', 0, TABS);
-            if (!_bound) { bind(); _bound = true; }
-            load();
-        });
-    });
+    Shared = createConfigPage(view, {
+        pluginId: PLUGIN_ID,
+        apiPrefix: 'DynamicDns',
+        tabsKey: 'ddns',
+        tabIndex: 0,
+        tabs: TABS,
+        bind: bind,
+        load: load
+    }).shared;
 }

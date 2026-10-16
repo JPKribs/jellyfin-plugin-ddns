@@ -10,7 +10,7 @@ namespace Jellyfin.Plugin.DynamicDns.Tests;
 
 /// <summary>
 /// Tests for the shared credential encryption pass that guards every configuration write path,
-/// including the UpdateConfiguration hook on the generic plugin configuration endpoint.
+/// including the OnConfigurationSaving hook on the generic plugin configuration endpoint.
 /// </summary>
 public class CredentialEncryptionTests
 {
@@ -20,7 +20,7 @@ public class CredentialEncryptionTests
     private static SecretProtector Protector(string dir) => new(
         "Jellyfin.Plugin.DynamicDns.Secrets.v1",
         NullLogger.Instance,
-        StableSecretProtection.Build(dir, NullLogger.Instance));
+        StableSecretProtection.Build(dir, "Jellyfin.Plugin.DynamicDns", NullLogger.Instance));
 
     [Fact]
     public void ProtectAll_EncryptsPlaintextCredentials()

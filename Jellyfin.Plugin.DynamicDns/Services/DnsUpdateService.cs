@@ -101,8 +101,8 @@ public sealed class DNSUpdateService : IDisposable
 
     private async Task<DNSUpdateOutcome> RunCoreAsync(Plugin plugin, DNSUpdateOutcome outcome, CancellationToken cancellationToken)
     {
-        // Backstop only. Every save path encrypts (the dashboard endpoint and the UpdateConfiguration
-        // override on the generic endpoint), but a config written before those hooks existed, or edited
+        // Backstop only. Every save path encrypts (the dashboard endpoint and the OnConfigurationSaving
+        // hook on the generic endpoint), but a config written before those hooks existed, or edited
         // directly on disk, is still caught here so a plaintext secret is never left bare.
         plugin.MutateConfiguration(c => CredentialEncryption.ProtectAll(c.Records, _secrets));
 

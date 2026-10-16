@@ -1,3 +1,5 @@
+import { createConfigPage } from './configurationpage?name=ddns_jpkribs_shared.js';
+
 export default function (view) {
     'use strict';
 
@@ -8,17 +10,6 @@ export default function (view) {
     ];
 
     var Shared = null;
-    var setTabs = null;
-    var initCollapsibles = null;
-    var _sharedPromise = import('/web/configurationpage?name=ddns_jpkribs_shared.js').then(function (mod) {
-        Shared = mod.createShared(view, PLUGIN_ID, 'DynamicDns');
-        setTabs = mod.setTabs;
-        initCollapsibles = mod.initCollapsibles;
-    });
-
-    var _bound = false;
-
-    function el(id) { return view.querySelector('#' + id); }
 
     // Use the plugin's own config endpoints so credentials on other records are redacted in transit and
     // any newly entered ones are encrypted at save (see DynamicDnsController).
@@ -27,13 +18,13 @@ export default function (view) {
 
     function showCurrentIp(cfg) {
         var parts = [cfg.LastDetectedIPv4, cfg.LastDetectedIPv6].filter(function (x) { return x; });
-        el('currentIp').value = parts.length ? parts.join('   /   ') : 'Not detected yet';
+        Shared.getEl('currentIp').value = parts.length ? parts.join('   /   ') : 'Not detected yet';
     }
 
     // Shows the read only detection warning when the last run could not resolve a public address for a
     // wanted family, for example when the detected address looked internal and nothing was published.
     function showDetectionWarning(message) {
-        var box = el('detectionWarning');
+        var box = Shared.getEl('detectionWarning');
         var text = message || '';
         box.textContent = text;
         box.style.display = text ? '' : 'none';
@@ -42,20 +33,20 @@ export default function (view) {
     function load() {
         getConfig().then(function (cfg) {
             if (!cfg) { Shared.setStatus('addressStatus', 'Could not load settings.', true); return; }
-            el('ipv4Url').value = cfg.IPv4DetectionUrl || '';
-            el('ipv6Url').value = cfg.IPv6DetectionUrl || '';
+            Shared.getEl('ipv4Url').value = cfg.IPv4DetectionUrl || '';
+            Shared.getEl('ipv6Url').value = cfg.IPv6DetectionUrl || '';
             // Select the matching preset, falling back to Off when the stored value is not one of them.
-            var force = el('forceUpdateHours');
+            var force = Shared.getEl('forceUpdateHours');
             force.value = String(cfg.ForceUpdateHours || 0);
             if (force.selectedIndex < 0) force.value = '0';
-            el('skipInternal').checked = cfg.SkipInternalAddresses !== false;
-            var bf = el('backoffAfterFailures');
+            Shared.getEl('skipInternal').checked = cfg.SkipInternalAddresses !== false;
+            var bf = Shared.getEl('backoffAfterFailures');
             bf.value = String(cfg.BackoffAfterFailures == null ? 3 : cfg.BackoffAfterFailures);
             if (bf.selectedIndex < 0) bf.value = '3';
-            var bh = el('backoffHours');
+            var bh = Shared.getEl('backoffHours');
             bh.value = String(cfg.BackoffHours || 24);
             if (bh.selectedIndex < 0) bh.value = '24';
-            el('requestTimeout').value = cfg.RequestTimeoutSeconds || 15;
+            Shared.getEl('requestTimeout').value = cfg.RequestTimeoutSeconds || 15;
             showCurrentIp(cfg);
             showDetectionWarning(cfg.LastDetectionMessage);
         }).catch(function () {
@@ -66,13 +57,13 @@ export default function (view) {
     function saveAddress() {
         getConfig().then(function (fresh) {
             if (!fresh) { throw new Error('settings unavailable'); }
-            fresh.IPv4DetectionUrl = el('ipv4Url').value.trim();
-            fresh.IPv6DetectionUrl = el('ipv6Url').value.trim();
-            fresh.ForceUpdateHours = Math.max(0, parseInt(el('forceUpdateHours').value, 10) || 0);
-            fresh.SkipInternalAddresses = el('skipInternal').checked;
-            fresh.BackoffAfterFailures = Math.max(0, parseInt(el('backoffAfterFailures').value, 10) || 0);
-            fresh.BackoffHours = Math.max(1, parseInt(el('backoffHours').value, 10) || 24);
-            fresh.RequestTimeoutSeconds = Math.max(1, parseInt(el('requestTimeout').value, 10) || 15);
+            fresh.IPv4DetectionUrl = Shared.getEl('ipv4Url').value.trim();
+            fresh.IPv6DetectionUrl = Shared.getEl('ipv6Url').value.trim();
+            fresh.ForceUpdateHours = Math.max(0, parseInt(Shared.getEl('forceUpdateHours').value, 10) || 0);
+            fresh.SkipInternalAddresses = Shared.getEl('skipInternal').checked;
+            fresh.BackoffAfterFailures = Math.max(0, parseInt(Shared.getEl('backoffAfterFailures').value, 10) || 0);
+            fresh.BackoffHours = Math.max(1, parseInt(Shared.getEl('backoffHours').value, 10) || 24);
+            fresh.RequestTimeoutSeconds = Math.max(1, parseInt(Shared.getEl('requestTimeout').value, 10) || 15);
             return saveConfig(fresh);
         }).then(function (saved) {
             Shared.setStatus('addressStatus', saved ? 'Saved.' : 'Save failed.', !saved);
@@ -102,16 +93,18 @@ export default function (view) {
     }
 
     function bind() {
-        el('btnSaveAddress').addEventListener('click', saveAddress);
-        el('btnRunNow').addEventListener('click', runNow);
-        initCollapsibles(view);
+        Shared.getEl('btnSaveAddress').addEventListener('click', saveAddress);
+        Shared.getEl('btnRunNow').addEventListener('click', runNow);
+        Shared.initCollapsibles();
     }
 
-    view.addEventListener('viewshow', function () {
-        _sharedPromise.then(function () {
-            setTabs('ddns', 1, TABS);
-            if (!_bound) { bind(); _bound = true; }
-            load();
-        });
-    });
+    Shared = createConfigPage(view, {
+        pluginId: PLUGIN_ID,
+        apiPrefix: 'DynamicDns',
+        tabsKey: 'ddns',
+        tabIndex: 1,
+        tabs: TABS,
+        bind: bind,
+        load: load
+    }).shared;
 }

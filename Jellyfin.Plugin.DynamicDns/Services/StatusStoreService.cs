@@ -1,7 +1,7 @@
 using System;
 using System.IO;
-using System.Text.Json;
 using Jellyfin.Plugin.DynamicDns.Models;
+using JPKribs.Jellyfin.Base;
 using MediaBrowser.Common.Configuration;
 using Microsoft.Extensions.Logging;
 
@@ -14,10 +14,7 @@ namespace Jellyfin.Plugin.DynamicDns.Services;
 /// </summary>
 public sealed class StatusStoreService
 {
-    private static readonly JsonSerializerOptions Options = new() { WriteIndented = true };
-
-    private readonly object _lock = new();
-    private readonly string _path;
+    private readonly JsonFileStore<StatusData> _store;
     private readonly ILogger<StatusStoreService> _logger;
 
     /// <summary>
@@ -29,54 +26,30 @@ public sealed class StatusStoreService
     {
         ArgumentNullException.ThrowIfNull(paths);
         _logger = logger;
-        _path = Path.Join(paths.PluginConfigurationsPath, "Jellyfin.Plugin.DynamicDns.Status.json");
+        _store = new JsonFileStore<StatusData>(Path.Join(paths.PluginConfigurationsPath, "Jellyfin.Plugin.DynamicDns.Status.json"), logger);
     }
 
     /// <summary>
     /// Reads the stored status, or a fresh empty status when none exists or it cannot be read.
     /// </summary>
     /// <returns>The status data.</returns>
-    public StatusData Load()
-    {
-        lock (_lock)
-        {
-            try
-            {
-                if (File.Exists(_path))
-                {
-                    var data = JsonSerializer.Deserialize<StatusData>(File.ReadAllText(_path), Options);
-                    if (data is not null)
-                    {
-                        return data;
-                    }
-                }
-            }
-            catch (Exception ex) when (ex is IOException or JsonException or UnauthorizedAccessException)
-            {
-                _logger.LogWarning(ex, "Could not read the status store, starting fresh.");
-            }
-
-            return new StatusData();
-        }
-    }
+    public StatusData Load() => _store.Load();
 
     /// <summary>
-    /// Writes the status to disk.
+    /// Writes the status to disk. The write is atomic, and a failure is logged rather than thrown so a
+    /// status write never fails the update run it records.
     /// </summary>
     /// <param name="data">The status to persist.</param>
     public void Save(StatusData data)
     {
         ArgumentNullException.ThrowIfNull(data);
-        lock (_lock)
+        try
         {
-            try
-            {
-                File.WriteAllText(_path, JsonSerializer.Serialize(data, Options));
-            }
-            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-            {
-                _logger.LogWarning(ex, "Could not write the status store.");
-            }
+            _store.Save(data);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            _logger.LogWarning(ex, "Could not write the status store.");
         }
     }
 }
