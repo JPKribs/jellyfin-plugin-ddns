@@ -11,6 +11,10 @@ Dynamic DNS is a simple Jellyfin plugin that keeps your DNS records pointed at y
 
 Each record has a name, a provider, a hostname, and the credentials that provider needs. A scheduled task named `Update Dynamic DNS` detects your public IP, looks up what each hostname currently resolves to in DNS, and pushes the detected IP to any record whose DNS does not already serve it. See [Adding Records](Records.md) and [How Updates Run](HowItWorks.md).
 
+The `Domains` tab lists every record with a health summary and the editor for the selected record.
+
+![Domains tab](screenshots/Domains.png)
+
 Dynamic DNS supports 45 providers based on the great work done by [ddclient](https://github.com/ddclient/ddclient). They are the recommended tool for an external, standalone DDNS solution! See [Providers](providers/README.md) for the fields each one needs.
 
 Next: [Installation](Installation.md).

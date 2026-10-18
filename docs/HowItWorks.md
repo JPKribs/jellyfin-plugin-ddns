@@ -2,6 +2,10 @@
 
 The scheduled task named `Update Dynamic DNS` runs every 15 minutes and on startup by default, but you can set the interval under `Scheduled Tasks`. On each run the plugin detects the public IP, looks up what each hostname currently resolves to in DNS, and pushes the detected IP to any record whose DNS does not already serve it. Each record shows its last action, updated, unchanged, or failed, and when it was last checked.
 
+The status card at the bottom of each record shows the result of its last run.
+
+![Last update status](screenshots/Last%20Update.png)
+
 ## Force Update
 
 If you want a record refreshed even when DNS already matches, choose an interval under `Force Update` in the `Update Behavior` section of the `Address` tab. When that period has passed since the last successful push, the plugin re-sends the current IP, which keeps the record alive on providers that age out stale entries. `Force Update` is `Off` by default, so records are pushed only when DNS does not already serve your detected IP.

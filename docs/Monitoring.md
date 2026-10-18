@@ -4,6 +4,8 @@
 
 The `Domains` tab summarizes every record at a glance.
 
+![Record health summary](screenshots/Record%20Health.png)
+
 * **Healthy**: The last update succeeded within the last 24 hours.
 * **Unhealthy**: A published record has not updated successfully in the last 24 hours.
 * **Unpublished**: The record has never run an update yet.
@@ -11,6 +13,10 @@ The `Domains` tab summarizes every record at a glance.
 ## Activity Log
 
 Notable events are written to Jellyfin's activity log under **Dashboard → Activity**, so you can see what the plugin has done without digging through the server log.
+
+Here is the activity log after records were added and their first updates failed.
+
+![Activity log](screenshots/Activity%20Log.png)
 
 * **Record updated**: A record was pushed to its provider, with the new address.
 * **Update failed**: A push was attempted and the provider rejected it or could not be reached.
