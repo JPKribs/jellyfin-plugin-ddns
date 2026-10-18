@@ -1,0 +1,104 @@
+site_name: Dynamic DNS
+site_description: A Jellyfin plugin that keeps your DNS records pointed at your server's current public IP.
+site_url: https://jpkribs.github.io/jellyfin-plugin-ddns/
+repo_url: https://github.com/JPKribs/jellyfin-plugin-ddns
+repo_name: JPKribs/jellyfin-plugin-ddns
+edit_uri: edit/master/docs/
+docs_dir: docs
+
+theme:
+  name: material
+  logo: assets/icon.png
+  favicon: assets/icon.png
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: deep purple
+      accent: light blue
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: deep purple
+      accent: light blue
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - navigation.sections
+    - navigation.top
+    - navigation.footer
+    - search.highlight
+    - content.code.copy
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+
+nav:
+  - Overview: index.md
+  - Getting Started:
+      - Installation: Installation.md
+      - Adding Records: Records.md
+  - Features:
+      - How Updates Run: HowItWorks.md
+      - Monitoring: Monitoring.md
+  - Providers:
+      - Overview: providers/README.md
+      - 1984 Hosting: providers/Hosting1984.md
+      - ChangeIP: providers/ChangeIp.md
+      - Cloudflare: providers/Cloudflare.md
+      - ClouDNS: providers/CloudNs.md
+      - DDNS.fm: providers/DdnsFm.md
+      - DDNSS.de: providers/Ddnss.md
+      - DigitalOcean: providers/DigitalOcean.md
+      - Dinahosting: providers/Dinahosting.md
+      - Directnic: providers/Directnic.md
+      - DNS Made Easy: providers/DnsMadeEasy.md
+      - DNSExit: providers/DnsExit2.md
+      - Domeneshop: providers/Domeneshop.md
+      - DonDominio: providers/DonDominio.md
+      - DSLReports: providers/DslReports1.md
+      - Duck DNS: providers/DuckDns.md
+      - Dynadot: providers/Dynadot.md
+      - "DynDNS v1 (legacy)": providers/DynDns1.md
+      - DynDNS v2: providers/DynDns2.md
+      - Dynu: providers/Dynu.md
+      - easyDNS: providers/EasyDns.md
+      - eNom: providers/Enom.md
+      - "FreeDNS (afraid.org)": providers/FreeDns.md
+      - freemyip.com: providers/FreeMyIp.md
+      - Gandi LiveDNS: providers/Gandi.md
+      - GoDaddy: providers/GoDaddy.md
+      - Hetzner DNS: providers/Hetzner.md
+      - "Hurricane Electric (dns.he.net)": providers/HeNet.md
+      - Infomaniak: providers/Infomaniak.md
+      - INWX: providers/Inwx.md
+      - IONOS: providers/Ionos.md
+      - Key-Systems: providers/KeySystems.md
+      - Mythic Beasts: providers/MythicDyn.md
+      - Namecheap: providers/Namecheap.md
+      - NearlyFreeSpeech.NET: providers/Nfsn.md
+      - Njalla: providers/Njalla.md
+      - No-IP: providers/NoIp.md
+      - NS1: providers/Ns1.md
+      - OVH: providers/Ovh.md
+      - Porkbun: providers/Porkbun.md
+      - regfish.de: providers/RegfishDe.md
+      - Simply.com: providers/SimplyCom.md
+      - Sitelutions: providers/Sitelutions.md
+      - Spaceship: providers/Spaceship.md
+      - "Yandex 360 / PDD": providers/Yandex.md
+      - ZoneEdit: providers/ZoneEdit1.md
+  - Reference:
+      - Security: Security.md
+      - Storage: Storage.md
+      - Versioning: Versioning.md
+  - Contributing:
+      - Contributing: contributors/CONTRIBUTING.md
+      - Creating a Provider: contributors/PROVIDERS.md
