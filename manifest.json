@@ -9,6 +9,14 @@
     "category": "Administration",
     "versions": [
       {
+        "version": "12.2.1.1",
+        "changelog": "\n## Fixed\n- Timeouts, network errors, rate limits, and provider server errors no longer pause a record for the full backoff window after three failures; they earn a short pause that starts at 15 minutes and doubles up to 2 hours, and only a sustained run of them takes the full window. Rejected credentials and requests still use the full window.\n- A paused record is retried as soon as the public IP changes, so a pause never holds back a new address.\n- Editing a record's provider, hostname, zone, server, or credentials resets its status, so it no longer inherits the old target's pause and last pushed address.\n- When one address family times out, the other family's successful update is still recorded.\n- A malformed IP detection URL fails on its own instead of aborting the whole update run, and detection replies are read with a size cap.\n- The live DNS check resolves the record's real name (the hostname completed with its zone, or the DuckDNS domain) and is skipped for numeric record IDs and several DuckDNS labels instead of resolving them as addresses.\n- Run now keeps running when you navigate away, and status from a run that is cancelled part way is still saved, so updates that already landed are not forgotten.\n- A saved login or password can now be removed with a Clear saved value button; a blank field still keeps the saved value.\n- Provider replies are stripped of control characters and truncated before they reach the record status and the activity log.\n- The repository manifest description matches the plugin description.\n- Yandex PDD is marked as a legacy provider because Yandex has retired the PDD API. Existing records still load.\n\n## Developer\n- Updated JPKribs.Jellyfin.Base to 2026.10.19.",
+        "targetAbi": "12.0.0.0",
+        "sourceUrl": "https://github.com/JPKribs/jellyfin-plugin-ddns/releases/download/v12.2.1.1/jellyfin-plugin-ddns-12.2.1.1.zip",
+        "checksum": "ce0f5c425c377e7f4c58ac78a41b0fd9",
+        "timestamp": "2026-10-19T20:15:19Z"
+      },
+      {
         "version": "12.2.1.0",
         "changelog": "\n## Developer\n- Updated JPKribs.Jellyfin.Base to 2026.10.16.",
         "targetAbi": "12.0.0.0",
