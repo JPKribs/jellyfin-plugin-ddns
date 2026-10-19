@@ -21,6 +21,9 @@ public sealed class DNSUpdateService : IDisposable
     // Action label written when a record is paused by the failure backoff policy.
     private const string BackingOffAction = "Backing off";
 
+    // Longest provider reply kept in a record's status and the activity log.
+    private const int MaxMessageLength = 300;
+
     // Consecutive failed detections before the activity log gets an unhealthy warning. Four runs is
     // about an hour on the default fifteen minute schedule, long enough to skip transient blips.
     private const int UnhealthyDetectionRuns = 4;
@@ -184,6 +187,32 @@ public sealed class DNSUpdateService : IDisposable
 
         var statusUpdates = new Dictionary<string, RecordOutcome>(StringComparer.Ordinal);
 
+        // Status is persisted even when the run is cancelled or fails part way, so a push that already
+        // landed is never forgotten and re-sent (or its failure miscounted) on the next run.
+        try
+        {
+            await UpdateRecordsAsync(enabled, status, ip, timeout, forceInterval, backoffThreshold, statusUpdates, outcome, cancellationToken).ConfigureAwait(false);
+        }
+        finally
+        {
+            LogOutcomes(enabled, outcome, ip);
+            PersistStatus(status, plugin, enabled, statusUpdates, ip, backoffThreshold, backoffWindow);
+        }
+
+        return outcome;
+    }
+
+    private async Task UpdateRecordsAsync(
+        List<DNSRecord> enabled,
+        StatusData status,
+        DetectedIP ip,
+        TimeSpan timeout,
+        TimeSpan forceInterval,
+        int backoffThreshold,
+        Dictionary<string, RecordOutcome> statusUpdates,
+        DNSUpdateOutcome outcome,
+        CancellationToken cancellationToken)
+    {
         foreach (var record in enabled)
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -198,24 +227,27 @@ public sealed class DNSUpdateService : IDisposable
                 Hostname = record.Hostname
             };
 
+            // A paused record is still retried once its address moves, so a pause never holds back a new IP.
             var now = DateTime.UtcNow;
-            if (RecordBackoff.IsBackingOff(record, backoffThreshold, now))
+            if (RecordBackoff.IsBackingOff(record, backoffThreshold, now) && !RecordBackoff.AddressMoved(record, ip))
             {
                 result.Skipped = true;
                 result.Success = false;
                 result.Action = BackingOffAction;
-                result.Message = "Paused after " + record.ConsecutiveFailures
-                    + " consecutive failures. Next attempt after "
-                    + record.BackoffUntilUtc!.Value.ToString("u", CultureInfo.InvariantCulture) + ".";
+                result.Message = PauseSummary(record, backoffThreshold) + " Next attempt after "
+                    + record.BackoffUntilUtc!.Value.ToString("u", CultureInfo.InvariantCulture)
+                    + " or when the public IP changes.";
                 statusUpdates[record.Id] = result;
                 outcome.Records.Add(result);
                 continue;
             }
 
-            // Proxied records compare against the last pushed IP, so they need no DNS lookup.
-            var dns = record.Proxied
+            // Proxied records compare against the last pushed IP, so they need no DNS lookup. Neither does a
+            // record whose hostname field holds no resolvable name (a record id, several DuckDNS labels).
+            var name = record.Proxied ? null : RecordTarget.ResolvableName(record);
+            var dns = name is null
                 ? DNSResolution.Failed
-                : await _dnsLookup.ResolveAsync(record.Hostname, cancellationToken).ConfigureAwait(false);
+                : await _dnsLookup.ResolveAsync(name, cancellationToken).ConfigureAwait(false);
             var decision = UpdatePolicy.Decide(record, ip, dns, forceInterval, now);
             if (decision.IsSkip())
             {
@@ -254,20 +286,28 @@ public sealed class DNSUpdateService : IDisposable
                 continue;
             }
 
-            var providerResult = await PushAsync(provider, record, login, password, ip, timeout, cancellationToken).ConfigureAwait(false);
+            var (providerResult, transient) = await PushAsync(provider, record, login, password, ip, timeout, cancellationToken).ConfigureAwait(false);
             result.Success = providerResult.Success;
             result.Action = providerResult.Success ? "Updated" : "Failed";
-            result.Message = providerResult.Message;
+
+            // Provider replies are echoed into the status and activity log, so strip control characters
+            // (no forged log lines) and cap the length (no flooding from an error page).
+            result.Message = string.IsNullOrEmpty(providerResult.Message)
+                ? string.Empty
+                : FormatUtilities.SanitizeForLog(providerResult.Message, MaxMessageLength);
             result.IPv4Applied = providerResult.IPv4Applied;
             result.IPv6Applied = providerResult.IPv6Applied;
+            result.Transient = !providerResult.Success && transient;
             statusUpdates[record.Id] = result;
             outcome.Records.Add(result);
         }
-
-        LogOutcomes(enabled, outcome, ip);
-        PersistStatus(status, plugin, enabled, statusUpdates, ip, backoffThreshold, backoffWindow);
-        return outcome;
     }
+
+    // Describes why a record is paused: definitive failures earn the long pause, temporary ones a short one.
+    private static string PauseSummary(DNSRecord record, int threshold)
+        => record.ConsecutiveFailures >= threshold
+            ? "Paused after " + record.ConsecutiveFailures + " consecutive failures."
+            : "Paused after " + record.TransientFailures + " consecutive temporary failures (timeouts, network or provider server errors).";
 
     /// <summary>
     /// Tracks detection health across runs so a persistent inability to find a public IP surfaces once
@@ -370,7 +410,7 @@ public sealed class DNSUpdateService : IDisposable
         RequestTimeoutSeconds = config.RequestTimeoutSeconds
     };
 
-    private async Task<DNSUpdateResult> PushAsync(
+    private async Task<(DNSUpdateResult Result, bool Transient)> PushAsync(
         IDNSProvider provider,
         DNSRecord record,
         string login,
@@ -382,22 +422,26 @@ public sealed class DNSUpdateService : IDisposable
         using var reqCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         reqCts.CancelAfter(timeout);
 
+        // Watch the provider's HTTP responses so a failure can be classed as temporary or definitive.
+        var attempt = ProviderAttempt.Begin(cancellationToken);
+
         try
         {
             // Hand the provider a transient copy with the decrypted credentials. The config keeps the
             // encrypted values.
             var live = record.WithSecrets(login, password);
-            return await provider.UpdateAsync(live, ip, reqCts.Token).ConfigureAwait(false);
+            var result = await provider.UpdateAsync(live, ip, reqCts.Token).ConfigureAwait(false);
+            return (result, attempt.FailureIsTransient);
         }
         catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
         {
             // The per request timeout fired rather than an outer cancellation.
-            return DNSUpdateResult.Fail("Request timed out after " + timeout.TotalSeconds.ToString("0", CultureInfo.InvariantCulture) + "s.");
+            return (DNSUpdateResult.Fail("Request timed out after " + timeout.TotalSeconds.ToString("0", CultureInfo.InvariantCulture) + "s."), true);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             _logger.LogError(ex, "Unexpected error updating {Host}", record.Hostname);
-            return DNSUpdateResult.Fail("Unexpected error: " + ex.Message);
+            return (DNSUpdateResult.Fail("Unexpected error: " + ex.Message), false);
         }
     }
 
@@ -410,6 +454,16 @@ public sealed class DNSUpdateService : IDisposable
         int backoffThreshold,
         TimeSpan backoffWindow)
     {
+        // Records are read fresh rather than from the run's snapshot, so a record added mid-run is not
+        // pruned and one edited mid-run to target something else does not inherit this run's status.
+        var current = plugin.ReadConfiguration(c => c.Records
+            .Where(r => !string.IsNullOrEmpty(r.Id))
+            .GroupBy(r => r.Id, StringComparer.Ordinal)
+            .ToDictionary(g => g.Key, g => g.First().Clone(), StringComparer.Ordinal));
+
+        // The status this run produced per record: a value to write, or null to remove it.
+        var written = new Dictionary<string, RecordStatus?>(StringComparer.Ordinal);
+        var now = DateTime.UtcNow;
         foreach (var record in enabled)
         {
             if (!statusUpdates.TryGetValue(record.Id, out var result))
@@ -417,32 +471,60 @@ public sealed class DNSUpdateService : IDisposable
                 continue;
             }
 
+            if (current.TryGetValue(record.Id, out var edited) && !RecordTarget.SameTarget(record, edited))
+            {
+                written[record.Id] = null;
+                continue;
+            }
+
             // A record crossing into backoff this run gets one warning entry. While it stays paused the
-            // timestamp is already set, so the streak produces no further entries until it recovers.
-            var wasBackingOff = record.BackoffUntilUtc is not null;
+            // pause is still in force, so the streak produces no further entries until it recovers. An
+            // expired pause left behind by a past streak does not count.
+            var wasBackingOff = record.BackoffUntilUtc is { } previousUntil && previousUntil > now;
             ApplyOutcome(record, result, ip, backoffThreshold, backoffWindow);
             if (!wasBackingOff && record.BackoffUntilUtc is not null)
             {
                 _activity.Log(
                     "Dynamic DNS paused updates for " + record.Hostname,
                     "DynamicDNS.RecordBackoff",
-                    "Paused after " + record.ConsecutiveFailures + " consecutive failures. The next attempt is after "
-                    + record.BackoffUntilUtc.Value.ToString("u", CultureInfo.InvariantCulture) + ".",
+                    PauseSummary(record, backoffThreshold) + " The next attempt is after "
+                    + record.BackoffUntilUtc.Value.ToString("u", CultureInfo.InvariantCulture)
+                    + " or when the public IP changes.",
                     LogLevel.Warning);
             }
 
-            status.Records[record.Id] = RecordStatus.FromRecord(record);
+            written[record.Id] = RecordStatus.FromRecord(record);
         }
 
-        // Drop status for records that no longer exist so the store does not grow without bound. The ids
-        // are read fresh rather than from the run's snapshot so a record added mid-run is not pruned.
-        var validIds = plugin.ReadConfiguration(c => new HashSet<string>(c.Records.Select(r => r.Id), StringComparer.Ordinal));
-        foreach (var key in status.Records.Keys.Where(k => !validIds.Contains(k)).ToList())
+        // Merge into the status as it is on disk now rather than writing back the copy loaded when the run
+        // started, so a reset the dashboard made mid-run (for a record this run did not touch) survives.
+        _statusStore.Update(fresh =>
         {
-            status.Records.Remove(key);
-        }
+            fresh.DetectedIPv4 = status.DetectedIPv4;
+            fresh.DetectedIPv6 = status.DetectedIPv6;
+            fresh.DetectionMessage = status.DetectionMessage;
+            fresh.ConsecutiveDetectionFailures = status.ConsecutiveDetectionFailures;
+            fresh.DetectionUnhealthyLogged = status.DetectionUnhealthyLogged;
+            fresh.PlaintextWarningLogged = status.PlaintextWarningLogged;
 
-        _statusStore.Save(status);
+            foreach (var (id, value) in written)
+            {
+                if (value is null)
+                {
+                    fresh.Records.Remove(id);
+                }
+                else
+                {
+                    fresh.Records[id] = value;
+                }
+            }
+
+            // Drop status for records that no longer exist so the store does not grow without bound.
+            foreach (var key in fresh.Records.Keys.Where(k => !current.ContainsKey(k)).ToList())
+            {
+                fresh.Records.Remove(key);
+            }
+        });
     }
 
     // Internal (not private) so the outcome bookkeeping matrix is testable without a full run.
@@ -471,7 +553,13 @@ public sealed class DNSUpdateService : IDisposable
         // The overall result stays failed, which surfaces the broken family and retries it next run.
         var v4Applied = result.IPv4Applied ?? (result.Success && record.WantsIPv4(ip));
         var v6Applied = result.IPv6Applied ?? (result.Success && record.WantsIPv6(ip));
-        RecordBackoff.ApplyAttempt(record, result.Success || v4Applied || v6Applied, backoffThreshold, backoffWindow, now);
+        var accepted = result.Success || v4Applied || v6Applied;
+        RecordBackoff.ApplyAttempt(record, accepted, result.Transient, backoffThreshold, backoffWindow, now);
+
+        // Remember what a failed attempt tried to push, so a pause is lifted early only once the address
+        // moves. An accepted attempt clears it.
+        record.FailedIPv4 = !accepted && record.WantsIPv4(ip) ? ip.IPv4! : string.Empty;
+        record.FailedIPv6 = !accepted && record.WantsIPv6(ip) ? ip.IPv6! : string.Empty;
 
         // Record only the addresses that actually landed, per family, so a family the provider rejected
         // (or cannot carry) is never marked as pushed and silently skipped forever after.

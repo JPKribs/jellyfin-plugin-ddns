@@ -122,6 +122,28 @@ public class DNSRecord
     public DateTime? BackoffUntilUtc { get; set; }
 
     /// <summary>
+    /// Gets or sets the number of consecutive temporary failures (timeouts, network errors, rate limits,
+    /// and provider server errors). These never count toward the long pause, only a short escalating one.
+    /// Reset to zero on success or on a definitive failure.
+    /// </summary>
+    [XmlIgnore]
+    public int TransientFailures { get; set; }
+
+    /// <summary>
+    /// Gets or sets the IPv4 address the most recent failed attempt tried to push, or empty. A paused
+    /// record is retried early once the detected IPv4 moves away from it.
+    /// </summary>
+    [XmlIgnore]
+    public string FailedIPv4 { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the IPv6 address the most recent failed attempt tried to push, or empty. A paused
+    /// record is retried early once the detected IPv6 moves away from it.
+    /// </summary>
+    [XmlIgnore]
+    public string FailedIPv6 { get; set; } = string.Empty;
+
+    /// <summary>
     /// Returns a shallow copy of the record. Used to snapshot the configuration for an update pass so
     /// the run never mutates the live configuration objects.
     /// </summary>

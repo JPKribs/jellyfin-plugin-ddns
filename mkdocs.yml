@@ -93,7 +93,7 @@ nav:
       - Simply.com: providers/SimplyCom.md
       - Sitelutions: providers/Sitelutions.md
       - Spaceship: providers/Spaceship.md
-      - "Yandex 360 / PDD": providers/Yandex.md
+      - "Yandex PDD (legacy)": providers/Yandex.md
       - ZoneEdit: providers/ZoneEdit1.md
   - Reference:
       - Security: Security.md

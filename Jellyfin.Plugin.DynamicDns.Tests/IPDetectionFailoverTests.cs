@@ -7,6 +7,7 @@ using Jellyfin.Plugin.DynamicDns.Models;
 using Jellyfin.Plugin.DynamicDns.Services;
 using Jellyfin.Plugin.DynamicDns.Configuration;
 using Microsoft.Extensions.Logging.Abstractions;
+using NSubstitute;
 using Xunit;
 
 namespace Jellyfin.Plugin.DynamicDns.Tests;
@@ -146,5 +147,85 @@ public class IPDetectionFailoverTests
         Assert.Null(ip.IPv4);
         Assert.NotNull(ip.IPv4Note);
         Assert.Contains("detection failed", ip.IPv4Note!, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Theory]
+    [InlineData("https://")]
+    [InlineData("https://host.test:99999")]
+    [InlineData("https://[bad")]
+    [InlineData("https:///nohost")]
+    public async Task MalformedConfiguredEndpoint_FailsAlone_AndTheNextOneIsUsed(string malformed)
+    {
+        // A malformed endpoint used to throw out of detection and abort the whole run.
+        var result = await DetectV4(malformed + "\nhttps://good.test", url =>
+            url.Contains("good.test", StringComparison.Ordinal)
+                ? (HttpStatusCode.OK, "8.8.4.4")
+                : throw new Xunit.Sdk.XunitException("unexpected request: " + url));
+
+        Assert.Equal("8.8.4.4", result);
+    }
+
+    [Fact]
+    public async Task OversizedReply_IsReadOnlyUpToTheCap()
+    {
+        var body = new CountingStream(10 * 1024 * 1024);
+        var factory = Substitute.For<IHttpClientFactory>();
+        factory.CreateClient(Arg.Any<string>()).Returns(_ => new HttpClient(new StreamHandler(req =>
+            req.RequestUri!.Host == "huge.test" ? new StreamContent(body) : new StringContent("8.8.4.4"))));
+        var svc = new IPDetectionService(factory, NullLogger<IPDetectionService>.Instance);
+        var cfg = new PluginConfiguration { IPv4DetectionUrl = "https://huge.test\nhttps://good.test", IPv6DetectionUrl = string.Empty };
+
+        var ip = await svc.DetectAsync(cfg, needIPv4: true, needIPv6: false, CancellationToken.None);
+
+        Assert.Equal("8.8.4.4", ip.IPv4);
+        Assert.True(body.BytesRead < 64 * 1024, "read " + body.BytesRead + " bytes");
+    }
+
+    private sealed class StreamHandler : HttpMessageHandler
+    {
+        private readonly Func<HttpRequestMessage, HttpContent> _content;
+
+        public StreamHandler(Func<HttpRequestMessage, HttpContent> content) => _content = content;
+
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+            => Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { Content = _content(request) });
+    }
+
+    // An endless-looking reply of 'x' bytes that counts how much was actually read.
+    private sealed class CountingStream : System.IO.Stream
+    {
+        private readonly long _length;
+
+        public CountingStream(long length) => _length = length;
+
+        public long BytesRead { get; private set; }
+
+        public override bool CanRead => true;
+
+        public override bool CanSeek => false;
+
+        public override bool CanWrite => false;
+
+        public override long Length => throw new NotSupportedException();
+
+        public override long Position { get => BytesRead; set => throw new NotSupportedException(); }
+
+        public override int Read(byte[] buffer, int offset, int count)
+        {
+            var n = (int)Math.Min(count, _length - BytesRead);
+            Array.Fill(buffer, (byte)'x', offset, n);
+            BytesRead += n;
+            return n;
+        }
+
+        public override void Flush()
+        {
+        }
+
+        public override long Seek(long offset, System.IO.SeekOrigin origin) => throw new NotSupportedException();
+
+        public override void SetLength(long value) => throw new NotSupportedException();
+
+        public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException();
     }
 }

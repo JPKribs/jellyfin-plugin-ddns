@@ -64,4 +64,25 @@ public class DNSResolutionTests
         var result = await svc.ResolveAsync("   ", CancellationToken.None);
         Assert.False(result.Succeeded);
     }
+
+    [Theory]
+    [InlineData("123456")]
+    [InlineData("1.2.3.4")]
+    [InlineData("2001:db8::1")]
+    public async Task Lookup_IpLiteral_ReturnsFailed_WithoutResolving(string literal)
+    {
+        // A numeric record id parses as an IPv4 literal, and the resolver would echo it back as if DNS
+        // served that address.
+        var resolved = false;
+        var svc = new DNSLookupService(NullLogger<DNSLookupService>.Instance, (_, _) =>
+        {
+            resolved = true;
+            return Task.FromResult(new[] { IPAddress.Parse("0.1.226.64") });
+        });
+
+        var result = await svc.ResolveAsync(literal, CancellationToken.None);
+
+        Assert.False(result.Succeeded);
+        Assert.False(resolved);
+    }
 }

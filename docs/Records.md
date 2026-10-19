@@ -4,7 +4,7 @@
 
 Each record has a name, a provider, a hostname, and the credentials that provider needs. The `Domains` tab shows only the fields a provider actually uses to try and minimize confusion. Records live in the plugin configuration, so they are captured by your normal Jellyfin config backups. See [Providers](providers/README.md) for the fields each provider needs.
 
-This is the editor for a Cloudflare record. Saved credentials show only as dots and are never sent back to the browser.
+This is the editor for a Cloudflare record. Saved credentials show only as dots and are never sent back to the browser. Leaving a credential field blank keeps the saved value; use `Clear saved value` under the field to remove it.
 
 ![Record editor](screenshots/Record%20Editor.png)
 

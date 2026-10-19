@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Net;
 using System.Net.Http;
 using System.Net.Sockets;
@@ -21,6 +22,10 @@ namespace Jellyfin.Plugin.DynamicDns.Services;
 public sealed class IPDetectionService
 {
     private static readonly char[] EndpointSeparators = { '\n', '\r', '\t', ',', ' ' };
+
+    // An echo endpoint answers with one address. Anything longer is not an address, so at most this many
+    // characters are read, which stops a misbehaving endpoint from streaming an unbounded body.
+    private const int MaxResponseChars = 1024;
 
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly ILogger<IPDetectionService> _logger;
@@ -218,13 +223,20 @@ public sealed class IPDetectionService
             return (null, false);
         }
 
+        // A malformed endpoint fails on its own rather than aborting detection for every other endpoint.
+        if (!Uri.TryCreate(url, UriKind.Absolute, out var uri) || uri.Scheme != Uri.UriSchemeHttps || string.IsNullOrEmpty(uri.Host))
+        {
+            _logger.LogWarning("Skipping the malformed IP detection endpoint {Url}", url);
+            return (null, false);
+        }
+
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         timeout.CancelAfter(requestTimeout);
 
         try
         {
             var client = _httpClientFactory.CreateClient(NamedClient.Default);
-            var body = (await client.GetStringAsync(url, timeout.Token).ConfigureAwait(false)).Trim();
+            var body = (await ReadBoundedAsync(client, uri, timeout.Token).ConfigureAwait(false)).Trim();
 
             if (!IPAddress.TryParse(body, out var parsed) || parsed.AddressFamily != expected)
             {
@@ -242,7 +254,7 @@ public sealed class IPDetectionService
 
             return (parsed.ToString(), false);
         }
-        catch (HttpRequestException ex)
+        catch (Exception ex) when (ex is HttpRequestException or InvalidOperationException or UriFormatException or IOException)
         {
             _logger.LogWarning(ex, "IP detection request to {Url} failed", url);
             return (null, false);
@@ -252,6 +264,34 @@ public sealed class IPDetectionService
             // The per probe timeout fired rather than an outer cancellation. Fail this endpoint and move on.
             _logger.LogWarning("IP detection request to {Url} timed out", url);
             return (null, false);
+        }
+    }
+
+    // Reads at most MaxResponseChars of a successful response body. A non success status throws, matching
+    // what GetStringAsync did, so the endpoint is failed over like any other error.
+    private static async Task<string> ReadBoundedAsync(HttpClient client, Uri uri, CancellationToken cancellationToken)
+    {
+        using var response = await client.GetAsync(uri, HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false);
+        response.EnsureSuccessStatusCode();
+
+        var stream = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
+        await using (stream.ConfigureAwait(false))
+        {
+            using var reader = new StreamReader(stream);
+            var buffer = new char[MaxResponseChars];
+            var total = 0;
+            while (total < buffer.Length)
+            {
+                var read = await reader.ReadAsync(buffer.AsMemory(total), cancellationToken).ConfigureAwait(false);
+                if (read == 0)
+                {
+                    break;
+                }
+
+                total += read;
+            }
+
+            return new string(buffer, 0, total);
         }
     }
 }

@@ -14,6 +14,10 @@ If you want a record refreshed even when DNS already matches, choose an interval
 
 If a record keeps failing, for example because a token is wrong, the plugin pauses it after a set number of failures in a row and then retries it only once each backoff window, so a misconfiguration does not keep spamming your provider and risk a rate limit or ban. Both the failure count and the window are set under `Update Behavior` and default to three failures and twenty four hours. The record card shows when a record is backing off and when it will next be tried.
 
+Only failures that point at the record itself count toward that pause: rejected credentials, a request the provider refuses, or an error the provider reports in its reply. Temporary failures (a timeout, a network error, a rate limit, or a provider server error) never count toward it. After the same number of temporary failures in a row the record instead pauses briefly, starting at fifteen minutes and doubling up to two hours. A failure that never clears can look temporary too (a mistyped server override, a provider host that no longer resolves), so once the two hour pause has been reached three times the record takes the full backoff window. Either pause is lifted as soon as your public IP changes, so a paused record never holds back a new address.
+
+Editing a record's provider, hostname, zone, server, or credentials starts its status over, clearing any pause and the last pushed address.
+
 !!! tip "Set the scheduled interval longer than your record TTL"
     If a run happens before the change has propagated, your resolver may still answer with the old address and the record can be pushed again needlessly.
 

@@ -67,3 +67,60 @@ public class StatusStoreServiceTests
         }
     }
 }
+
+/// <summary>Covers removing chosen records' status, as a retargeting save does.</summary>
+public class StatusStoreRemoveTests
+{
+    [Fact]
+    public void RemoveRecords_DropsOnlyTheNamedRecords()
+    {
+        var dir = Path.Join(Path.GetTempPath(), "ddns-status-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(dir);
+        try
+        {
+            var paths = Substitute.For<IApplicationPaths>();
+            paths.PluginConfigurationsPath.Returns(dir);
+            var store = new StatusStoreService(paths, NullLogger<StatusStoreService>.Instance);
+            var data = new StatusData { DetectedIPv4 = "1.2.3.4" };
+            data.Records["a"] = new RecordStatus { LastIPv4 = "1.1.1.1" };
+            data.Records["b"] = new RecordStatus { LastIPv4 = "2.2.2.2" };
+            store.Save(data);
+
+            store.RemoveRecords(new[] { "a", "missing" });
+
+            var loaded = store.Load();
+            Assert.False(loaded.Records.ContainsKey("a"));
+            Assert.Equal("2.2.2.2", loaded.Records["b"].LastIPv4);
+            Assert.Equal("1.2.3.4", loaded.DetectedIPv4);
+        }
+        finally
+        {
+            Directory.Delete(dir, true);
+        }
+    }
+
+    [Fact]
+    public void StatusWrittenBeforeNewFields_LoadsWithDefaults()
+    {
+        var dir = Path.Join(Path.GetTempPath(), "ddns-status-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(dir);
+        try
+        {
+            File.WriteAllText(
+                Path.Join(dir, "Jellyfin.Plugin.DynamicDns.Status.json"),
+                "{\"DetectedIPv4\":\"1.2.3.4\",\"Records\":{\"a\":{\"LastIPv4\":\"1.2.3.4\",\"ConsecutiveFailures\":3,\"BackoffUntilUtc\":\"2030-01-01T00:00:00Z\"}}}");
+            var paths = Substitute.For<IApplicationPaths>();
+            paths.PluginConfigurationsPath.Returns(dir);
+
+            var record = new StatusStoreService(paths, NullLogger<StatusStoreService>.Instance).Load().Records["a"];
+
+            Assert.Equal(3, record.ConsecutiveFailures);
+            Assert.Equal(0, record.TransientFailures);
+            Assert.Equal(string.Empty, record.FailedIPv4);
+        }
+        finally
+        {
+            Directory.Delete(dir, true);
+        }
+    }
+}

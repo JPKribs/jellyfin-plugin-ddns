@@ -1,5 +1,7 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using Jellyfin.Plugin.DynamicDns.Models;
 using JPKribs.Jellyfin.Base;
 using MediaBrowser.Common.Configuration;
@@ -46,6 +48,59 @@ public sealed class StatusStoreService
         try
         {
             _store.Save(data);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            _logger.LogWarning(ex, "Could not write the status store.");
+        }
+    }
+
+    /// <summary>
+    /// Loads the stored status, applies <paramref name="mutate"/>, and saves the result under the store's
+    /// lock, so a change made by another caller in between is never overwritten by a stale copy. A failure
+    /// is logged rather than thrown so a status write never fails the update run it records.
+    /// </summary>
+    /// <param name="mutate">The change to apply to the stored status.</param>
+    public void Update(Action<StatusData> mutate)
+    {
+        ArgumentNullException.ThrowIfNull(mutate);
+        try
+        {
+            _store.Update(mutate);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            _logger.LogWarning(ex, "Could not write the status store.");
+        }
+    }
+
+    /// <summary>
+    /// Removes the status of the given records, so each starts over with no backoff and no last pushed
+    /// address. Loading, removing, and saving happen under the store's lock, and nothing is written when
+    /// none of the records had status. A failure is logged rather than thrown.
+    /// </summary>
+    /// <param name="recordIds">The ids of the records to reset.</param>
+    public void RemoveRecords(IEnumerable<string> recordIds)
+    {
+        ArgumentNullException.ThrowIfNull(recordIds);
+        var ids = recordIds.ToList();
+        if (ids.Count == 0)
+        {
+            return;
+        }
+
+        try
+        {
+            _store.UpdateIf(data =>
+            {
+                var removed = false;
+                foreach (var id in ids)
+                {
+                    removed |= data.Records.Remove(id);
+                }
+
+                return removed;
+            });
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {

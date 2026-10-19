@@ -46,7 +46,7 @@ Provider to the matching value on the Domains tab, then fill the fields below fr
 * [Simply.com](SimplyCom.md)
 * [Sitelutions](Sitelutions.md)
 * [Spaceship](Spaceship.md)
-* [Yandex 360 / PDD](Yandex.md)
+* [Yandex PDD (legacy)](Yandex.md)
 * [ZoneEdit](ZoneEdit1.md)
 
 ## Provider notes

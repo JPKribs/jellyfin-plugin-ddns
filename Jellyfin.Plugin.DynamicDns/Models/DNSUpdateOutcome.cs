@@ -33,6 +33,13 @@ public sealed class RecordOutcome
 
     /// <summary>Gets or sets the per-family IPv6 outcome: <c>null</c> when no IPv6 push was attempted or the provider does not report per family.</summary>
     public bool? IPv6Applied { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether a failure was temporary (a timeout, network error, rate
+    /// limit, or provider server error) rather than a sign the record is misconfigured. Internal, so it
+    /// drives the backoff bookkeeping without reaching the dashboard response.
+    /// </summary>
+    internal bool Transient { get; set; }
 }
 
 /// <summary>

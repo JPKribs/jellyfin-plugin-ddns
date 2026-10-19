@@ -26,6 +26,12 @@ export default function (view) {
     var currentIndex = -1;
     var editorEnabled = true;
 
+    // Posted in a credential field to remove the stored value. A blank field keeps it, so clearing is an
+    // explicit action. Keyed by input id, reset whenever the editor loads a record.
+    var CLEAR_SECRET = '__JPK_DDNS_SECRET_CLEAR__';
+    var CLEAR_BUTTONS = { recLogin: 'btnClearLogin', recPassword: 'btnClearPassword' };
+    var clearedSecrets = {};
+
     // The plugin's own config endpoints redact stored credentials to a write-only sentinel on read and
     // encrypt freshly typed ones on save, so secrets never round-trip through the browser in the clear.
     function getConfig() { return Shared.apiRequest('Configuration', 'GET'); }
@@ -155,6 +161,17 @@ export default function (view) {
         var input = Shared.getEl(id);
         input.value = '';
         input.placeholder = stored ? '••••••••' : '';
+        clearedSecrets[id] = false;
+        Shared.setVisible(CLEAR_BUTTONS[id], !!stored);
+    }
+
+    // Marks a stored credential for removal on the next save. Typing a new value still replaces it.
+    function clearSecret(id) {
+        var input = Shared.getEl(id);
+        input.value = '';
+        input.placeholder = 'Cleared when saved';
+        clearedSecrets[id] = true;
+        Shared.setVisible(CLEAR_BUTTONS[id], false);
     }
 
     function applyFields(provider) {
@@ -241,11 +258,13 @@ export default function (view) {
         r.UpdateIPv6 = Shared.getEl('recUpdateIPv6').checked;
         r.Enabled = editorEnabled;
         // Only overwrite a credential when the admin typed a replacement. A blank field keeps the stored
-        // (encrypted) value rather than wiping it.
+        // (encrypted) value rather than wiping it, unless the admin explicitly cleared it.
         var login = Shared.getEl('recLogin').value.trim();
         if (login) r.Login = login;
+        else if (clearedSecrets.recLogin) r.Login = CLEAR_SECRET;
         var password = Shared.getEl('recPassword').value;
         if (password) r.Password = password;
+        else if (clearedSecrets.recPassword) r.Password = CLEAR_SECRET;
         r.Zone = Shared.getEl('recZone').value.trim();
         r.Server = Shared.getEl('recServer').value.trim();
         r.Ttl = parseInt(Shared.getEl('recTtl').value, 10) || 1;
@@ -256,16 +275,21 @@ export default function (view) {
         r.BackupMx = Shared.getEl('recBackupMx').checked;
     }
 
-    function persistRecords(okMessage, errMessage) {
+    function persistRecords(okMessage, errMessage, onFail) {
         return getConfig().then(function (fresh) {
             if (!fresh) { throw new Error('settings unavailable'); }
             fresh.Records = records;
             config = fresh;
             return saveConfig(fresh);
         }).then(function (saved) {
+            // Adopt the records as persisted, so a credential just typed (or cleared) is held as the
+            // server's redacted marker rather than resent, and the status reflects any reset by the save.
+            if (saved && saved.Records) { records = saved.Records; }
+            else if (onFail) { onFail(); }
             renderSelect();
             Shared.setStatus('recordStatus', saved ? okMessage : errMessage, !saved);
         }).catch(function () {
+            if (onFail) { onFail(); }
             Shared.setStatus('recordStatus', errMessage, true);
         });
     }
@@ -273,13 +297,23 @@ export default function (view) {
     function saveRecord() {
         var r = records[currentIndex];
         if (!r) return;
+        // The credentials as last loaded from the server (its redacted marker or empty), restored if the
+        // save fails, so a typed secret or a clear request never lingers in the record to be shown as
+        // saved or silently resent with a later save.
+        var priorLogin = r.Login;
+        var priorPassword = r.Password;
         readEditorInto(r);
         if (!r.Hostname) {
+            r.Login = priorLogin;
+            r.Password = priorPassword;
             Shared.setStatus('recordStatus', 'A hostname is required.', true);
             return;
         }
 
-        persistRecords('Saved.', 'Save failed.');
+        persistRecords('Saved.', 'Save failed.', function () {
+            r.Login = priorLogin;
+            r.Password = priorPassword;
+        });
     }
 
     function addRecord() {
@@ -312,6 +346,8 @@ export default function (view) {
         Shared.getEl('btnNewRecord').addEventListener('click', addRecord);
         Shared.getEl('btnDeleteRecord').addEventListener('click', deleteRecord);
         Shared.getEl('btnSaveRecord').addEventListener('click', saveRecord);
+        Shared.getEl('btnClearLogin').addEventListener('click', function () { clearSecret('recLogin'); });
+        Shared.getEl('btnClearPassword').addEventListener('click', function () { clearSecret('recPassword'); });
         Shared.getEl('btnEnable').addEventListener('click', function () {
             editorEnabled = !editorEnabled;
             setEnableVisual(editorEnabled);

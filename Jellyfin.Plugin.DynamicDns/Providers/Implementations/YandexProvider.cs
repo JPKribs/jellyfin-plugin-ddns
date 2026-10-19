@@ -11,7 +11,10 @@ using Microsoft.Extensions.Logging;
 namespace Jellyfin.Plugin.DynamicDns.Providers.Implementations;
 
 /// <summary>
-/// Yandex 360 / PDD (port of ddclient's <c>nic_yandex_update</c>). Authenticates with a
+/// Yandex PDD, legacy (port of ddclient's <c>nic_yandex_update</c>). Yandex has retired the PDD API in
+/// favour of the Yandex 360 API: its documentation now redirects there and pddimp.yandex.ru no longer
+/// presents a certificate for its own name. Kept so existing records still load; new setups should use
+/// another provider. Authenticates with a
 /// <c>PddToken</c> header, lists the domain's DNS records to find the record whose <c>fqdn</c> and
 /// record type both match, then POSTs a form-encoded edit to set its content. Matching the type keeps
 /// an IPv4 edit from overwriting the AAAA (or an unrelated TXT/MX) at the same name, and lets A and
@@ -33,10 +36,10 @@ public sealed class YandexProvider : DNSProviderBase
     public override DNSProviderKind Kind => DNSProviderKind.Yandex;
 
     /// <inheritdoc />
-    public override string Label => "Yandex";
+    public override string Label => "Yandex PDD (legacy, retired API)";
 
     /// <inheritdoc />
-    public override string Hint => "Login is the domain. Password is your PDD token. Hostname is the FQDN.";
+    public override string Hint => "Legacy: Yandex has retired the PDD API, so updates are expected to fail. Login is the domain. Password is your PDD token. Hostname is the FQDN.";
 
     /// <inheritdoc />
     public override ProviderFields Fields => new()

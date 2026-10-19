@@ -93,7 +93,7 @@ public abstract class DNSProviderBase : IDNSProvider
 
         if (record.UpdateIPv4 && ip.IPv4 is not null)
         {
-            var (ok, message) = await update("A", ip.IPv4, cancellationToken).ConfigureAwait(false);
+            var (ok, message) = await UpdateFamilyAsync(update, "A", ip.IPv4, cancellationToken).ConfigureAwait(false);
             allOk &= ok;
             v4Ok = ok;
             parts.Add("IPv4: " + message);
@@ -101,7 +101,7 @@ public abstract class DNSProviderBase : IDNSProvider
 
         if (record.UpdateIPv6 && ip.IPv6 is not null)
         {
-            var (ok, message) = await update("AAAA", ip.IPv6, cancellationToken).ConfigureAwait(false);
+            var (ok, message) = await UpdateFamilyAsync(update, "AAAA", ip.IPv6, cancellationToken).ConfigureAwait(false);
             allOk &= ok;
             v6Ok = ok;
             parts.Add("IPv6: " + message);
@@ -110,6 +110,30 @@ public abstract class DNSProviderBase : IDNSProvider
         return parts.Count == 0
             ? DNSUpdateResult.Fail("No record type enabled or no matching IP detected.")
             : new DNSUpdateResult(allOk, string.Join("; ", parts)) { IPv4Applied = v4Ok, IPv6Applied = v6Ok };
+    }
+
+    // Pushes one family and reports its outcome to the current attempt. The request timeout spans every
+    // family, so one family timing out is caught here as that family's failure: the update cycle still
+    // records a family that already landed. A cancellation of the run itself still propagates.
+    private static async Task<(bool Ok, string Message)> UpdateFamilyAsync(
+        FamilyUpdater update,
+        string recordType,
+        string address,
+        CancellationToken cancellationToken)
+    {
+        var attempt = ProviderAttempt.Current;
+        try
+        {
+            var (ok, message) = await update(recordType, address, cancellationToken).ConfigureAwait(false);
+            attempt?.CompleteFamily(ok);
+            return (ok, message);
+        }
+        catch (OperationCanceledException) when (attempt is not null && !attempt.RunToken.IsCancellationRequested)
+        {
+            attempt.FamilyTimedOut();
+            attempt.CompleteFamily(false);
+            return (false, "request timed out");
+        }
     }
 
     /// <summary>
@@ -194,6 +218,7 @@ public abstract class DNSProviderBase : IDNSProvider
         string? password = null)
     {
         var result = await JpkHttp.SendAsync(_httpClientFactory, method, url, cancellationToken, headers, body, contentType, login, password).ConfigureAwait(false);
+        ProviderAttempt.Current?.Observe(result.Status);
         if (result.Status == 0)
         {
             Logger.LogWarning("{Provider} request failed: {Detail}", Kind, result.Body);

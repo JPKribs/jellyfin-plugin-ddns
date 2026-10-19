@@ -29,6 +29,10 @@ public class DynamicDNSController : ControllerBase
     // the credential ever leaving the server, and a typed replacement is distinguishable from it.
     private const string SecretSentinel = "__JPK_DDNS_SECRET_KEPT__";
 
+    // Posted in a credential field to remove the stored value. A blank field keeps the stored value, so
+    // clearing needs its own marker rather than an empty string.
+    private const string SecretClearSentinel = "__JPK_DDNS_SECRET_CLEAR__";
+
     private readonly DNSUpdateService _updateService;
     private readonly StatusStoreService _statusStore;
     private readonly SecretProtector _secrets;
@@ -138,6 +142,11 @@ public class DynamicDNSController : ControllerBase
 
         ConfigurationAudit.LogRecordChanges(_activity, before, after);
 
+        // Runtime status is keyed by record id, so a record edited to point somewhere else (another
+        // provider, host, zone, server, or account) would otherwise inherit the old target's backoff and
+        // last pushed addresses. Start those records over.
+        _statusStore.RemoveRecords(RetargetedIds(before, after));
+
         var status = _statusStore.Load();
         return Ok(plugin.ReadConfiguration(c => Redact(c, status)));
     }
@@ -147,18 +156,46 @@ public class DynamicDNSController : ControllerBase
     /// Behaves like the scheduled run: a record whose IP is unchanged since its last successful update
     /// is skipped rather than re-pushed.
     /// </summary>
-    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <remarks>
+    /// The run is deliberately not tied to the request's abort token. Navigating away mid run would
+    /// otherwise cancel it after some records were already pushed, and those pushes would be forgotten.
+    /// </remarks>
     /// <returns>The aggregate update outcome.</returns>
     [HttpPost("RunNow")]
     [ProducesResponseType(StatusCodes.Status200OK)]
-    public async Task<ActionResult<DNSUpdateOutcome>> RunNow(CancellationToken cancellationToken)
+    public async Task<ActionResult<DNSUpdateOutcome>> RunNow()
     {
-        var outcome = await _updateService.RunAsync(cancellationToken).ConfigureAwait(false);
+        var outcome = await _updateService.RunAsync(CancellationToken.None).ConfigureAwait(false);
         return Ok(outcome);
     }
 
-    private string ResolveSecret(string? submitted, string? stored)
+    // Ids of records kept across a save whose target or credentials changed.
+    internal static IEnumerable<string> RetargetedIds(IReadOnlyList<DNSRecord>? before, IReadOnlyList<DNSRecord>? after)
     {
+        if (before is null || after is null)
+        {
+            return Array.Empty<string>();
+        }
+
+        var prior = before
+            .Where(r => !string.IsNullOrEmpty(r.Id))
+            .GroupBy(r => r.Id, StringComparer.Ordinal)
+            .ToDictionary(g => g.Key, g => g.First(), StringComparer.Ordinal);
+
+        return after
+            .Where(r => prior.TryGetValue(r.Id, out var old) && !RecordTarget.SameTarget(old, r))
+            .Select(r => r.Id)
+            .ToList();
+    }
+
+    internal string ResolveSecret(string? submitted, string? stored)
+    {
+        // An explicit clear removes the stored value.
+        if (string.Equals(submitted, SecretClearSentinel, StringComparison.Ordinal))
+        {
+            return string.Empty;
+        }
+
         // Sentinel or blank means no replacement was typed, so keep whatever is already stored.
         if (string.IsNullOrEmpty(submitted) || string.Equals(submitted, SecretSentinel, StringComparison.Ordinal))
         {

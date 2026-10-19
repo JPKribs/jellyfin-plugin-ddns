@@ -35,6 +35,15 @@ public sealed class RecordStatus
     /// <summary>Gets or sets the UTC time until which this record is paused by the backoff policy.</summary>
     public DateTime? BackoffUntilUtc { get; set; }
 
+    /// <summary>Gets or sets the number of consecutive temporary failures (timeouts, server errors, rate limits).</summary>
+    public int TransientFailures { get; set; }
+
+    /// <summary>Gets or sets the IPv4 address the most recent failed attempt tried to push.</summary>
+    public string FailedIPv4 { get; set; } = string.Empty;
+
+    /// <summary>Gets or sets the IPv6 address the most recent failed attempt tried to push.</summary>
+    public string FailedIPv6 { get; set; } = string.Empty;
+
     /// <summary>Copies this status onto a record's runtime fields.</summary>
     /// <param name="record">The record to populate.</param>
     public void ApplyTo(DNSRecord record)
@@ -49,6 +58,9 @@ public sealed class RecordStatus
         record.LastUpdateUtc = LastUpdateUtc;
         record.ConsecutiveFailures = ConsecutiveFailures;
         record.BackoffUntilUtc = BackoffUntilUtc;
+        record.TransientFailures = TransientFailures;
+        record.FailedIPv4 = FailedIPv4 ?? string.Empty;
+        record.FailedIPv6 = FailedIPv6 ?? string.Empty;
     }
 
     /// <summary>Reads a record's current runtime fields into a status object.</summary>
@@ -67,7 +79,10 @@ public sealed class RecordStatus
             LastCheckedUtc = record.LastCheckedUtc,
             LastUpdateUtc = record.LastUpdateUtc,
             ConsecutiveFailures = record.ConsecutiveFailures,
-            BackoffUntilUtc = record.BackoffUntilUtc
+            BackoffUntilUtc = record.BackoffUntilUtc,
+            TransientFailures = record.TransientFailures,
+            FailedIPv4 = record.FailedIPv4,
+            FailedIPv6 = record.FailedIPv6
         };
     }
 }

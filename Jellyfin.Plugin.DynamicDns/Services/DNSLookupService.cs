@@ -16,14 +16,27 @@ namespace Jellyfin.Plugin.DynamicDns.Services;
 public sealed class DNSLookupService
 {
     private readonly ILogger<DNSLookupService> _logger;
+    private readonly Func<string, CancellationToken, Task<IPAddress[]>> _resolve;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="DNSLookupService"/> class.
     /// </summary>
     /// <param name="logger">The logger.</param>
     public DNSLookupService(ILogger<DNSLookupService> logger)
+        : this(logger, Dns.GetHostAddressesAsync)
+    {
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="DNSLookupService"/> class with a custom resolver, so
+    /// tests can answer lookups without the network.
+    /// </summary>
+    /// <param name="logger">The logger.</param>
+    /// <param name="resolve">Resolves a hostname to its addresses.</param>
+    internal DNSLookupService(ILogger<DNSLookupService> logger, Func<string, CancellationToken, Task<IPAddress[]>> resolve)
     {
         _logger = logger;
+        _resolve = resolve;
     }
 
     /// <summary>
@@ -34,14 +47,16 @@ public sealed class DNSLookupService
     /// <returns>The resolved addresses, or a failed resolution when the lookup did not answer.</returns>
     public async Task<DNSResolution> ResolveAsync(string hostname, CancellationToken cancellationToken)
     {
-        if (string.IsNullOrWhiteSpace(hostname))
+        // An IP literal (including legacy numeric forms such as a bare record id) is not a name, and the
+        // resolver would echo it back as if DNS served it.
+        if (string.IsNullOrWhiteSpace(hostname) || IPAddress.TryParse(hostname.Trim(), out _))
         {
             return DNSResolution.Failed;
         }
 
         try
         {
-            var addresses = await Dns.GetHostAddressesAsync(hostname.Trim(), cancellationToken).ConfigureAwait(false);
+            var addresses = await _resolve(hostname.Trim(), cancellationToken).ConfigureAwait(false);
             return DNSResolution.Resolved(addresses);
         }
         catch (SocketException ex)
