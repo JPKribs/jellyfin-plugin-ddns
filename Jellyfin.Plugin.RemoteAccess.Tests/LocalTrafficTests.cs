@@ -1,18 +1,12 @@
 using System;
-using System.Collections.Generic;
 using System.Net;
-using Jellyfin.Plugin.DynamicDns.Proxy;
 using Jellyfin.Plugin.DynamicDns.Proxy.Hosting;
-using Jellyfin.Plugin.DynamicDns.Proxy.Network;
-using Jellyfin.Plugin.DynamicDns.Proxy.Settings;
-using Microsoft.AspNetCore.Http;
 using Xunit;
 
 namespace Jellyfin.Plugin.DynamicDns.Tests;
 
 /// <summary>
-/// Noticing when every visitor looks local, and the option that gives requests for the public names the
-/// internet's path rules anyway.
+/// Noticing when every visitor looks local.
 /// </summary>
 public class LocalTrafficTests
 {
@@ -82,35 +76,5 @@ public class LocalTrafficTests
         // The hour after 12:01 saw only ten requests, so at 13:02 the sign no longer shows.
         Feed(watch, 1, _router, _start.AddMinutes(123));
         Assert.False(watch.Suspected);
-    }
-
-    private static RequestDecision Decide(string host, string path, bool https = true, string method = "GET")
-    {
-        var settings = ProxyPolicyTests.Settings();
-        var runtime = ProxyRuntimeFactory.Build(settings, new JellyfinNetworkView(new Uri("http://127.0.0.1:8097/"), string.Empty, true, 8097, 0), _ => true, httpsAvailable: true);
-        return RequestPolicy.Decide(runtime, new RequestFacts(true, https, host, method, path, QueryString.Empty, TreatedAsInternet: true), new Http01ChallengeStore());
-    }
-
-    [Fact]
-    public void TreatedAsInternet_GetsTheInternetsPathRules()
-    {
-        Assert.Equal(RequestAction.Forbidden, Decide("media.example.com", "/Startup/Configuration").Action);
-        Assert.Equal(RequestAction.EmptyUserList, Decide("media.example.com", "/Users/Public").Action);
-        Assert.Equal(RequestAction.Drop, Decide("lan.example.com", "/").Action);
-        Assert.Equal(RequestAction.Forward, Decide("media.example.com", "/web/index.html").Action);
-    }
-
-    [Fact]
-    public void TreatedAsInternet_PlainHttp_IsForwardedNotRedirected()
-    {
-        // A tunnel that speaks plain HTTP to the proxy would loop forever if it were sent to HTTPS.
-        Assert.Equal(RequestAction.Forward, Decide("media.example.com", "/web/index.html", https: false).Action);
-    }
-
-    [Fact]
-    public void Options_PublicNamesAsInternet_IsOffByDefault()
-    {
-        Assert.False(ProxyOptions.From(new ProxyAdvancedSettings()).PublicNamesAsInternet);
-        Assert.True(ProxyOptions.From(new ProxyAdvancedSettings { PublicNamesAsInternet = true }).PublicNamesAsInternet);
     }
 }

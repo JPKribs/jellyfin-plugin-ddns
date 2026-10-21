@@ -468,7 +468,7 @@ public sealed class ProxyManager : IAsyncDisposable
             ServerCountry = _blocks.ServerCountry.Country,
             JellyfinExposedAt = ExposedAt(),
             FolderProblem = FolderAccess.Problem,
-            EveryoneLooksLocal = _localTraffic.Suspected && !options.PublicNamesAsInternet,
+            EveryoneLooksLocal = _localTraffic.Suspected,
             CountryRule = DescribeCountryRule(options, _blocks.ServerCountry.Country),
         };
 

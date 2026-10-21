@@ -131,10 +131,6 @@ public class ProxyPolicyTests
     }
 
     [Fact]
-    public void Wan_TrailingSlash_StillHidesTheUserList()
-        => Assert.Equal(RequestAction.EmptyUserList, Decide(false, true, "media.example.com", "/Users/Public/").Action);
-
-    [Fact]
     public void Redirect_KeepsPathAndQuery()
         => Assert.Equal("https://media.example.com/a?b=1", RequestPolicy.HttpsUrl("media.example.com", "/a", new QueryString("?b=1")));
 
@@ -155,13 +151,11 @@ public class ProxyPolicyTests
         => Assert.Equal(RequestAction.Forward, Decide(false, true, "media.example.com", "/System/Configuration").Action);
 
     [Fact]
-    public void Wan_UserListHidden_LanSeesIt()
+    public void Wan_UserList_IsJellyfinsAnswerUnchanged()
     {
-        Assert.Equal(RequestAction.EmptyUserList, Decide(false, true, "media.example.com", "/Users/Public").Action);
-        Assert.Equal(RequestAction.Forward, Decide(false, true, "media.example.com", "/Users/Public", method: "POST").Action);
+        // The proxy never rewrites what Jellyfin sends. Which users show on sign-in screens is Jellyfin's setting.
+        Assert.Equal(RequestAction.Forward, Decide(false, true, "media.example.com", "/Users/Public").Action);
         Assert.Equal(RequestAction.Forward, Decide(true, false, "192.168.1.10", "/Users/Public").Action);
-        var open = Runtime(Settings(s => s.Advanced.HideUserListFromWan = false));
-        Assert.Equal(RequestAction.Forward, Decide(false, true, "media.example.com", "/Users/Public", runtime: open).Action);
     }
 
     [Fact]

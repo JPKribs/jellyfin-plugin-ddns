@@ -11,9 +11,4 @@ namespace Jellyfin.Plugin.DynamicDns.Proxy;
 /// <param name="Method">The HTTP method.</param>
 /// <param name="Path">The path, including Jellyfin's base URL.</param>
 /// <param name="Query">The raw query string.</param>
-/// <param name="TreatedAsInternet">Whether a local client asking for a public name gets the internet's path rules.</param>
-public readonly record struct RequestFacts(bool Local, bool IsHttps, string Host, string Method, PathString Path, QueryString Query, bool TreatedAsInternet = false)
-{
-    /// <summary>Gets a value indicating whether the internet's path rules apply: the user list, setup and Local-only Services.</summary>
-    public bool InternetRules => !Local || TreatedAsInternet;
-}
+public readonly record struct RequestFacts(bool Local, bool IsHttps, string Host, string Method, PathString Path, QueryString Query);

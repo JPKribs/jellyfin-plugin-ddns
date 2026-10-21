@@ -17,9 +17,6 @@ public class ProxyAdvancedSettings
     /// <summary>Gets or sets the LAN address advertised to local clients. Empty detects it.</summary>
     public string LanAddress { get; set; } = string.Empty;
 
-    /// <summary>Gets or sets a value indicating whether the public user list is hidden from internet clients.</summary>
-    public bool? HideUserListFromWan { get; set; }
-
     /// <summary>Gets or sets a value indicating whether HTTPS responses for configured hostnames carry HSTS.</summary>
     public bool? HstsEnabled { get; set; }
 
@@ -34,12 +31,6 @@ public class ProxyAdvancedSettings
     /// every client, local ones too, reaches it through the proxy.
     /// </summary>
     public bool? JellyfinLoopbackOnly { get; set; }
-
-    /// <summary>
-    /// Gets or sets a value indicating whether requests for the public names get the internet's path rules even
-    /// from a local address, for setups where something in front of the proxy makes every visitor look local.
-    /// </summary>
-    public bool? PublicNamesAsInternet { get; set; }
 
     /// <summary>Gets or sets extra networks treated like the LAN, as addresses or CIDR blocks.</summary>
     public List<string> TrustedNetworks { get; set; } = new();

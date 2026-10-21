@@ -95,7 +95,7 @@ public sealed class ProxyStatus
 
     /// <summary>
     /// Gets or sets a value indicating whether every visitor in the last hour looked local, as when something in
-    /// front of the proxy hides their addresses, while requests for the public names still get local rules.
+    /// front of the proxy hides their addresses.
     /// </summary>
     public bool EveryoneLooksLocal { get; set; }
 }

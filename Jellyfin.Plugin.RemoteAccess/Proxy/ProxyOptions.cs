@@ -63,9 +63,6 @@ public sealed record ProxyOptions
     /// <summary>Gets the LAN address to advertise, empty to detect it.</summary>
     public string LanAddress { get; init; } = string.Empty;
 
-    /// <summary>Gets a value indicating whether the public user list is hidden from internet clients.</summary>
-    public bool HideUserListFromWan { get; init; } = true;
-
     /// <summary>Gets a value indicating whether HSTS is sent.</summary>
     public bool HstsEnabled { get; init; } = true;
 
@@ -80,12 +77,6 @@ public sealed record ProxyOptions
     /// default: it changes how local apps, casting and discovery reach Jellyfin.
     /// </summary>
     public bool JellyfinLoopbackOnly { get; init; }
-
-    /// <summary>
-    /// Gets a value indicating whether requests for the public names get the internet's path rules even from a
-    /// local address. Bans, the block list, country rules and sign-in limits still go by the real address.
-    /// </summary>
-    public bool PublicNamesAsInternet { get; init; }
 
     /// <summary>Gets extra networks treated like the LAN.</summary>
     public IReadOnlyList<string> TrustedNetworks { get; init; } = Array.Empty<string>();
@@ -170,12 +161,10 @@ public sealed record ProxyOptions
             HttpPort = a.HttpPort ?? d.HttpPort,
             HttpsPort = a.HttpsPort ?? d.HttpsPort,
             LanAddress = (a.LanAddress ?? string.Empty).Trim(),
-            HideUserListFromWan = a.HideUserListFromWan ?? d.HideUserListFromWan,
             HstsEnabled = a.HstsEnabled ?? d.HstsEnabled,
             HstsMaxAgeDays = a.HstsMaxAgeDays ?? d.HstsMaxAgeDays,
             SameOriginFramesOnly = a.SameOriginFramesOnly ?? d.SameOriginFramesOnly,
             JellyfinLoopbackOnly = a.JellyfinLoopbackOnly ?? d.JellyfinLoopbackOnly,
-            PublicNamesAsInternet = a.PublicNamesAsInternet ?? d.PublicNamesAsInternet,
             TrustedNetworks = (a.TrustedNetworks ?? new List<string>()).ToList(),
             BlockedAddresses = (a.BlockedAddresses ?? new List<string>()).ToList(),
             BanFailures = a.BanFailures ?? d.BanFailures,

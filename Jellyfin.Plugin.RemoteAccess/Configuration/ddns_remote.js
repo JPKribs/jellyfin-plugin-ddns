@@ -166,7 +166,7 @@ export default function (view) {
         show('powerError', st.Enabled && !st.Running ? st.Error : '');
         show('folderProblem', st.FolderProblem);
         show('everyoneLocal', st.Enabled && st.EveryoneLooksLocal
-            ? 'Every visitor in the last hour came from one local address, none from the internet. If people reach this server from outside, something in front of the proxy, such as rootless Docker, a tunnel or another proxy, is hiding their addresses. Bans, the block list and country rules cannot apply to them. Pass the real addresses through, or turn on Advanced → Security → Public names follow internet rules.'
+            ? 'Every visitor in the last hour came from one local address, none from the internet. If people reach this server from outside, something in front of the proxy, such as rootless Docker, a tunnel or another proxy, is hiding their addresses. Bans, the block list and country rules cannot apply to them. Pass the real addresses through to the proxy.'
             : '');
         show('countryNote', st.Enabled && st.CountryRule ? st.CountryRule + ' Change it under Advanced → Blocking.' : '');
 

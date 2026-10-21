@@ -45,7 +45,7 @@ public static class RequestPolicy
         var route = runtime.MatchRoute(facts.Host);
         if (route is not null)
         {
-            return route.Exposure == RouteExposure.LanOnly && facts.InternetRules
+            return route.Exposure == RouteExposure.LanOnly && !facts.Local
                 ? new RequestDecision(RequestAction.Drop)
                 : new RequestDecision(RequestAction.Forward, route);
         }
@@ -57,18 +57,9 @@ public static class RequestPolicy
             return new RequestDecision(RequestAction.Drop);
         }
 
-        if (facts.InternetRules)
+        if (!facts.Local && PathRules.IsStartup(PathRules.StripBase(facts.Path, runtime.BaseUrl)))
         {
-            var path = PathRules.StripBase(facts.Path, runtime.BaseUrl);
-            if (PathRules.IsStartup(path))
-            {
-                return new RequestDecision(RequestAction.Forbidden);
-            }
-
-            if (runtime.Options.HideUserListFromWan && PathRules.IsPublicUserList(facts.Method, path))
-            {
-                return new RequestDecision(RequestAction.EmptyUserList);
-            }
+            return new RequestDecision(RequestAction.Forbidden);
         }
 
         return new RequestDecision(RequestAction.Forward);

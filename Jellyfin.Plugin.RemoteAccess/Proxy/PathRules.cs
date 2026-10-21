@@ -72,13 +72,6 @@ public static class PathRules
             && segments[2].Equals("Authenticate", StringComparison.OrdinalIgnoreCase);
     }
 
-    /// <summary>Whether a request is for Jellyfin's public user list.</summary>
-    /// <param name="method">The HTTP method.</param>
-    /// <param name="path">The base-relative path.</param>
-    /// <returns>True for <c>GET /Users/Public</c>.</returns>
-    public static bool IsPublicUserList(string method, PathString path)
-        => HttpMethods.IsGet(method) && Trim(path).Equals("/Users/Public", StringComparison.OrdinalIgnoreCase);
-
     /// <summary>
     /// Whether a path may stream media. Only download, stream and item file paths are matched precisely
     /// under <c>/Items</c>; other item APIs keep the minimum send rate.

@@ -85,15 +85,9 @@ that cannot be applied, such as turning it on while the proxy cannot reach Jelly
 
 ### When every visitor looks local
 
-Passing the real addresses through is the fix. When something in front of the proxy cannot, such as a tunnel or
-another proxy, **Advanced → Security → Public names follow internet rules** gives requests for your public names
-the internet's rules even from a local address: the user list is hidden, setup is blocked, Services set to your
-network only are refused, and the internet's upload limit applies. Plain HTTP is still answered rather than
-redirected, so a tunnel that speaks HTTP to the proxy does not loop.
-
-Bans, the block list, country rules and sign-in limits still go by the real address. One shared address stands
-for every visitor, so banning it would lock everyone out, and Jellyfin itself still treats those visitors as
-local. People at home who use your public name get the same rules. The option is off by default.
+Passing the real addresses through is the only fix. While every visitor arrives from one local address, the
+proxy cannot tell them apart: bans, the block list and country rules cannot apply, and the proxy changes nothing
+about the requests to make up for it.
 
 ## Certificates
 
@@ -193,7 +187,6 @@ These are on by default. Each can be changed under **Advanced**.
   eight, and each must arrive within 10 seconds. A ban, a block or a new country rule also cuts off
   connections that are already open, streams and WebSockets included. A ban on a /56 or /48 shows on every
   address in it, and Unban by any of those addresses lifts it.
-* **Hidden user list**: sign-in screens on the internet show no user picker.
 * **Setup wizard**: never reachable from the internet.
 * **Unknown names**: requests for any name you did not add, including your bare IP, are dropped before the
   connection is encrypted.

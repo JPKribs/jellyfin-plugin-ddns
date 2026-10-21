@@ -28,22 +28,6 @@
                                 <div class="fieldDescription">While Jellyfin trusts the proxy, it listens on this server alone, so nothing reaches it except through the proxy, not even a port left forwarded on your router. Local apps then connect by your address, which must reach this server from home too. Apps that find servers by searching the network, casting devices that use the server's own address, and DLNA stop seeing Jellyfin. Jellyfin restarts when this changes. <span data-default="JellyfinLoopbackOnly" data-unit="onoff"></span></div>
                             </div>
                             <div class="selectContainer">
-                                <label class="selectLabel" for="advPublicNamesAsInternet">Public names follow internet rules</label>
-                                <select id="advPublicNamesAsInternet" class="jpk-selector-dropdown" data-adv="PublicNamesAsInternet" data-kind="bool">
-                                    <option value="true">On</option>
-                                    <option value="false">Off</option>
-                                </select>
-                                <div class="fieldDescription">Requests for your public names get the internet's rules even from a local address. The user list is hidden, setup is blocked, Services set to your network only are refused and the internet's upload limit applies. Turn this on when a tunnel, another proxy or your router makes every visitor look local. Bans, the block list, country rules and sign-in limits still go by the real address, so they still cannot tell those visitors apart, and Jellyfin still treats them as local. People at home who use your public name get the same rules. <span data-default="PublicNamesAsInternet" data-unit="onoff"></span></div>
-                            </div>
-                            <div class="selectContainer">
-                                <label class="selectLabel" for="advHideUserListFromWan">Hide the user list</label>
-                                <select id="advHideUserListFromWan" class="jpk-selector-dropdown" data-adv="HideUserListFromWan" data-kind="bool">
-                                    <option value="true">On</option>
-                                    <option value="false">Off</option>
-                                </select>
-                                <div class="fieldDescription">Sign-in screens on the internet show no user picker. <span data-default="HideUserListFromWan" data-unit="onoff"></span></div>
-                            </div>
-                            <div class="selectContainer">
                                 <label class="selectLabel" for="advHstsEnabled">Always use HTTPS</label>
                                 <select id="advHstsEnabled" class="jpk-selector-dropdown" data-adv="HstsEnabled" data-kind="bool">
                                     <option value="true">On</option>

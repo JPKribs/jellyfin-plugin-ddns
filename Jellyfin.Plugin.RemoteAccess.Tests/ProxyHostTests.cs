@@ -193,13 +193,13 @@ public sealed class ProxyHostTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task Wan_UserListEmpty_StartupForbidden()
+    public async Task Wan_UserListPassesThrough_StartupForbidden()
     {
         await using var proxy = await StartProxyAsync().ConfigureAwait(false);
         using var client = Client(proxy.HttpsPort);
 
         var users = await client.GetStringAsync(new Uri($"https://{Host}:{proxy.HttpsPort}/Users/Public")).ConfigureAwait(false);
-        Assert.Equal("[]", users);
+        Assert.Contains("alice", users, StringComparison.Ordinal);
 
         using var startup = await client.GetAsync(new Uri($"https://{Host}:{proxy.HttpsPort}/Startup/Configuration")).ConfigureAwait(false);
         Assert.Equal(HttpStatusCode.Forbidden, startup.StatusCode);

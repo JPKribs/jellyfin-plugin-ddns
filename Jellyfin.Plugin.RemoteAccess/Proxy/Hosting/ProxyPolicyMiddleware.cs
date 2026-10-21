@@ -147,11 +147,7 @@ public sealed class ProxyPolicyMiddleware
         var host = HostnameMatcher.Normalize(request.Host.Host);
         var publicName = HostnameMatcher.IsPublicName(host) && runtime.IsConfiguredHost(host);
         _localTraffic.Observe(local, publicName, context.Connection.RemoteIpAddress, DateTime.UtcNow);
-
-        // Only the path rules and upload limits: bans, the block list, country rules and sign-in limits go by the
-        // real address, so one shared local address is never banned for everyone behind it.
-        var treated = local && publicName && runtime.Options.PublicNamesAsInternet;
-        var facts = new RequestFacts(local, request.IsHttps, request.Host.Host, request.Method, request.Path, request.QueryString, treated);
+        var facts = new RequestFacts(local, request.IsHttps, request.Host.Host, request.Method, request.Path, request.QueryString);
         var decision = RequestPolicy.Decide(runtime, facts, _challenges);
 
         // The connection was checked when it opened, but a client blocked or banned since then must not keep
@@ -174,12 +170,6 @@ public sealed class ProxyPolicyMiddleware
                 return;
             case RequestAction.Forbidden:
                 context.Response.StatusCode = StatusCodes.Status403Forbidden;
-                return;
-            case RequestAction.EmptyUserList:
-                context.Response.StatusCode = StatusCodes.Status200OK;
-                context.Response.ContentType = "application/json; charset=utf-8";
-                context.Response.Headers.CacheControl = "no-store";
-                await context.Response.WriteAsync("[]", context.RequestAborted).ConfigureAwait(false);
                 return;
             case RequestAction.Redirect:
                 context.Response.StatusCode = StatusCodes.Status308PermanentRedirect;
@@ -209,14 +199,14 @@ public sealed class ProxyPolicyMiddleware
 
         // An upload that declares a size over the limit is refused before the backend hears about it; without
         // a declared size the limit still stops the body mid-stream.
-        var limitMb = EffectiveSettings.MaxRequestBodyMb(runtime, route, local && !treated);
+        var limitMb = EffectiveSettings.MaxRequestBodyMb(runtime, route, local);
         if (limitMb > 0 && request.ContentLength > limitMb * 1024L * 1024L)
         {
             context.Response.StatusCode = StatusCodes.Status413PayloadTooLarge;
             return;
         }
 
-        ApplyLimits(context, runtime, route, local && !treated);
+        ApplyLimits(context, runtime, route, local);
         context.Response.OnStarting(() =>
         {
             ApplySecurityHeaders(context, runtime, route);

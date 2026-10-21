@@ -14,9 +14,6 @@ public enum RequestAction
     /// <summary>Answer 403.</summary>
     Forbidden,
 
-    /// <summary>Answer Jellyfin's public user list with an empty list.</summary>
-    EmptyUserList,
-
     /// <summary>Redirect to HTTPS.</summary>
     Redirect,
 
