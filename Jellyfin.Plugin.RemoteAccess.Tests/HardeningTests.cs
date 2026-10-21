@@ -266,12 +266,23 @@ public sealed class HardeningTests : IDisposable
     }
 
     [Fact]
-    public void Compression_ServicesOffUnlessAsked()
+    public void Compression_ServicesOffUnlessAsked_JellyfinNever()
     {
-        var runtime = Runtime(s => s.Routes.Add(new ProxyRoute { Name = "App", Hostnames = new List<string> { "app.example.com" }, Target = "http://192.168.1.20:5055" }));
-        var context = new Microsoft.AspNetCore.Http.DefaultHttpContext();
-        context.Items["ddns.proxy.route"] = runtime.Routes[0];
-        Assert.False(ProxyPolicyMiddleware.ShouldCompress(context, runtime));
+        var runtime = Runtime(s =>
+        {
+            s.Routes.Add(new ProxyRoute { Name = "App", Hostnames = new List<string> { "app.example.com" }, Target = "http://192.168.1.20:5055" });
+            s.Routes.Add(new ProxyRoute { Name = "Packed", Hostnames = new List<string> { "packed.example.com" }, Target = "http://192.168.1.21:5055", Overrides = new RouteOverrides { Compress = true } });
+        });
+        var app = new Microsoft.AspNetCore.Http.DefaultHttpContext();
+        app.Items["ddns.proxy.route"] = runtime.Routes[0];
+        Assert.False(ProxyPolicyMiddleware.ShouldCompress(app, runtime));
+
+        var packed = new Microsoft.AspNetCore.Http.DefaultHttpContext();
+        packed.Items["ddns.proxy.route"] = runtime.Routes[1];
+        Assert.True(ProxyPolicyMiddleware.ShouldCompress(packed, runtime));
+
+        // Jellyfin compresses its own replies.
+        Assert.False(ProxyPolicyMiddleware.ShouldCompress(new Microsoft.AspNetCore.Http.DefaultHttpContext(), runtime));
     }
 
     [Fact]

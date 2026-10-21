@@ -31,7 +31,6 @@ public class ProxySettingsTests
         Assert.Empty(o.Countries);
         Assert.Equal(80, o.HttpPort);
         Assert.Equal(443, o.HttpsPort);
-        Assert.True(o.CompressJellyfin);
     }
 
     [Fact]
@@ -42,7 +41,6 @@ public class ProxySettingsTests
         Assert.True(low.MaxConnectionsPerIp < ProxyOptions.Standard.MaxConnectionsPerIp);
         Assert.True(low.KeepAliveSeconds < ProxyOptions.Standard.KeepAliveSeconds);
         Assert.Equal(ProxyOptions.Standard.MaxRequestBodyMbWan, low.MaxRequestBodyMbWan);
-        Assert.Equal(ProxyOptions.Standard.CompressJellyfin, low.CompressJellyfin);
 
         // A value the administrator chose wins over either set.
         Assert.Equal(1000, ProxyOptions.From(new ProxyAdvancedSettings { MaxConnections = 1000 }, ProxyOptions.LowMemory).MaxConnections);

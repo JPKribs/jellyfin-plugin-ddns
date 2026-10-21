@@ -323,14 +323,15 @@ public sealed class ProxyHostTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task Compression_AppliesToJellyfinText()
+    public async Task Compression_LeavesJellyfinsResponsesToJellyfin()
     {
+        // Jellyfin compresses its own replies, so the proxy passes them on as they come, here uncompressed.
         await using var proxy = await StartProxyAsync().ConfigureAwait(false);
         using var client = Client(proxy.HttpsPort, decompress: false);
         using var request = new HttpRequestMessage(HttpMethod.Get, $"https://{Host}:{proxy.HttpsPort}/web/main.js");
         request.Headers.TryAddWithoutValidation("Accept-Encoding", "gzip");
         using var response = await client.SendAsync(request).ConfigureAwait(false);
-        Assert.Equal("gzip", response.Content.Headers.ContentEncoding.Single());
+        Assert.Empty(response.Content.Headers.ContentEncoding);
     }
 
     [Fact]

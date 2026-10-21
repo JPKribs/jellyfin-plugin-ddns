@@ -105,8 +105,9 @@ public sealed class ProxyPolicyMiddleware
         => context?.Items.TryGetValue(RouteItem, out var value) == true ? value as RuntimeRoute : null;
 
     /// <summary>
-    /// Whether the proxy should compress this response: Jellyfin's when that option is on (Jellyfin does not
-    /// compress responses it sees as HTTPS), a route's when its own option is on. Range requests never are.
+    /// Whether the proxy should compress this response: only a Service's, when its own option is on. Jellyfin
+    /// compresses its own responses, through the proxy too, so compressing them again only costs time. Range
+    /// requests never are.
     /// </summary>
     /// <param name="context">The request.</param>
     /// <param name="runtime">The runtime.</param>
@@ -120,10 +121,9 @@ public sealed class ProxyPolicyMiddleware
             return false;
         }
 
-        var route = RouteOf(context);
         // A Service is compressed only when asked: compressing pages that mix a secret with reflected input over
-        // HTTPS can leak the secret (BREACH), and Jellyfin, which uses header tokens, is the one known to be safe.
-        return route is null ? runtime.Options.CompressJellyfin : route.Overrides.Compress ?? false;
+        // HTTPS can leak the secret (BREACH).
+        return RouteOf(context) is { } route && (route.Overrides.Compress ?? false);
     }
 
     /// <summary>

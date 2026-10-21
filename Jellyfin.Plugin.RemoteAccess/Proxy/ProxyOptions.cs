@@ -135,9 +135,6 @@ public sealed record ProxyOptions
     /// <summary>Gets the backend silence timeout in seconds.</summary>
     public int BackendActivityTimeoutSeconds { get; init; } = 300;
 
-    /// <summary>Gets a value indicating whether Jellyfin's text responses are compressed by the proxy.</summary>
-    public bool CompressJellyfin { get; init; } = true;
-
     /// <summary>
     /// Resolves stored advanced settings against the defaults.
     /// </summary>
@@ -183,8 +180,7 @@ public sealed record ProxyOptions
             MaxRequestBodyMbWan = a.MaxRequestBodyMbWan ?? d.MaxRequestBodyMbWan,
             MaxRequestBodyMbLan = a.MaxRequestBodyMbLan ?? d.MaxRequestBodyMbLan,
             MinResponseBytesPerSecond = a.MinResponseBytesPerSecond ?? d.MinResponseBytesPerSecond,
-            BackendActivityTimeoutSeconds = a.BackendActivityTimeoutSeconds ?? d.BackendActivityTimeoutSeconds,
-            CompressJellyfin = a.CompressJellyfin ?? d.CompressJellyfin
+            BackendActivityTimeoutSeconds = a.BackendActivityTimeoutSeconds ?? d.BackendActivityTimeoutSeconds
         };
     }
 }

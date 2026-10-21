@@ -118,11 +118,13 @@ recorded. The **Refresh Locations** scheduled task also does this weekly.
 | Setting | What it does | Default |
 |---|---|---|
 | **HTTP/2** | Lets browsers load pages faster over one connection. | On |
-| **Compression** | Shrinks library lists and the web client, never media. | On |
 | **Largest upload from the internet** | In MB, with 0 for unlimited. | 100 |
 | **Largest upload from your network** | In MB, with 0 for unlimited. | Unlimited |
 | **Connections per internet address** | Connections one internet address may hold open. | Auto: 64, or 32 on low memory |
 | **Total connections** | Connections the proxy holds open in all. | Auto: 2000, or 500 on low memory |
+
+Jellyfin compresses its own pages, through the proxy too, so the proxy leaves them as they are. Compression for
+other apps is set on each Service.
 
 ### Timeouts
 

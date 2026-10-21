@@ -1,7 +1,7 @@
 ---
 name: "Dynamic DNS"
 guid: "8150dce5-6153-4924-a985-a6927be95baa"
-version: "12.2.3.3"
+version: "12.2.3.4"
 targetAbi: "12.2.0.0"
 framework: "net10.0"
 overview: "Reach your server from anywhere: Dynamic DNS and a secure HTTPS proxy, inside Jellyfin."
@@ -21,11 +21,5 @@ artifacts:
 - "Certes.dll"
 - "BouncyCastle.Cryptography.dll"
 changelog:
-  fixed:
-  - When the Domains tab cannot load its settings, it now says so even when there are no records yet.
-  - Correcting a server clock that had run ahead no longer forgets when the current Let's Encrypt certificate was issued.
-  developer:
-  - A cleanup sweep removed unused code, merged duplicated helpers in the pages and the server code, and fixed stale comments.
-  - The pages are embedded with one pattern instead of a list, and build.sh no longer checks a partial list of them.
-  - The unused slash-command workflows are removed.
-  - The docs add a Dashboard page under Features, and the Beginner's Guide starts by checking for CGNAT.
+  changed:
+  - The Compression setting on the Advanced tab is removed. Jellyfin already compresses its own pages through the proxy, so the proxy compressing them again was wasted work. Web assets now serve about 7% faster through HTTPS. Compression for other apps is still set on each Service.

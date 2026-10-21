@@ -63,7 +63,7 @@ Every proxy setting not on the other tabs, each starting on its default.
 * **Security**: Only through the proxy, Always use HTTPS and how long browsers remember it, and Block embedding.
 * **Blocking**: bans for failed sign-ins, the block list, trusted networks and country rules.
 * **History**: whether visits are recorded, for how long, and how precise locations are.
-* **Performance**: HTTP/2, compression, upload sizes and connection limits.
+* **Performance**: HTTP/2, upload sizes and connection limits.
 * **Timeouts**: idle connections, request header limits, the minimum read rate and how long Jellyfin may take to
   answer.
 

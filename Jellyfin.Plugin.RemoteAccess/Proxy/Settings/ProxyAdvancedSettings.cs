@@ -88,7 +88,4 @@ public class ProxyAdvancedSettings
 
     /// <summary>Gets or sets how long the backend may go silent on a request or WebSocket, in seconds.</summary>
     public int? BackendActivityTimeoutSeconds { get; set; }
-
-    /// <summary>Gets or sets a value indicating whether the proxy compresses Jellyfin's text responses.</summary>
-    public bool? CompressJellyfin { get; set; }
 }
