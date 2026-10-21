@@ -1,4 +1,3 @@
-using System;
 using System.Text.RegularExpressions;
 
 namespace Jellyfin.Plugin.DynamicDns.Proxy;
@@ -29,35 +28,6 @@ public static partial class CredentialRedactor
         var masked = QueryCredential().Replace(text, m => m.Groups["name"].Value + "=" + Mask);
         return TokenAttribute().Replace(masked, m => m.Groups["name"].Value + "=\"" + Mask + "\"");
     }
-
-    /// <summary>
-    /// Masks a header value when the header carries credentials, otherwise returns it unchanged.
-    /// </summary>
-    /// <param name="name">The header name.</param>
-    /// <param name="value">The header value.</param>
-    /// <returns>The value, masked when sensitive.</returns>
-    public static string RedactHeader(string name, string? value)
-    {
-        if (IsCredentialHeader(name))
-        {
-            return Mask;
-        }
-
-        return Redact(value);
-    }
-
-    /// <summary>
-    /// Whether a header carries credentials.
-    /// </summary>
-    /// <param name="name">The header name.</param>
-    /// <returns>True for token, authorization and cookie headers.</returns>
-    public static bool IsCredentialHeader(string name)
-        => name.Equals("X-Emby-Token", StringComparison.OrdinalIgnoreCase)
-            || name.Equals("X-MediaBrowser-Token", StringComparison.OrdinalIgnoreCase)
-            || name.Equals("Authorization", StringComparison.OrdinalIgnoreCase)
-            || name.Equals("X-Emby-Authorization", StringComparison.OrdinalIgnoreCase)
-            || name.Equals("Cookie", StringComparison.OrdinalIgnoreCase)
-            || name.Equals("Set-Cookie", StringComparison.OrdinalIgnoreCase);
 
     [GeneratedRegex(@"(?<name>(?<=[?&;\s]|^)(?:api_key|apikey|api-key|token|access_token))=(?!"")[^&#\s""]*", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
     private static partial Regex QueryCredential();

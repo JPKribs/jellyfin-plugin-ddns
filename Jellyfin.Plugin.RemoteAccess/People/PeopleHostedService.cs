@@ -11,9 +11,9 @@ using Jellyfin.Plugin.DynamicDns.Utilities;
 namespace Jellyfin.Plugin.DynamicDns.People;
 
 /// <summary>
-/// Keeps People history current: opens or downloads the location database at startup, records open sessions
-/// refused connections and internet visits every minute, keeps the server's own country current, and prunes old history once a
-/// day.
+/// Keeps People history current: opens or downloads the location database at startup, records open sessions,
+/// refused connections and internet visits every minute, keeps the server's own country current, and prunes old
+/// history once a day.
 /// </summary>
 public sealed class PeopleHostedService : BackgroundService
 {
@@ -140,7 +140,7 @@ public sealed class PeopleHostedService : BackgroundService
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
-                // The loop runs every few seconds, so a lasting fault warns once.
+                // The loop runs every minute, so a lasting fault warns once.
                 _loop.Failed(level => _logger.Log(level, ex, "Recording People history failed"));
             }
         }

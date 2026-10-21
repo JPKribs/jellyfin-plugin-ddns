@@ -3,7 +3,7 @@ using System;
 namespace Jellyfin.Plugin.DynamicDns.People;
 
 /// <summary>
-/// What the People page shows about the location database.
+/// What the plugin's pages show about the location database.
 /// </summary>
 public sealed class GeoIpStatus
 {

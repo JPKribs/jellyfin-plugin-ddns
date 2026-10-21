@@ -56,10 +56,10 @@ public static class CountryRules
     public static bool NeedsDatabase(ProxyOptions options) => options?.CountryMode is CountryRuleMode.ServerCountry or CountryRuleMode.Block or CountryRuleMode.AllowOnly;
 
     /// <summary>
-    /// The location database detail to keep loaded: what the People page asks for, and at least country
+    /// The location database detail to keep loaded: what the history asks for, and at least country
     /// detail while country rules are on.
     /// </summary>
-    /// <param name="people">The People page's detail.</param>
+    /// <param name="people">The history's detail.</param>
     /// <param name="rulesOn">Whether country rules are on.</param>
     /// <returns>The detail to load.</returns>
     public static LocationDetail RequiredDetail(LocationDetail people, bool rulesOn)

@@ -124,23 +124,6 @@ public sealed class ProxyManager : IAsyncDisposable
     public bool IsRunning => Volatile.Read(ref _host) is not null;
 
     /// <summary>
-    /// Gets the ports the running proxy holds.
-    /// </summary>
-    public IReadOnlyCollection<int> ListeningPorts
-    {
-        get
-        {
-            var host = Volatile.Read(ref _host);
-            if (host is null)
-            {
-                return Array.Empty<int>();
-            }
-
-            return host.Listener.HttpsPort is { } https ? new[] { host.Listener.HttpPort, https } : new[] { host.Listener.HttpPort };
-        }
-    }
-
-    /// <summary>
     /// Reads the saved settings and brings the proxy in line: stops it when disabled, updates it in place when
     /// only live settings changed, rebuilds it when listeners changed. Never throws for a bind failure; the
     /// error is kept for the status page.
@@ -450,7 +433,7 @@ public sealed class ProxyManager : IAsyncDisposable
         var host = Volatile.Read(ref _host);
         var settings = ReadSettings();
         var options = ProxyOptions.From(settings.Advanced);
-        var status = new ProxyStatus
+        return new ProxyStatus
         {
             Enabled = settings.Enabled,
             Running = host is not null,
@@ -482,8 +465,6 @@ public sealed class ProxyManager : IAsyncDisposable
             EveryoneLooksLocal = _localTraffic.Suspected,
             CountryRule = DescribeCountryRule(options, _blocks.ServerCountry.Country),
         };
-
-        return status;
     }
 
     // The country rule is on by default, and someone travelling abroad is the first to meet it, so the Proxy tab

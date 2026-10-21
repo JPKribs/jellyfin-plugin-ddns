@@ -135,9 +135,11 @@ public static class NetworkTakeover
     public static string ExternalEntry(ProxySettings settings)
     {
         ArgumentNullException.ThrowIfNull(settings);
-        var publicName = settings.Hostnames.FirstOrDefault(h => !h.StartsWith('*'));
-        return publicName is null ? string.Empty : "external=https://" + publicName;
+        return PublicName(settings) is { } name ? "external=https://" + name : string.Empty;
     }
+
+    // A wildcard hostname cannot be advertised, so the first exact one is used.
+    private static string? PublicName(ProxySettings settings) => settings.Hostnames.FirstOrDefault(h => !h.StartsWith('*'));
 
     // The current entries without the ones trusting added, keeping any that were there before it.
     private static string[] WithoutAdded(IEnumerable<string> current, ICollection<string> before, IEnumerable<string> added)
@@ -155,10 +157,9 @@ public static class NetworkTakeover
     public static IReadOnlyList<string> LocalEntries(ProxySettings settings)
     {
         ArgumentNullException.ThrowIfNull(settings);
-        var publicName = settings.Hostnames.FirstOrDefault(h => !h.StartsWith('*'));
-        return publicName is null
-            ? Array.Empty<string>()
-            : new[] { "0.0.0.0/0=https://" + publicName, "::/0=https://" + publicName };
+        return PublicName(settings) is { } name
+            ? new[] { "0.0.0.0/0=https://" + name, "::/0=https://" + name }
+            : Array.Empty<string>();
     }
 
     /// <summary>
@@ -206,7 +207,6 @@ public static class NetworkTakeover
 
     private static bool IsExternal(string entry) => entry.StartsWith("external=", StringComparison.OrdinalIgnoreCase);
 
-
     /// <summary>
     /// The published server URLs: the administrator's own entries, with the internet's entry pointing at the
     /// public HTTPS name. Local clients keep reaching Jellyfin directly. A wildcard hostname cannot be
@@ -219,7 +219,7 @@ public static class NetworkTakeover
     public static IEnumerable<string> PublishedUris(IEnumerable<string>? existing, ProxySettings settings, bool forLocalToo = false)
     {
         ArgumentNullException.ThrowIfNull(settings);
-        var publicName = settings.Hostnames.FirstOrDefault(h => !h.StartsWith('*'));
+        var publicName = PublicName(settings);
         // For every client, the administrator's own entries all go: each would send someone to an address that
         // no longer answers. Undo brings them back.
         foreach (var entry in (existing ?? Enumerable.Empty<string>()).Where(e => publicName is null || !(IsExternal(e) || forLocalToo)))
@@ -237,7 +237,7 @@ public static class NetworkTakeover
 
         if (publicName is not null)
         {
-            yield return "external=https://" + publicName;
+            yield return ExternalEntry(settings);
         }
     }
 

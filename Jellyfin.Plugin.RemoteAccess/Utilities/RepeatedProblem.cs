@@ -13,9 +13,6 @@ internal sealed class RepeatedProblem
 {
     private int _failing;
 
-    /// <summary>Gets a value indicating whether the problem is current.</summary>
-    public bool IsFailing => Volatile.Read(ref _failing) == 1;
-
     /// <summary>
     /// Reports the problem happening again.
     /// </summary>

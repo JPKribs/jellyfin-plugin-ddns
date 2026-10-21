@@ -48,16 +48,8 @@ public static class ProxySettingsValidator
         settings.Certificate.Password ??= string.Empty;
         var a = settings.Advanced ??= new ProxyAdvancedSettings();
         a.LanAddress = (a.LanAddress ?? string.Empty).Trim();
-        a.TrustedNetworks = (a.TrustedNetworks ?? new List<string>())
-            .Select(n => (n ?? string.Empty).Trim())
-            .Where(n => n.Length > 0)
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .ToList();
-        a.BlockedAddresses = (a.BlockedAddresses ?? new List<string>())
-            .Select(n => (n ?? string.Empty).Trim())
-            .Where(n => n.Length > 0)
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .ToList();
+        a.TrustedNetworks = CleanEntries(a.TrustedNetworks);
+        a.BlockedAddresses = CleanEntries(a.BlockedAddresses);
         a.Countries = (a.Countries ?? new List<string>())
             .Select(c => (c ?? string.Empty).Trim().ToUpperInvariant())
             .Where(c => c.Length == 2 && c.All(char.IsAsciiLetterUpper))
@@ -169,6 +161,13 @@ public static class ProxySettingsValidator
         CheckRoutes(errors, settings, reservedPorts);
         return errors;
     }
+
+    private static List<string> CleanEntries(List<string>? values)
+        => (values ?? new List<string>())
+            .Select(n => (n ?? string.Empty).Trim())
+            .Where(n => n.Length > 0)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
 
     private static int? ClampOptional(int? value, int min, int max)
         => value is { } v ? Math.Clamp(v, min, max) : null;

@@ -49,6 +49,7 @@ nav:
       - Adding Records: Records.md
   - Features:
       - Remote Access: RemoteAccess.md
+      - Dashboard: Dashboard.md
       - How Updates Run: HowItWorks.md
       - Monitoring: Monitoring.md
   - Providers:

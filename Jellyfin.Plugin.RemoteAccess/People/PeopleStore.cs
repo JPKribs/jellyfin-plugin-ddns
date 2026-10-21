@@ -485,11 +485,7 @@ public sealed class PeopleStore
             {
                 File.Delete(copy);
             }
-            catch (IOException ex)
-            {
-                _logger.LogWarning("Could not delete the old history copy {File}: {Message}", copy, ex.Message);
-            }
-            catch (UnauthorizedAccessException ex)
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
             {
                 _logger.LogWarning("Could not delete the old history copy {File}: {Message}", copy, ex.Message);
             }
@@ -723,12 +719,7 @@ public sealed class PeopleStore
         try
         {
             connection.Open();
-            using (var pragma = connection.CreateCommand())
-            {
-                pragma.CommandText = "PRAGMA busy_timeout=5000;";
-                pragma.ExecuteNonQuery();
-            }
-
+            SetBusyTimeout(connection);
             EnsureSchema(connection);
             return connection;
         }
@@ -737,6 +728,13 @@ public sealed class PeopleStore
             connection.Dispose();
             throw;
         }
+    }
+
+    private static void SetBusyTimeout(SqliteConnection connection)
+    {
+        using var pragma = connection.CreateCommand();
+        pragma.CommandText = "PRAGMA busy_timeout=5000;";
+        pragma.ExecuteNonQuery();
     }
 
     // Write-ahead logging is stored in the file, so it is set once, with the schema, rather than per connection.
@@ -791,12 +789,7 @@ public sealed class PeopleStore
                 SqliteConnection.ClearAllPools();
                 DatabaseSchema.SetAside(_path, action == SchemaAction.TooNew ? "newer" : "corrupt", 2, _logger);
                 connection.Open();
-                using (var pragma = connection.CreateCommand())
-                {
-                    pragma.CommandText = "PRAGMA busy_timeout=5000;";
-                    pragma.ExecuteNonQuery();
-                }
-
+                SetBusyTimeout(connection);
                 if (OpenSchema(connection) is SchemaAction.TooNew or SchemaAction.MigrationFailed)
                 {
                     throw new InvalidOperationException("A new People history database could not be created.");

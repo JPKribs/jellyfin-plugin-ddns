@@ -1,7 +1,7 @@
 ---
 name: "Dynamic DNS"
 guid: "8150dce5-6153-4924-a985-a6927be95baa"
-version: "12.2.3.2"
+version: "12.2.3.3"
 targetAbi: "12.2.0.0"
 framework: "net10.0"
 overview: "Reach your server from anywhere: Dynamic DNS and a secure HTTPS proxy, inside Jellyfin."
@@ -21,6 +21,11 @@ artifacts:
 - "Certes.dll"
 - "BouncyCastle.Cryptography.dll"
 changelog:
-  changed:
-  - The Request a New Certificate scheduled task is removed. Refresh Certificate already requests a new certificate whenever one is missing, no longer covers your addresses, or expires within 30 days. To force one now, use Request a New Certificate on the Proxy tab.
-  - The Update Dynamic DNS scheduled task is now Update DDNS, and Update Location Database is now Refresh Locations. Their schedules carry over.
+  fixed:
+  - When the Domains tab cannot load its settings, it now says so even when there are no records yet.
+  - Correcting a server clock that had run ahead no longer forgets when the current Let's Encrypt certificate was issued.
+  developer:
+  - A cleanup sweep removed unused code, merged duplicated helpers in the pages and the server code, and fixed stale comments.
+  - The pages are embedded with one pattern instead of a list, and build.sh no longer checks a partial list of them.
+  - The unused slash-command workflows are removed.
+  - The docs add a Dashboard page under Features, and the Beginner's Guide starts by checking for CGNAT.

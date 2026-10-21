@@ -14,8 +14,7 @@ Who reaches the server, from where, and what was turned away.
 * **Activity**: every recorded visit, sign-in, failure and refusal, filtered by type and country. A row can be
   blocked or unblocked from here.
 
-History is kept for the days set under **Advanced → History**. Locations come from the
-[DB-IP](https://db-ip.com) database, which the plugin downloads.
+See [Dashboard](Dashboard.md) for every part of it.
 
 ![Dashboard tab](screenshots/Dashboard.png)
 

@@ -77,7 +77,7 @@ public sealed class GeoIpService : IDisposable
     public bool IsLoaded => Volatile.Read(ref _reader) is not null;
 
     /// <summary>
-    /// Describes the database for the People page.
+    /// Describes the database for the plugin's pages.
     /// </summary>
     /// <param name="detail">The configured detail.</param>
     /// <returns>The status.</returns>

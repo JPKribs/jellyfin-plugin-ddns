@@ -1,10 +1,8 @@
 import { createConfigPage } from './configurationpage?name=ddns_jpkribs_shared.js';
-import { TABS } from './configurationpage?name=ddns_tabs.js';
+import { PLUGIN_ID, TABS, showText } from './configurationpage?name=ddns_tabs.js';
 
 export default function (view) {
     'use strict';
-
-    var PLUGIN_ID = '8150dce5-6153-4924-a985-a6927be95baa';
 
     var Shared = null;
 
@@ -18,13 +16,10 @@ export default function (view) {
         Shared.getEl('currentIp').value = parts.length ? parts.join('   /   ') : 'Not detected yet';
     }
 
-    // Shows the read only detection warning when the last run could not resolve a public address for a
-    // wanted family, for example when the detected address looked internal and nothing was published.
+    // Warns when the last run could not resolve a public address for a wanted family, for example when the
+    // detected address looked internal and nothing was published.
     function showDetectionWarning(message) {
-        var box = Shared.getEl('detectionWarning');
-        var text = message || '';
-        box.textContent = text;
-        box.style.display = text ? '' : 'none';
+        showText(Shared, 'detectionWarning', message);
     }
 
     function load() {

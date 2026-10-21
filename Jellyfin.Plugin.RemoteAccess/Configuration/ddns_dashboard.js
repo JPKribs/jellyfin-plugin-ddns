@@ -1,11 +1,10 @@
 import { createConfigPage, confirmDialog } from './configurationpage?name=ddns_jpkribs_shared.js';
 import { WORLD, WORLD_VIEWBOX } from './configurationpage?name=ddns_worldmap.js';
-import { TABS, errorText } from './configurationpage?name=ddns_tabs.js';
+import { PLUGIN_ID, TABS, errorText, showText } from './configurationpage?name=ddns_tabs.js';
 
 export default function (view) {
     'use strict';
 
-    var PLUGIN_ID = '8150dce5-6153-4924-a985-a6927be95baa';
     var Shared = null;
     var data = null;
     // Which kinds the map and its table show. Any mix can be picked; all three is everything.
@@ -114,8 +113,8 @@ export default function (view) {
             }).join('') + '</tbody></table></div>';
     }
 
-    // The country filter lists the places in the data, keeping the choice while it is still there.
-    // Every country with any activity, from the full totals rather than the rows shown, plus your network.
+    // The country filter lists every country with any activity, from the full totals rather than the rows
+    // shown, plus your network, and keeps the current choice.
     function fillCountryFilter() {
         var names = {};
         [data.PeopleByCountry, data.FailedByCountry, data.BlockedByCountry].forEach(function (list) {
@@ -236,9 +235,6 @@ export default function (view) {
         }).join('');
         Shared.getEl('worldMap').innerHTML = '<svg viewBox="' + WORLD_VIEWBOX + '" role="img" aria-label="World map">' + paths + '</svg>';
 
-        var showUsers = mapShown.people;
-        var showFailures = mapShown.failed;
-        var showBlocked = mapShown.blocked;
         var legend = Shared.getEl('mapLegend');
         if (!rows.length) {
             // The empty state sits in the same frame as the table, so the layout does not jump between views.
@@ -249,15 +245,15 @@ export default function (view) {
             legend.innerHTML = '<div class="ddns-table-wrap ddns-empty">' + esc(empty) + '</div>';
         } else {
             legend.innerHTML = '<div class="ddns-table-wrap"><table class="ddns-table"><thead><tr><th>Country</th>' +
-                (showUsers ? countHeading('Users', 'person') : '') +
-                (showFailures ? countHeading('Failures', 'warning') : '') +
-                (showBlocked ? countHeading('Blocked', 'block') : '') +
+                (mapShown.people ? countHeading('Users', 'person') : '') +
+                (mapShown.failed ? countHeading('Failures', 'warning') : '') +
+                (mapShown.blocked ? countHeading('Blocked', 'block') : '') +
                 '<th>Last</th></tr></thead><tbody>' +
                 rows.map(function (r) {
                     return '<tr><td>' + esc(r.name) + '</td>' +
-                        (showUsers ? '<td class="ddns-num">' + r.users + '</td>' : '') +
-                        (showFailures ? '<td class="ddns-num">' + r.failures + '</td>' : '') +
-                        (showBlocked ? '<td class="ddns-num">' + r.blocked + '</td>' : '') +
+                        (mapShown.people ? '<td class="ddns-num">' + r.users + '</td>' : '') +
+                        (mapShown.failed ? '<td class="ddns-num">' + r.failures + '</td>' : '') +
+                        (mapShown.blocked ? '<td class="ddns-num">' + r.blocked + '</td>' : '') +
                         '<td>' + esc(agoShort(r.last)) + '</td></tr>';
                 }).join('') + '</tbody></table></div>';
         }
@@ -267,12 +263,6 @@ export default function (view) {
             button.className = 'raised emby-button ' + (mapShown[b[1]] ? 'jpk-button-submit' : 'jpk-secondary');
             button.setAttribute('aria-pressed', mapShown[b[1]] ? 'true' : 'false');
         });
-    }
-
-    function show(id, text) {
-        var el = Shared.getEl(id);
-        el.textContent = text || '';
-        Shared.setVisible(el, !!text);
     }
 
     function load() {
@@ -287,32 +277,31 @@ export default function (view) {
             var note = '';
             if (data.Settings && data.Settings.Enabled === false) note = 'History is off, so nothing new is recorded. Turn it on under Advanced.';
             else if (data.Recording === false) note = 'History is recorded while remote access is on.';
-            show('peopleOff', note);
+            showText(Shared, 'peopleOff', note);
         }).catch(function () {
             Shared.getEl('activity').innerHTML = '<div class="ddns-table-wrap ddns-empty">Could not load Remote Access.</div>';
         });
     }
 
-    function setBlocked(ip, block) {
-        Shared.apiRequest('People/' + (block ? 'Block' : 'Unblock') + '?ip=' + encodeURIComponent(ip), 'POST').then(function () {
-            Shared.setStatus('activityStatus', (block ? 'Blocked ' : 'Unblocked ') + ip + '.', false);
+    // Posts one change, reports it under the Activity heading and reloads.
+    function post(path, done, failed) {
+        Shared.apiRequest(path, 'POST').then(function () {
+            Shared.setStatus('activityStatus', done, false);
             load();
         }).catch(function (err) {
-            errorText(err, 'Could not ' + (block ? 'block ' : 'unblock ') + ip + '.').then(function (message) {
+            errorText(err, failed).then(function (message) {
                 Shared.setStatus('activityStatus', message, true);
             });
         });
     }
 
+    function setBlocked(ip, block) {
+        post('People/' + (block ? 'Block' : 'Unblock') + '?ip=' + encodeURIComponent(ip),
+            (block ? 'Blocked ' : 'Unblocked ') + ip + '.', 'Could not ' + (block ? 'block ' : 'unblock ') + ip + '.');
+    }
+
     function unban(ip) {
-        Shared.apiRequest('People/Unban?ip=' + encodeURIComponent(ip), 'POST').then(function () {
-            Shared.setStatus('activityStatus', 'Unbanned ' + ip + '.', false);
-            load();
-        }).catch(function (err) {
-            errorText(err, 'Could not unban ' + ip + '.').then(function (message) {
-                Shared.setStatus('activityStatus', message, true);
-            });
-        });
+        post('People/Unban?ip=' + encodeURIComponent(ip), 'Unbanned ' + ip + '.', 'Could not unban ' + ip + '.');
     }
 
     function onActivityClick(e) {
@@ -341,15 +330,7 @@ export default function (view) {
     // A country rule covers many people, so this one asks first.
     function unblockCountry(code, name) {
         confirmDialog('Connections from ' + name + ' are allowed from now on. Individual blocked addresses stay blocked.', { title: 'Unblock ' + name, confirmText: 'Unblock' }).then(function (ok) {
-            if (!ok) return;
-            Shared.apiRequest('People/UnblockCountry?code=' + encodeURIComponent(code), 'POST').then(function () {
-                Shared.setStatus('activityStatus', 'Unblocked ' + name + '.', false);
-                load();
-            }).catch(function (err) {
-                errorText(err, 'Could not unblock ' + name + '.').then(function (message) {
-                    Shared.setStatus('activityStatus', message, true);
-                });
-            });
+            if (ok) post('People/UnblockCountry?code=' + encodeURIComponent(code), 'Unblocked ' + name + '.', 'Could not unblock ' + name + '.');
         });
     }
 

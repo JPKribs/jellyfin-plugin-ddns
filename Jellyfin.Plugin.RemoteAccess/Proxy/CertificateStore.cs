@@ -389,17 +389,13 @@ public sealed class CertificateStore : IDisposable
     private static Loaded Build(X509Certificate2 leaf, X509Certificate2Collection intermediates, string stamp)
         => new(leaf, SslStreamCertificateContext.Create(leaf, intermediates, offline: true), stamp);
 
-    private string FileStamp(ProxyCertificateSettings settings)
+    private string FileStamp(ProxyCertificateSettings settings) => settings.Mode switch
     {
-
-        return settings.Mode switch
-        {
-            CertificateMode.Pkcs12File => FileStamp(settings.Path),
-            CertificateMode.PemFiles => FileStamp(settings.Path) + "|" + FileStamp(settings.KeyPath),
-            CertificateMode.Automatic => FileStamp(_paths.AcmeChainFile) + "|" + FileStamp(_paths.AcmeKeyFile),
-            _ => settings.Mode.ToString()
-        };
-    }
+        CertificateMode.Pkcs12File => FileStamp(settings.Path),
+        CertificateMode.PemFiles => FileStamp(settings.Path) + "|" + FileStamp(settings.KeyPath),
+        CertificateMode.Automatic => FileStamp(_paths.AcmeChainFile) + "|" + FileStamp(_paths.AcmeKeyFile),
+        _ => settings.Mode.ToString()
+    };
 
     /// <summary>
     /// What a certificate file looks like on disk, to notice it changed. A link, as certbot's <c>live</c> folder

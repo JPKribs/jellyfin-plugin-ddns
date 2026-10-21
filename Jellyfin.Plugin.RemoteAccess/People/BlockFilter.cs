@@ -169,7 +169,6 @@ public sealed class BlockFilter : IConnectionFilter
                 LastUtc = now
             });
         }
-
     }
 
     // One minute's refusals, with how many new groups each IPv6 /48 has taken, swapped out whole on each drain.
@@ -221,7 +220,7 @@ public readonly record struct RefusalTotals(long Address, long Ban, long Country
     /// <returns>The description, empty when nothing was refused.</returns>
     public string Describe()
     {
-        var parts = new System.Collections.Generic.List<string>(3);
+        var parts = new List<string>(3);
         if (Country > 0)
         {
             parts.Add(Country + " by the country rules");

@@ -14,11 +14,10 @@ namespace Jellyfin.Plugin.DynamicDns.Providers.Implementations;
 /// Yandex PDD, legacy (port of ddclient's <c>nic_yandex_update</c>). Yandex has retired the PDD API in
 /// favour of the Yandex 360 API: its documentation now redirects there and pddimp.yandex.ru no longer
 /// presents a certificate for its own name. Kept so existing records still load; new setups should use
-/// another provider. Authenticates with a
-/// <c>PddToken</c> header, lists the domain's DNS records to find the record whose <c>fqdn</c> and
-/// record type both match, then POSTs a form-encoded edit to set its content. Matching the type keeps
-/// an IPv4 edit from overwriting the AAAA (or an unrelated TXT/MX) at the same name, and lets A and
-/// AAAA update independently.
+/// another provider. Authenticates with a <c>PddToken</c> header, lists the domain's DNS records to find
+/// the record whose <c>fqdn</c> and record type both match, then POSTs a form-encoded edit to set its
+/// content. Matching the type keeps an IPv4 edit from overwriting the AAAA (or an unrelated TXT/MX) at the
+/// same name, and lets A and AAAA update independently.
 /// </summary>
 public sealed class YandexProvider : DNSProviderBase
 {

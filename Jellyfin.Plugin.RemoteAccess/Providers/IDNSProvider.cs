@@ -12,7 +12,7 @@ namespace Jellyfin.Plugin.DynamicDns.Providers;
 /// <see cref="DNSProviderBase"/> that returns that <see cref="Kind"/> and implements
 /// <see cref="UpdateAsync"/>. Registration is automatic (the assembly is scanned), and per-family
 /// providers should delegate the A/AAAA loop to <see cref="DNSProviderBase.ApplyPerFamilyAsync"/>.
-/// Override <see cref="Label"/>, <see cref="Hint"/>, and <see cref="Fields"/> so the dashboard renders the
+/// Implement <see cref="Label"/>, <see cref="Hint"/>, and <see cref="Fields"/> so the dashboard renders the
 /// provider with no JS change.
 /// </remarks>
 public interface IDNSProvider

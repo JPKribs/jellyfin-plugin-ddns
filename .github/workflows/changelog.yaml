@@ -14,9 +14,6 @@ on:
       - '.github/**'
       - '.gitignore'
   workflow_dispatch:
-  repository_dispatch:
-    types:
-      - update-prep-command
 
 permissions:
   contents: write

@@ -1,7 +1,7 @@
 namespace Jellyfin.Plugin.DynamicDns.People;
 
 /// <summary>
-/// How much location the People page shows for an internet address.
+/// How much location the history shows for an internet address.
 /// </summary>
 public enum LocationDetail
 {

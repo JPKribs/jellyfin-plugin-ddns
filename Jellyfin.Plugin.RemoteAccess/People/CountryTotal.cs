@@ -3,7 +3,7 @@ using System;
 namespace Jellyfin.Plugin.DynamicDns.People;
 
 /// <summary>
-/// How much came from one country, for the People map.
+/// How much came from one country, for the Dashboard map.
 /// </summary>
 public sealed class CountryTotal
 {

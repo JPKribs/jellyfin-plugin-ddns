@@ -54,7 +54,7 @@ public sealed class ProxyStatus
     /// <summary>Gets or sets when the takeover was applied (UTC).</summary>
     public DateTime? TakeoverAppliedUtc { get; set; }
 
-    /// <summary>Gets or sets why the takeover last rolled back, empty when none.</summary>
+    /// <summary>Gets or sets why Jellyfin could not be reached through the proxy at the last check, empty when it could.</summary>
     public string TakeoverError { get; set; } = string.Empty;
 
     /// <summary>Gets or sets the LAN address detected for auto-discovery.</summary>

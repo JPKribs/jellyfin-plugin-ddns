@@ -76,7 +76,7 @@ public sealed class ProxyPolicyMiddleware
     }
 
     /// <summary>
-    /// The address a request used, like <c>https://media.example.com:8920</c>, for the People page.
+    /// The address a request used, like <c>https://media.example.com:8920</c>, for the history.
     /// </summary>
     /// <param name="request">The request.</param>
     /// <returns>The scheme, host and port, lower-cased.</returns>
@@ -143,24 +143,22 @@ public sealed class ProxyPolicyMiddleware
             return;
         }
 
-        var local = runtime.Classifier.IsLocal(context.Connection.RemoteIpAddress);
+        var client = context.Connection.RemoteIpAddress;
+        var clientAddress = client is null ? null : NetworkClassifier.Normalize(client);
+        var local = runtime.Classifier.IsLocal(client);
         var host = HostnameMatcher.Normalize(request.Host.Host);
         var publicName = HostnameMatcher.IsPublicName(host) && runtime.IsConfiguredHost(host);
-        _localTraffic.Observe(local, publicName, context.Connection.RemoteIpAddress, DateTime.UtcNow);
+        _localTraffic.Observe(local, publicName, client, DateTime.UtcNow);
         var facts = new RequestFacts(local, request.IsHttps, request.Host.Host, request.Method, request.Path, request.QueryString);
         var decision = RequestPolicy.Decide(runtime, facts, _challenges);
 
         // The connection was checked when it opened, but a client blocked or banned since then must not keep
         // using it, and plain HTTP is only checked here. Certificate checks always get through.
-        var client = context.Connection.RemoteIpAddress;
-        if (!local && client is not null && decision.Action != RequestAction.Challenge)
+        if (!local && clientAddress is { } address && decision.Action != RequestAction.Challenge
+            && !_gate.Filters.All(f => f.Allow(address, runtime)))
         {
-            var address = NetworkClassifier.Normalize(client);
-            if (!_gate.Filters.All(f => f.Allow(address, runtime)))
-            {
-                context.Abort();
-                return;
-            }
+            context.Abort();
+            return;
         }
 
         switch (decision.Action)
@@ -192,10 +190,10 @@ public sealed class ProxyPolicyMiddleware
             return;
         }
 
+        var path = PathRules.StripBase(request.Path, runtime.BaseUrl);
         context.Items[RouteItem] = route;
         request.Headers.Remove(RouteHeader);
-        request.Headers[RouteHeader] = route?.Id
-            ?? (PathRules.IsMedia(PathRules.StripBase(request.Path, runtime.BaseUrl)) ? ProxyRuntime.JellyfinMediaId : ProxyRuntime.JellyfinId);
+        request.Headers[RouteHeader] = route?.Id ?? (PathRules.IsMedia(path) ? ProxyRuntime.JellyfinMediaId : ProxyRuntime.JellyfinId);
 
         // An upload that declares a size over the limit is refused before the backend hears about it; without
         // a declared size the limit still stops the body mid-stream.
@@ -213,15 +211,13 @@ public sealed class ProxyPolicyMiddleware
             return Task.CompletedTask;
         });
 
-        if (route is null && client is not null)
+        if (route is null && clientAddress is not null)
         {
-            _recorder.RecordRequest(NetworkClassifier.Normalize(client), AccessUrl(request), request.Headers.UserAgent.ToString(), local);
+            _recorder.RecordRequest(clientAddress, AccessUrl(request), request.Headers.UserAgent.ToString(), local);
         }
 
-        var path = PathRules.StripBase(request.Path, runtime.BaseUrl);
-        var signIn = route is null && client is not null && PathRules.IsSignIn(path);
+        var signIn = route is null && clientAddress is not null && PathRules.IsSignIn(path);
         var internetSignIn = signIn && !local;
-        var clientAddress = client is null ? null : NetworkClassifier.Normalize(client);
         if (internetSignIn && !await ReadSignInBodyAsync(context).ConfigureAwait(false))
         {
             return;

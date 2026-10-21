@@ -66,42 +66,9 @@ get_plugin_info() {
     echo "$name|$guid"
 }
 
-# Validate embedded resources exist
-validate_resources() {
-    log "INFO" "Validating embedded resources exist"
-
-    local missing_files=()
-    local config_files=(
-        "$PROJECT_DIR/Configuration/ddns_domains.html"
-        "$PROJECT_DIR/Configuration/ddns_domains.js"
-        "$PROJECT_DIR/Configuration/ddns_address.html"
-        "$PROJECT_DIR/Configuration/ddns_address.js"
-    )
-
-    for file in "${config_files[@]}"; do
-        if [[ ! -f "$file" ]]; then
-            missing_files+=("$file")
-        else
-            log "SUCCESS" "Found: $file"
-        fi
-    done
-
-    if [[ ${#missing_files[@]} -gt 0 ]]; then
-        log "ERROR" "Missing embedded resource files:"
-        for file in "${missing_files[@]}"; do
-            log "ERROR" "  - $file"
-        done
-        log "ERROR" "These files are required for the configuration page to work"
-        return 1
-    fi
-
-    log "SUCCESS" "All embedded resources found"
-    return 0
-}
-
 # Main build process
 main() {
-    log "INFO" "Starting Dynamic DNS Plugin build"
+    log "INFO" "Starting Remote Access plugin build"
 
     # Get version and plugin info once at the start
     log "INFO" "Reading version from build.yaml"
@@ -121,11 +88,6 @@ main() {
     # Check if project file exists
     if [[ ! -f "$PROJECT_FILE" ]]; then
         log "ERROR" "Project file not found: $PROJECT_FILE"
-        exit 1
-    fi
-
-    # Validate embedded resources
-    if ! validate_resources; then
         exit 1
     fi
 

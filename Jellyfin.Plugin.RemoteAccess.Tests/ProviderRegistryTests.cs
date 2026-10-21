@@ -40,30 +40,6 @@ public class ProviderRegistryTests
     }
 
     [Fact]
-    public void EveryProviderKind_ResolvesToItsImplementingType()
-    {
-        var services = new ServiceCollection();
-        services.AddLogging();
-        services.AddSingleton(StubHttp.Always(HttpStatusCode.OK, string.Empty));
-
-        var providerTypes = typeof(IDNSProvider).Assembly.GetTypes()
-            .Where(t => t is { IsClass: true, IsAbstract: false } && typeof(IDNSProvider).IsAssignableFrom(t))
-            .ToList();
-        foreach (var type in providerTypes)
-        {
-            services.AddSingleton(typeof(IDNSProvider), type);
-        }
-
-        using var provider = services.BuildServiceProvider();
-
-        // The helper must round trip: a provider's Kind resolves back to that provider's own type.
-        foreach (var instance in provider.GetServices<IDNSProvider>())
-        {
-            Assert.Equal(instance.GetType(), instance.Kind.ProviderType());
-        }
-    }
-
-    [Fact]
     public void EveryProvider_ExposesCompleteMetadata()
     {
         var services = new ServiceCollection();

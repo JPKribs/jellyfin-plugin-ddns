@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Xml.Serialization;
 using Jellyfin.Plugin.DynamicDns.Models;
@@ -66,7 +67,7 @@ public class PluginConfiguration : BasePluginConfiguration
     /// <summary>Gets or sets the built-in reverse proxy settings. Off by default.</summary>
     public ProxySettings Proxy { get; set; } = new();
 
-    /// <summary>Gets or sets the People page settings: who connected from where.</summary>
+    /// <summary>Gets or sets the history settings: who connected from where.</summary>
     public PeopleSettings People { get; set; } = new();
 
     // The detected IP and detection warning are runtime status, kept in the separate status store rather
@@ -88,4 +89,12 @@ public class PluginConfiguration : BasePluginConfiguration
     /// </summary>
     [XmlIgnore]
     public string LastDetectionMessage { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Returns the timeout for one outbound detection or provider request. Clamped so a huge setting cannot
+    /// overflow the timer and fail every run.
+    /// </summary>
+    /// <returns>The timeout.</returns>
+    public TimeSpan RequestTimeout()
+        => TimeSpan.FromSeconds(RequestTimeoutSeconds > 0 ? Math.Min(RequestTimeoutSeconds, 300) : 15);
 }

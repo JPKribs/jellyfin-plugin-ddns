@@ -1,7 +1,7 @@
 namespace Jellyfin.Plugin.DynamicDns.People;
 
 /// <summary>
-/// Settings for the People page: who connected from where.
+/// Settings for the history: who connected from where.
 /// </summary>
 public class PeopleSettings
 {

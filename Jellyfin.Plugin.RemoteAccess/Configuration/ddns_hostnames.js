@@ -1,6 +1,6 @@
 import { createCheckboxList } from './configurationpage?name=ddns_jpkribs_shared.js';
 
-// A hostname picker shared by the Proxy and Routes tabs: a checklist of the names the DDNS records keep
+// A hostname picker shared by the Proxy and Services tabs: a checklist of the names the DDNS records keep
 // pointed at this server, plus a box for any other names. Both save into the same hostname list, so a
 // name checked here and a name typed below are treated alike by the proxy.
 export function createHostnamePicker(shared, containerId, customId) {

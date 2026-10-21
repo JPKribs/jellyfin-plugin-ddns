@@ -48,7 +48,7 @@ public sealed class PeopleService
     }
 
     /// <summary>
-    /// Gets the location database detail to keep loaded: the People page's choice, and at least country detail
+    /// Gets the location database detail to keep loaded: the history's choice, and at least country detail
     /// while country rules are on.
     /// </summary>
     public static LocationDetail RequiredLocation
@@ -85,10 +85,10 @@ public sealed class PeopleService
         var text = value.Trim();
         if (IPAddress.TryParse(text, out var ip))
         {
-            return Proxy.NetworkClassifier.Normalize(ip);
+            return NetworkClassifier.Normalize(ip);
         }
 
-        return IPEndPoint.TryParse(text, out var endPoint) ? Proxy.NetworkClassifier.Normalize(endPoint.Address) : null;
+        return IPEndPoint.TryParse(text, out var endPoint) ? NetworkClassifier.Normalize(endPoint.Address) : null;
     }
 
     /// <summary>

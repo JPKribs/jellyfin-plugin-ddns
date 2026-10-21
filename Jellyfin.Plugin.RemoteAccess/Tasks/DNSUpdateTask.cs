@@ -2,11 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
-using Jellyfin.Plugin.DynamicDns.Models;
 using Jellyfin.Plugin.DynamicDns.Services;
 using JPKribs.Jellyfin.Base;
 using MediaBrowser.Model.Tasks;
-using Microsoft.Extensions.Logging;
 
 namespace Jellyfin.Plugin.DynamicDns.Tasks;
 
@@ -16,17 +14,14 @@ namespace Jellyfin.Plugin.DynamicDns.Tasks;
 public sealed class DNSUpdateTask : PluginScheduledTask
 {
     private readonly DNSUpdateService _updateService;
-    private readonly ILogger<DNSUpdateTask> _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="DNSUpdateTask"/> class.
     /// </summary>
     /// <param name="updateService">The update service.</param>
-    /// <param name="logger">The logger.</param>
-    public DNSUpdateTask(DNSUpdateService updateService, ILogger<DNSUpdateTask> logger)
+    public DNSUpdateTask(DNSUpdateService updateService)
     {
         _updateService = updateService;
-        _logger = logger;
     }
 
     /// <inheritdoc />
@@ -42,19 +37,8 @@ public sealed class DNSUpdateTask : PluginScheduledTask
     public override async Task ExecuteAsync(IProgress<double> progress, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(progress);
-
         progress.Report(0);
-
-        var outcome = await _updateService.RunAsync(cancellationToken).ConfigureAwait(false);
-
-        var records = outcome.Records;
-        var total = records.Count;
-
-        for (var i = 0; i < total; i++)
-        {
-            progress.Report(total == 0 ? 100 : (double)(i + 1) / total * 100);
-        }
-
+        await _updateService.RunAsync(cancellationToken).ConfigureAwait(false);
         progress.Report(100);
     }
 

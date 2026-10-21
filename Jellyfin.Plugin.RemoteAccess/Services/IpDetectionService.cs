@@ -69,8 +69,7 @@ public sealed class IPDetectionService
 
         // When the user has turned off internal address skipping, accept whatever detection returns.
         var requirePublic = config.SkipInternalAddresses;
-        // Clamped so a huge setting cannot overflow the timer and fail every run.
-        var timeout = TimeSpan.FromSeconds(config.RequestTimeoutSeconds > 0 ? Math.Min(config.RequestTimeoutSeconds, 300) : 15);
+        var timeout = config.RequestTimeout();
 
         if (needIPv4)
         {
@@ -307,8 +306,8 @@ public sealed class IPDetectionService
         }
     }
 
-    // Reads at most MaxResponseChars of a successful response body. A non success status throws, matching
-    // what GetStringAsync did, so the endpoint is failed over like any other error.
+    // Reads at most MaxResponseChars of a successful response body. A non success status throws, so the
+    // endpoint is failed over like any other error.
     private static async Task<string> ReadBoundedAsync(HttpClient client, Uri uri, CancellationToken cancellationToken)
     {
         using var response = await client.GetAsync(uri, HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false);

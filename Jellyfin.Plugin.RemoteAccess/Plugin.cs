@@ -200,7 +200,7 @@ public class Plugin : PluginBase<Plugin, PluginConfiguration>
             {
                 JellyfinNetworkOrchestrator.RestoreForUninstall(new ProxyPaths(ApplicationPaths), _configurationManager, _logger);
             }
-            catch (Exception ex) when (ex is System.IO.IOException or UnauthorizedAccessException or InvalidOperationException)
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException)
             {
                 _logger.LogError(ex, "Could not restore Jellyfin's network settings during uninstall");
             }

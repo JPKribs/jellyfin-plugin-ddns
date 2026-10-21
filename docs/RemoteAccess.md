@@ -150,17 +150,8 @@ shows both defaults and which one applies.
 
 ## Dashboard
 
-The **Dashboard** tab shows who connects:
-
-* **Locations**: a world map and table by country, of users, failed sign-ins and blocked visitors.
-* **Banned**: addresses banned for failed sign-ins, each with **Unban**.
-* **Activity**: every address and what it did. **User** signed in, **Failure** failed to, **Blocked** was turned
-  away, and **Seen** reached the sign-in page and did nothing else. Each row can be blocked or unblocked.
-
-Locations come from the free DB-IP database, downloaded to this server, so addresses are never sent anywhere. What
-is recorded, and for how long, is under **Advanced → History**.
-
-![Dashboard tab](screenshots/Dashboard.png)
+The **Dashboard** tab shows who connects, where from, and what was turned away, with bans you can lift and
+addresses you can block. See [Dashboard](Dashboard.md).
 
 ## Services
 

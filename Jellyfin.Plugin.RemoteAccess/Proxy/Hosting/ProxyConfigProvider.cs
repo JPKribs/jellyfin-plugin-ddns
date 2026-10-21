@@ -112,7 +112,6 @@ public sealed class ProxyConfigProvider : IProxyConfigProvider
 
         // YARP's activity timer only restarts when a read or write completes, and a paused player stops
         // reading, which stalls the write. Media gets a long timer so a pause does not end the stream.
-        var media = Request(null);
         clusters.Add(new ClusterConfig
         {
             ClusterId = ProxyRuntime.JellyfinMediaId,
@@ -120,7 +119,7 @@ public sealed class ProxyConfigProvider : IProxyConfigProvider
             {
                 [ProxyRuntime.JellyfinMediaId] = new() { Address = runtime.JellyfinBackend.ToString() }
             },
-            HttpRequest = media with { ActivityTimeout = MediaActivityTimeout }
+            HttpRequest = Request(null) with { ActivityTimeout = MediaActivityTimeout }
         });
 
         return clusters;

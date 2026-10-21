@@ -558,6 +558,18 @@ public sealed class HardeningTests : IDisposable
     }
 
     [Fact]
+    public void Planner_CorrectingAFutureTime_KeepsTheIssuedCertificatesStart()
+    {
+        var now = new DateTime(2026, 10, 21, 0, 0, 0, DateTimeKind.Utc);
+        var notBefore = now.AddDays(-5);
+        var state = AcmeState.Succeeded(now.AddDays(3), new[] { "media.example.com" }, "https://acme/", notBefore);
+
+        var normalized = AcmePlanner.Normalize(state, now);
+        Assert.Equal(now, normalized.LastSuccessUtc);
+        Assert.Equal(notBefore, normalized.IssuedNotBeforeUtc);
+    }
+
+    [Fact]
     public void Planner_AnOlderCertificatePutBack_IsNotHeldAsTheNewOne()
     {
         var now = new DateTime(2026, 10, 21, 0, 0, 0, DateTimeKind.Utc);

@@ -1,11 +1,10 @@
 import { createConfigPage, confirmDialog } from './configurationpage?name=ddns_jpkribs_shared.js';
 import { createHostnamePicker } from './configurationpage?name=ddns_hostnames.js';
-import { TABS, errorText } from './configurationpage?name=ddns_tabs.js';
+import { PLUGIN_ID, TABS, errorText, showText } from './configurationpage?name=ddns_tabs.js';
 
 export default function (view) {
     'use strict';
 
-    var PLUGIN_ID = '8150dce5-6153-4924-a985-a6927be95baa';
     // What to do next for each section that is not finished, in the order they matter.
     var NEXT = {
         power: 'Turn on remote access.',
@@ -18,6 +17,11 @@ export default function (view) {
     var settings = null;
     var hostnames = null;
     var arranged = false;
+    // The last status shown, for the certificate actions.
+    var lastStatus = null;
+    // The self-signed root, fetched once while it is shown.
+    var rootLoaded = false;
+    var rootPem = '';
 
     var CERT_NOTES = {
         Automatic: 'Issued and renewed for you.',
@@ -37,9 +41,7 @@ export default function (view) {
     }
 
     function show(id, text) {
-        var el = Shared.getEl(id);
-        el.textContent = text || '';
-        Shared.setVisible(el, !!text);
+        showText(Shared, id, text);
     }
 
     function formatDate(value) {
@@ -83,7 +85,7 @@ export default function (view) {
         else if (soon(cert.NotAfterUtc)) parts.certificate = { done: true, badge: ['orange', 'Expires soon'] };
         else parts.certificate = { done: true, badge: ['green', 'Ready'] };
 
-        parts.router = { done: true, badge: ['blue', 'Check'] };
+        parts.router = { done: true };
 
         // What Jellyfin actually trusts decides, so a setting changed outside this page shows up here.
         if (st.TakeoverPhase === 'Managed' && st.JellyfinTrustsProxy === false) parts.jellyfin = { done: false, why: 'Jellyfin no longer trusts the proxy. Its network settings were changed since.' };
@@ -96,8 +98,9 @@ export default function (view) {
 
     function setOpen(key, open) {
         var section = view.querySelector('[data-section="' + key + '"]');
-        section.querySelector('.jpk-collapsible-header').classList.toggle('collapsed', !open);
-        section.querySelector('.jpk-collapsible-header').setAttribute('aria-expanded', open ? 'true' : 'false');
+        var header = section.querySelector('.jpk-collapsible-header');
+        header.classList.toggle('collapsed', !open);
+        header.setAttribute('aria-expanded', open ? 'true' : 'false');
         section.querySelector('.jpk-collapsible-content').classList.toggle('collapsed', !open);
         return section;
     }
@@ -224,8 +227,6 @@ export default function (view) {
         Shared.setVisible('btnMove', !managed || (st.TakeoverPhase === 'Managed' && st.JellyfinTrustsProxy === false));
     }
 
-    var lastStatus = null;
-
     // What can be done with the certificate in use, shown only while its source is still the one picked above:
     // picking another source hides them before it is saved.
     function showCertActions() {
@@ -335,9 +336,6 @@ export default function (view) {
             });
         });
     }
-
-    var rootLoaded = false;
-    var rootPem = '';
 
     function loadRoot() {
         rootLoaded = true;

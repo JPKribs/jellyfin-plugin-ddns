@@ -12,7 +12,19 @@ works.
 
 * Jellyfin 12.2 running at home, and an administrator account on it.
 * Access to your home router's settings, to forward two ports.
-* A public IP from your internet provider. Step 8 shows how to check.
+* A public IP from your internet provider. Step 0 shows how to check.
+
+## 0. Check you are not behind CGNAT
+
+Some internet providers share one public address between many homes, called carrier-grade NAT or CGNAT. Behind it,
+nothing from the internet can reach your home, so **this guide will not work unless you ask your provider for a
+public or static IP**. Many give one for free or a small monthly fee. Check before you buy anything:
+
+1. Open your router's status page and find its internet or WAN address.
+2. On a device at home, open [ifconfig.me](https://ifconfig.me) to see the address the internet sees.
+
+If the two match, you are fine. If they differ, or the router's address starts with `100.64` to `100.127`, you
+are behind CGNAT. Ask your provider for a public IP before going further.
 
 ## 1. Buy a domain
 
@@ -118,20 +130,13 @@ Port 443 carries everything. Port 80 only sends `http://` links on to HTTPS. Do 
     On Linux, Jellyfin needs permission to use ports 80 and 443. In Docker, use host networking. See
     [Before you start](RemoteAccess.md#before-you-start).
 
-## 8. Check you have a public IP
-
-Compare the internet or WAN address on your router's status page with the **Public IP** on the plugin's
-**Address** tab. They should match. If they do not, or the router's address starts with `100.64` to `100.127`,
-your provider shares one address between many homes and forwarded ports cannot be reached. Ask them for a public
-IP, often free or a small monthly fee.
-
-## 9. Trust the Proxy
+## 8. Trust the Proxy
 
 On the **Proxy** tab, under **Jellyfin**, select **Trust the Proxy** and confirm. Jellyfin restarts once. After that
 it sees each visitor's real address, so its own remote-access rules and bitrate limits work, and the proxy's bans
 and country rules apply.
 
-## 10. Test it
+## 9. Test it
 
 On your phone, turn Wi-Fi off and open `https://media.example.com`. You should see Jellyfin's sign-in page with a
 padlock in the address bar. Then add the same address as a server in the Jellyfin apps you use away from home.
@@ -155,9 +160,9 @@ inside your home.
 | `no 'AAAA' record at Cloudflare` | Turn off **Update IPv6**, or add an `AAAA` record as in step 2. |
 | An authentication or permission error | The token is wrong, or limited to a different zone. Make a new one as in step 3, and check **Auth email or token** is `token`. |
 | `no zone ID found` | **Zone name** must be the domain alone, such as `example.com`, not `media.example.com`. |
-| The Address tab warns that the address is internal | The server has no public IP of its own. See step 8. |
+| The Address tab warns that the address is internal | The server has no public IP of its own. See step 0. |
 | The Proxy tab shows no certificate | Its Certificate section shows Let's Encrypt's reason. The activity log under **Dashboard → Activity** has it too. |
-| The phone cannot connect | Check the forwarding rules in step 7, and step 8. Some providers block ports 80 and 443 on home lines. Ask them. |
+| The phone cannot connect | Check the forwarding rules in step 7, and step 0. Some providers block ports 80 and 443 on home lines. Ask them. |
 | Works away from home, not at home | Normal for many routers. Use Jellyfin's local address at home. |
 | The sign-in page loads, but everyone shows as local on the Dashboard | Something in front of the proxy hides visitors' addresses. See [When every visitor looks local](RemoteAccess.md#when-every-visitor-looks-local). |
 | Locked out after a setting change | See [Recovery](RemoteAccess.md#recovery). |

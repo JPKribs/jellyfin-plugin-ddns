@@ -9,7 +9,7 @@ using MediaBrowser.Model.Tasks;
 namespace Jellyfin.Plugin.DynamicDns.Tasks;
 
 /// <summary>
-/// Downloads the newest location database for the People page. DB-IP publishes a new one each month.
+/// Downloads the newest location database for the Dashboard's map and the country rules. DB-IP publishes a new one each month.
 /// </summary>
 public sealed class LocationDatabaseTask : PluginScheduledTask
 {

@@ -1,4 +1,7 @@
-// The tab bar shared by every Dynamic DNS page, kept in one place so the pages never disagree.
+// What every Dynamic DNS page shares, kept in one place so the pages never disagree.
+export const PLUGIN_ID = '8150dce5-6153-4924-a985-a6927be95baa';
+
+// The tab bar.
 export const TABS = [
     { href: 'configurationpage?name=ddns_dashboard', name: 'Dashboard' },
     { href: 'configurationpage?name=ddns_domains', name: 'Domains' },
@@ -16,4 +19,11 @@ export function errorText(err, fallback) {
         }).catch(function () { return fallback; });
     }
     return Promise.resolve(fallback);
+}
+
+// Puts a message in a box and shows the box, or hides it when there is no message.
+export function showText(shared, id, text) {
+    var el = shared.getEl(id);
+    el.textContent = text || '';
+    shared.setVisible(el, !!text);
 }

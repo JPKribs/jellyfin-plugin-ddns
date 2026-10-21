@@ -1,11 +1,9 @@
 import { createConfigPage, confirmDialog } from './configurationpage?name=ddns_jpkribs_shared.js';
 import { createHostnamePicker } from './configurationpage?name=ddns_hostnames.js';
-import { TABS, errorText } from './configurationpage?name=ddns_tabs.js';
+import { PLUGIN_ID, TABS, errorText, showText } from './configurationpage?name=ddns_tabs.js';
 
 export default function (view) {
     'use strict';
-
-    var PLUGIN_ID = '8150dce5-6153-4924-a985-a6927be95baa';
 
     var Shared = null;
     var routes = [];
@@ -120,10 +118,7 @@ export default function (view) {
     // A disabled route says so below the dropdown rather than in the option text.
     function showRouteState() {
         var r = routes[current];
-        var state = Shared.getEl('routeState');
-        var disabled = !!r && r.Enabled === false;
-        state.textContent = disabled ? 'Off, so it cannot be reached.' : '';
-        Shared.setVisible(state, disabled);
+        showText(Shared, 'routeState', r && r.Enabled === false ? 'Off, so it cannot be reached.' : '');
     }
 
     function render() {

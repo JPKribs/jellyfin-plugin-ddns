@@ -1,15 +1,13 @@
 import { createConfigPage, confirmDialog } from './configurationpage?name=ddns_jpkribs_shared.js';
-import { TABS } from './configurationpage?name=ddns_tabs.js';
+import { PLUGIN_ID, TABS, showText } from './configurationpage?name=ddns_tabs.js';
 
 export default function (view) {
     'use strict';
 
-    var PLUGIN_ID = '8150dce5-6153-4924-a985-a6927be95baa';
-
     var Shared = null;
 
-    // Provider list, hints, and field specs come from the backend (GET DynamicDns/Providers), so each
-    // provider drives its own UI from its C# class. p[0] is the enum name and p[1] is the friendly label.
+    // Provider list, hints, and field specs, filled by loadProviders. In PROVIDERS, p[0] is the enum name and
+    // p[1] is the friendly label.
     var PROVIDERS = [];
     var PROVIDER_VALUES = [];
     var HINTS = {};
@@ -18,7 +16,6 @@ export default function (view) {
     // Fallback spec showing every field for an unrecognized provider.
     var DEFAULT_FIELDS = { h: 'Hostname', l: 'Login', p: 'Password', z: 'Zone', s: true, t: true, v6: true, a: ['wildcard', 'static', 'mx', 'backupmx'] };
 
-    var config = null;
     var records = [];
     var currentIndex = -1;
     var editorEnabled = true;
@@ -34,8 +31,9 @@ export default function (view) {
     function getConfig() { return Shared.apiRequest('Configuration', 'GET'); }
     function saveConfig(cfg) { return Shared.apiRequest('Configuration', 'POST', cfg); }
 
-    // Pull the provider list, hints, and field specs from the backend once, so each provider's UI is
-    // defined in one place: its C# class. The field keys map the server shape onto the short keys used here.
+    // Pulls the provider list, hints, and field specs from the backend (GET DynamicDns/Providers) once, so each
+    // provider's UI is defined in one place: its C# class. The field keys map the server shape onto the short
+    // keys used here.
     var _providersLoaded = false;
     function loadProviders() {
         if (_providersLoaded) { return Promise.resolve(); }
@@ -279,7 +277,6 @@ export default function (view) {
         return getConfig().then(function (fresh) {
             if (!fresh) { throw new Error('settings unavailable'); }
             fresh.Records = records.filter(function (x) { return !!x.Hostname; });
-            config = fresh;
             return saveConfig(fresh);
         }).then(function (saved) {
             // Adopt the records as persisted, so a credential just typed (or cleared) is held as the
@@ -364,13 +361,13 @@ export default function (view) {
 
     function load() {
         loadProviders().then(getConfig).then(function (cfg) {
-            config = cfg;
-            records = config.Records || [];
+            records = cfg.Records || [];
             renderProviderOptions();
             currentIndex = records.length ? 0 : -1;
             renderSelect();
         }).catch(function () {
-            Shared.setStatus('recordStatus', 'Could not load providers or settings.', true);
+            // Outside the editor, which stays hidden when there are no records.
+            showText(Shared, 'loadError', 'Could not load providers or settings.');
         });
     }
 

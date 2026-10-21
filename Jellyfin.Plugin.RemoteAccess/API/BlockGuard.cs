@@ -85,6 +85,11 @@ internal static class BlockGuard
             ? target.BaseAddress.ToString()
             : target.ToString();
 
-    private static IPNetwork Single(IPAddress ip)
+    /// <summary>
+    /// The full-length network that names one address alone.
+    /// </summary>
+    /// <param name="ip">The address.</param>
+    /// <returns>The network.</returns>
+    public static IPNetwork Single(IPAddress ip)
         => new(ip, ip.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork ? 32 : 128);
 }

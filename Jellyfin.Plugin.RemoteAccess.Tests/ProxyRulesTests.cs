@@ -60,14 +60,6 @@ public class ProxyRulesTests
     public void Redactor_MasksEveryTokenForm(string input, string expected)
         => Assert.Equal(expected, CredentialRedactor.Redact(input));
 
-    [Fact]
-    public void Redactor_MasksCredentialHeaders()
-    {
-        Assert.Equal(CredentialRedactor.Mask, CredentialRedactor.RedactHeader("X-Emby-Token", "abc"));
-        Assert.Equal(CredentialRedactor.Mask, CredentialRedactor.RedactHeader("authorization", "Bearer abc"));
-        Assert.Equal("text/html", CredentialRedactor.RedactHeader("Accept", "text/html"));
-    }
-
     [Theory]
     [InlineData("/Startup/Configuration", true)]
     [InlineData("/startup/user", true)]

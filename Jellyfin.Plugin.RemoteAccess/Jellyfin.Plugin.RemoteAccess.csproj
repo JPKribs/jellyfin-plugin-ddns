@@ -45,22 +45,7 @@
 
   <ItemGroup>
     <!-- Admin dashboard pages (tabs) -->
-    <EmbeddedResource Include="Configuration\ddns_domains.html" />
-    <EmbeddedResource Include="Configuration\ddns_domains.js" />
-    <EmbeddedResource Include="Configuration\ddns_address.html" />
-    <EmbeddedResource Include="Configuration\ddns_address.js" />
-    <EmbeddedResource Include="Configuration\ddns_remote.html" />
-    <EmbeddedResource Include="Configuration\ddns_remote.js" />
-    <EmbeddedResource Include="Configuration\ddns_services.html" />
-    <EmbeddedResource Include="Configuration\ddns_services.js" />
-    <EmbeddedResource Include="Configuration\ddns_dashboard.html" />
-    <EmbeddedResource Include="Configuration\ddns_dashboard.js" />
-    <EmbeddedResource Include="Configuration\ddns_advanced.html" />
-    <EmbeddedResource Include="Configuration\ddns_advanced.js" />
-    <EmbeddedResource Include="Configuration\ddns_tabs.js" />
-    <EmbeddedResource Include="Configuration\ddns_hostnames.js" />
-    <EmbeddedResource Include="Configuration\ddns_worldmap.js" />
-    <EmbeddedResource Include="Configuration\ddns_common.css" />
+    <EmbeddedResource Include="Configuration\ddns_*.html;Configuration\ddns_*.js;Configuration\ddns_*.css" />
   </ItemGroup>
 
 </Project>

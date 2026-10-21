@@ -23,7 +23,4 @@ public sealed class DetectedIP
     /// IPv6 was found or was not requested. Set when a detected address looked internal.
     /// </summary>
     public string? IPv6Note { get; init; }
-
-    /// <summary>Gets a value indicating whether at least one address was detected.</summary>
-    public bool HasAny => IPv4 is not null || IPv6 is not null;
 }

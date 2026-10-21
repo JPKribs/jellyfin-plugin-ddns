@@ -77,7 +77,8 @@ public static class AcmePlanner
             ConsecutiveFailures = state.ConsecutiveFailures,
             LastError = state.LastError,
             Names = state.Names,
-            Directory = state.Directory
+            Directory = state.Directory,
+            IssuedNotBeforeUtc = state.IssuedNotBeforeUtc
         };
     }
 

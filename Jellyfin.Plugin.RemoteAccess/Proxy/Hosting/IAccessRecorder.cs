@@ -3,7 +3,7 @@ using System.Net;
 namespace Jellyfin.Plugin.DynamicDns.Proxy.Hosting;
 
 /// <summary>
-/// Where the proxy reports which address each client used, for the People page. Kept to plain values so the
+/// Where the proxy reports which address each client used, for the history. Kept to plain values so the
 /// proxy host never touches Jellyfin's services.
 /// </summary>
 public interface IAccessRecorder

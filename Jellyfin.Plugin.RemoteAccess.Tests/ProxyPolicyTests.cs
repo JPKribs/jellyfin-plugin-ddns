@@ -12,8 +12,7 @@ using Xunit;
 namespace Jellyfin.Plugin.DynamicDns.Tests;
 
 /// <summary>
-/// The request policy: what internet and LAN clients may reach, and how plain HTTP from the internet is
-/// handled, including plain HTTP from the internet.
+/// The request policy: what internet and LAN clients may reach, and how plain HTTP from the internet is handled.
 /// </summary>
 public class ProxyPolicyTests
 {

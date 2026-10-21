@@ -1,11 +1,10 @@
 import { createConfigPage, confirmDialog, createChipSelect } from './configurationpage?name=ddns_jpkribs_shared.js';
-import { TABS, errorText } from './configurationpage?name=ddns_tabs.js';
+import { PLUGIN_ID, TABS, errorText } from './configurationpage?name=ddns_tabs.js';
 import { COUNTRY_CODES, WORLD } from './configurationpage?name=ddns_worldmap.js';
 
 export default function (view) {
     'use strict';
 
-    var PLUGIN_ID = '8150dce5-6153-4924-a985-a6927be95baa';
     var Shared = null;
     var defaults = null;
     // Both default sets, standard and low-memory, and which one this server uses.
@@ -13,9 +12,12 @@ export default function (view) {
     // The values as last loaded or saved, so a save only writes what was changed on this page.
     var loaded = {};
     var settingsLoaded = false;
+    // Until the history settings load, saving would overwrite them with the form's defaults.
+    var historyLoaded = false;
     // What the server said about restarting Jellyfin after the last save, if anything.
     var restartNote = '';
     var countries = null;
+    var serverCountry = '';
 
     var MODE_NOTES = {
         ServerCountry: 'Only this server\'s country and any below can connect.',
@@ -23,7 +25,6 @@ export default function (view) {
         AllowOnly: 'Only the countries below can connect.',
         Off: 'Every country can connect.'
     };
-    var serverCountry = '';
 
     var LOCATION_NOTES = {
         Country: 'Looked up on this server. Nothing is sent anywhere.',
@@ -184,9 +185,6 @@ export default function (view) {
         else status = 'The location database has not been downloaded yet.';
         Shared.getEl('locationStatus').textContent = status;
     }
-
-    // Until the history settings load, saving would overwrite them with the form's defaults.
-    var historyLoaded = false;
 
     function loadHistory() {
         return Shared.apiRequest('People', 'GET').then(function (d) {

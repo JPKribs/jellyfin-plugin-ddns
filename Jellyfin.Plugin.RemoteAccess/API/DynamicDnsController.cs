@@ -16,7 +16,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace Jellyfin.Plugin.DynamicDns.Api;
 
 /// <summary>
-/// Administrative endpoints backing the Dynamic DNS dashboard page.
+/// Administrative endpoints backing the Domains and Address tabs.
 /// </summary>
 [ApiController]
 [Authorize(Policy = "RequiresElevation")]
@@ -144,6 +144,13 @@ public class DynamicDNSController : ControllerBase
             return BadRequest(new { Errors = new List<string> { "Encrypted values cannot be entered as credentials." } });
         }
 
+        incoming.IPv4DetectionUrl ??= string.Empty;
+        incoming.IPv6DetectionUrl ??= string.Empty;
+        incoming.ForceUpdateHours = Math.Max(0, incoming.ForceUpdateHours);
+        incoming.BackoffAfterFailures = Math.Max(0, incoming.BackoffAfterFailures);
+        incoming.BackoffHours = Math.Max(1, incoming.BackoffHours);
+        incoming.RequestTimeoutSeconds = Math.Clamp(incoming.RequestTimeoutSeconds, 1, 300);
+
         // The merge replaces the record list and never mutates the stored record objects, so the prior
         // list captured here still holds the pre save values for the audit diff after the mutation.
         List<DNSRecord>? before = null;
@@ -152,22 +159,22 @@ public class DynamicDNSController : ControllerBase
         plugin.MutateConfiguration(current =>
         {
             before = current.Records;
-            settingsChanged = current.IPv4DetectionUrl != (incoming.IPv4DetectionUrl ?? string.Empty)
-                || current.IPv6DetectionUrl != (incoming.IPv6DetectionUrl ?? string.Empty)
-                || current.ForceUpdateHours != Math.Max(0, incoming.ForceUpdateHours)
+            settingsChanged = current.IPv4DetectionUrl != incoming.IPv4DetectionUrl
+                || current.IPv6DetectionUrl != incoming.IPv6DetectionUrl
+                || current.ForceUpdateHours != incoming.ForceUpdateHours
                 || current.SkipInternalAddresses != incoming.SkipInternalAddresses
-                || current.BackoffAfterFailures != Math.Max(0, incoming.BackoffAfterFailures)
-                || current.BackoffHours != Math.Max(1, incoming.BackoffHours)
-                || current.RequestTimeoutSeconds != Math.Clamp(incoming.RequestTimeoutSeconds, 1, 300);
+                || current.BackoffAfterFailures != incoming.BackoffAfterFailures
+                || current.BackoffHours != incoming.BackoffHours
+                || current.RequestTimeoutSeconds != incoming.RequestTimeoutSeconds;
             current.Records = RecordMerge.Apply(current.Records, incoming.Records, ResolveSecret, () => Guid.NewGuid().ToString("N"));
             after = current.Records;
-            current.IPv4DetectionUrl = incoming.IPv4DetectionUrl ?? string.Empty;
-            current.IPv6DetectionUrl = incoming.IPv6DetectionUrl ?? string.Empty;
-            current.ForceUpdateHours = Math.Max(0, incoming.ForceUpdateHours);
+            current.IPv4DetectionUrl = incoming.IPv4DetectionUrl;
+            current.IPv6DetectionUrl = incoming.IPv6DetectionUrl;
+            current.ForceUpdateHours = incoming.ForceUpdateHours;
             current.SkipInternalAddresses = incoming.SkipInternalAddresses;
-            current.BackoffAfterFailures = Math.Max(0, incoming.BackoffAfterFailures);
-            current.BackoffHours = Math.Max(1, incoming.BackoffHours);
-            current.RequestTimeoutSeconds = Math.Clamp(incoming.RequestTimeoutSeconds, 1, 300);
+            current.BackoffAfterFailures = incoming.BackoffAfterFailures;
+            current.BackoffHours = incoming.BackoffHours;
+            current.RequestTimeoutSeconds = incoming.RequestTimeoutSeconds;
 
             return true;
         });

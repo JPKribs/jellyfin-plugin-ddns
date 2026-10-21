@@ -16,8 +16,8 @@ using Microsoft.AspNetCore.Mvc;
 namespace Jellyfin.Plugin.DynamicDns.Api;
 
 /// <summary>
-/// Administrative endpoints backing the People tab. This is personal data, so every endpoint requires an
-/// administrator.
+/// Administrative endpoints backing the history on the Dashboard tab and its settings on the Advanced tab. This
+/// is personal data, so every endpoint requires an administrator.
 /// </summary>
 [ApiController]
 [Authorize(Policy = "RequiresElevation")]
@@ -99,7 +99,7 @@ public class PeopleController : ControllerBase
 
             var ip = NetworkClassifier.Normalize(parsed);
             row.Exempt = row.IsLocal || BlockGuard.IsExempt(ip, _network, trusted);
-            var rowTarget = BlockGuard.TryParseTarget(row.Ip, out var parsedTarget) ? parsedTarget : new IPNetwork(ip, ip.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork ? 32 : 128);
+            var rowTarget = BlockGuard.TryParseTarget(row.Ip, out var parsedTarget) ? parsedTarget : BlockGuard.Single(ip);
             row.Listed = options.BlockedAddresses.Any(e => BlockGuard.NamesOnly(e, rowTarget));
             // A ban on the /56 or /48 holding the address counts too.
             row.Banned = bannedIps.Contains(NetworkClassifier.GroupKey(ip)) || _bans.BanFor(ip) is not null;

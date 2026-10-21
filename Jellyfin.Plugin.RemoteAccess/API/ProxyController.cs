@@ -17,7 +17,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace Jellyfin.Plugin.DynamicDns.Api;
 
 /// <summary>
-/// Administrative endpoints backing the Proxy, Routes and Performance tabs.
+/// Administrative endpoints backing the Proxy, Services and Advanced tabs.
 /// </summary>
 [ApiController]
 [Authorize(Policy = "RequiresElevation")]
@@ -25,7 +25,6 @@ namespace Jellyfin.Plugin.DynamicDns.Api;
 [Produces("application/json")]
 public class ProxyController : ControllerBase
 {
-
     private readonly ProxyManager _proxy;
     private readonly JellyfinNetworkOrchestrator _orchestrator;
     private readonly SecretProtector _secrets;
@@ -135,7 +134,7 @@ public class ProxyController : ControllerBase
         // applied is refused, so the setting never claims what Jellyfin is not doing. Otherwise it waits for
         // Trust the Proxy.
         string? restart = null;
-        var loopbackNow = ProxyOptions.From(incoming.Advanced).JellyfinLoopbackOnly;
+        var loopbackNow = options.JellyfinLoopbackOnly;
         if (ProxyOptions.From(stored.Advanced).JellyfinLoopbackOnly != loopbackNow)
         {
             var phase = _orchestrator.State.Phase;
@@ -285,7 +284,6 @@ public class ProxyController : ControllerBase
         return Ok(_proxy.GetStatus(_orchestrator.State));
     }
 
-    // Blocking never applies to the LAN, but an administrator saving from the internet could cut themselves off.
     // What a save changed, in the page's own words, for the activity entry. Unchanged saves log nothing.
     private static List<string> ChangedSections(ProxySettings before, ProxySettings after)
     {
@@ -321,6 +319,7 @@ public class ProxyController : ControllerBase
         return changed;
     }
 
+    // Blocking never applies to the LAN, but an administrator saving from the internet could cut themselves off.
     private string? SelfLockout(ProxySettings settings)
     {
         var options = ProxyOptions.From(settings.Advanced);

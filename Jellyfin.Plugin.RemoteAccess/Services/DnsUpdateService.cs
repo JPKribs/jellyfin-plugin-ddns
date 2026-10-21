@@ -137,7 +137,8 @@ public sealed class DNSUpdateService : IDisposable
             // Encryption is working again, so a future outage warns anew.
             status.PlaintextWarningLogged = false;
         }
-        var timeout = TimeSpan.FromSeconds(config.RequestTimeoutSeconds > 0 ? Math.Min(config.RequestTimeoutSeconds, 300) : 15);
+
+        var timeout = config.RequestTimeout();
 
         var enabled = config.Records.Where(r => r.Enabled).ToList();
 
