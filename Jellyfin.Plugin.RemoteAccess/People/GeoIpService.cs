@@ -389,8 +389,7 @@ public sealed class GeoIpService : IDisposable
             var body = await response.Content.ReadAsStreamAsync(token).ConfigureAwait(false);
             await using (body.ConfigureAwait(false))
             {
-                var gzip = new GZipStream(body, CompressionMode.Decompress);
-                await using (gzip.ConfigureAwait(false))
+                using (var gzip = new GZipStream(body, CompressionMode.Decompress))
                 {
                     var file = File.Create(target);
                     await using (file.ConfigureAwait(false))

@@ -414,8 +414,8 @@ public class DNSUpdateServiceRunTests
                 return (r.Ok, "HTTP " + r.Status);
             })
         });
-        h.Hook = (req, _) => Task.FromResult<HttpResponseMessage?>(req.RequestUri!.Host != "api.test" ? null
-            : new HttpResponseMessage(req.RequestUri.AbsolutePath == "/a" ? HttpStatusCode.NotFound : HttpStatusCode.ServiceUnavailable));
+        h.Hook = (req, _) => Task.FromResult(req.RequestUri!.Host != "api.test" ? null
+            : Reply(req.RequestUri.AbsolutePath == "/a" ? HttpStatusCode.NotFound : HttpStatusCode.ServiceUnavailable));
         h.SetRecords(DualStack());
 
         await h.RunAsync();
@@ -561,4 +561,7 @@ public class DNSUpdateServiceRunTests
         Assert.NotNull(h.StatusOf("rec1").BackoffUntilUtc);
         Assert.Contains(h.Activity, e => e.Name.StartsWith("Dynamic DNS paused updates", StringComparison.Ordinal));
     }
+
+    // The response is handed to the HTTP client, which disposes it.
+    private static HttpResponseMessage? Reply(HttpStatusCode status) => new(status);
 }

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Jellyfin.Plugin.DynamicDns.Models;
 using JPKribs.Jellyfin.Base;
 
@@ -22,12 +23,9 @@ public static class CredentialEncryption
     {
         ArgumentNullException.ThrowIfNull(incoming);
         var previous = new Dictionary<string, DNSRecord>(StringComparer.Ordinal);
-        foreach (var record in stored ?? Array.Empty<DNSRecord>())
+        foreach (var record in (stored ?? Array.Empty<DNSRecord>()).Where(r => !string.IsNullOrEmpty(r.Id)))
         {
-            if (!string.IsNullOrEmpty(record.Id))
-            {
-                previous.TryAdd(record.Id, record);
-            }
+            previous.TryAdd(record.Id, record);
         }
 
         foreach (var record in incoming)

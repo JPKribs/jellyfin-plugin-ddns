@@ -94,6 +94,8 @@ public static class PlainHttpRedirect
         }
         catch (Exception ex) when (ex is OperationCanceledException or ConnectionResetException or InvalidOperationException)
         {
+            // The client went away before the redirect was sent. Nothing is left to answer.
+            connection.Abort();
         }
     }
 

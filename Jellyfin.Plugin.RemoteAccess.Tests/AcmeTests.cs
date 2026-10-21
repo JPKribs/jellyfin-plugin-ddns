@@ -32,7 +32,7 @@ public sealed class AcmeTests : IDisposable
     private static readonly string[] _names = { "media.example.com" };
     private static readonly DNSRecord[] NoRecords = Array.Empty<DNSRecord>();
 
-    private readonly string _dir = Path.Combine(Path.GetTempPath(), "ddns-acme-" + Guid.NewGuid().ToString("N"));
+    private readonly string _dir = Path.Join(Path.GetTempPath(), "ddns-acme-" + Guid.NewGuid().ToString("N"));
 
     public AcmeTests() => Directory.CreateDirectory(_dir);
 
@@ -44,6 +44,7 @@ public sealed class AcmeTests : IDisposable
         }
         catch (IOException)
         {
+            // A file still held open is left for the system's temporary-file cleanup.
         }
     }
 

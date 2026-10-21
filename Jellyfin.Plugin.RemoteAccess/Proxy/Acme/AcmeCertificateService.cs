@@ -472,13 +472,10 @@ public sealed class AcmeCertificateService : IDisposable
             using var doc = System.Text.Json.JsonDocument.Parse(body);
             if (doc.RootElement.TryGetProperty("Answer", out var answers) && answers.ValueKind == System.Text.Json.JsonValueKind.Array)
             {
-                foreach (var answer in answers.EnumerateArray())
-                {
-                    if (answer.TryGetProperty("data", out var data) && data.GetString() is { } text)
-                    {
-                        values.Add(text.Trim().Trim('"'));
-                    }
-                }
+                values.AddRange(answers.EnumerateArray()
+                    .Select(answer => answer.TryGetProperty("data", out var data) ? data.GetString() : null)
+                    .OfType<string>()
+                    .Select(text => text.Trim().Trim('"')));
             }
         }
         catch (System.Text.Json.JsonException)

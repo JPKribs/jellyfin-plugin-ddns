@@ -220,14 +220,11 @@ public static class NetworkTakeover
     {
         ArgumentNullException.ThrowIfNull(settings);
         var publicName = settings.Hostnames.FirstOrDefault(h => !h.StartsWith('*'));
-        foreach (var entry in existing ?? Enumerable.Empty<string>())
+        // For every client, the administrator's own entries all go: each would send someone to an address that
+        // no longer answers. Undo brings them back.
+        foreach (var entry in (existing ?? Enumerable.Empty<string>()).Where(e => publicName is null || !(IsExternal(e) || forLocalToo)))
         {
-            // For every client, the administrator's own entries all go: each would send someone to an address
-            // that no longer answers. Undo brings them back.
-            if (publicName is null || !(IsExternal(entry) || forLocalToo))
-            {
-                yield return entry;
-            }
+            yield return entry;
         }
 
         if (forLocalToo)

@@ -90,6 +90,7 @@ public sealed class ProxyHostTests : IAsyncLifetime
         }
         catch (IOException)
         {
+            // A file still held open is left for the system's temporary-file cleanup.
         }
     }
 
@@ -147,7 +148,7 @@ public sealed class ProxyHostTests : IAsyncLifetime
         Assert.Equal(new Uri($"https://{Host}/web/index.html"), redirect.Headers.Location);
 
         // A name the proxy does not serve gets no answer at all.
-        var request = new HttpRequestMessage(HttpMethod.Get, new Uri($"http://{Host}:{proxy.HttpPort}/"));
+        using var request = new HttpRequestMessage(HttpMethod.Get, new Uri($"http://{Host}:{proxy.HttpPort}/"));
         request.Headers.Host = "other.example.org";
         await Assert.ThrowsAsync<HttpRequestException>(() => client.SendAsync(request)).ConfigureAwait(false);
     }
@@ -245,7 +246,8 @@ public sealed class ProxyHostTests : IAsyncLifetime
         // Loopback counts as the internet in this test, so the visit is buffered for the history.
         Assert.Equal("127.0.0.1", Assert.Single(recorder.DrainSeen()).Ip);
 
-        using var signIn = await client.PostAsync(new Uri($"https://{Host}:{proxy.HttpsPort}/Users/AuthenticateByName"), new StringContent("{}")).ConfigureAwait(false);
+        using var signInBody = new StringContent("{}");
+        using var signIn = await client.PostAsync(new Uri($"https://{Host}:{proxy.HttpsPort}/Users/AuthenticateByName"), signInBody).ConfigureAwait(false);
         Assert.Equal(HttpStatusCode.Unauthorized, signIn.StatusCode);
         Assert.Equal(new[] { "127.0.0.1" }, recorder.TakeUnclaimed(TimeSpan.Zero).Select(f => f.Ip));
     }
@@ -258,13 +260,15 @@ public sealed class ProxyHostTests : IAsyncLifetime
         var url = new Uri($"https://{Host}:{proxy.HttpsPort}/Users/AuthenticateByName");
 
         // A sign-in body is a few hundred bytes; one declared far larger is refused at once.
-        using var large = await client.PostAsync(url, new StringContent(new string('x', 20_000))).ConfigureAwait(false);
+        using var largeBody = new StringContent(new string('x', 20_000));
+        using var large = await client.PostAsync(url, largeBody).ConfigureAwait(false);
         Assert.Equal(HttpStatusCode.RequestEntityTooLarge, large.StatusCode);
 
         // A normal one still reaches Jellyfin, and the slots are free again afterwards.
         for (var i = 0; i < 3; i++)
         {
-            using var normal = await client.PostAsync(url, new StringContent("{}")).ConfigureAwait(false);
+            using var normalBody = new StringContent("{}");
+            using var normal = await client.PostAsync(url, normalBody).ConfigureAwait(false);
             Assert.Equal(HttpStatusCode.Unauthorized, normal.StatusCode);
         }
     }
@@ -343,7 +347,8 @@ public sealed class ProxyHostTests : IAsyncLifetime
         using var client = Client(proxy.HttpsPort);
         var upload = new Uri($"https://{RouteHost}:{proxy.HttpsPort}/upload");
 
-        using var small = await client.PostAsync(upload, new ByteArrayContent(new byte[512 * 1024])).ConfigureAwait(false);
+        using var smallBody = new ByteArrayContent(new byte[512 * 1024]);
+        using var small = await client.PostAsync(upload, smallBody).ConfigureAwait(false);
         Assert.Equal(HttpStatusCode.OK, small.StatusCode);
         Assert.False(small.Headers.Contains("Strict-Transport-Security"));
 
@@ -352,11 +357,13 @@ public sealed class ProxyHostTests : IAsyncLifetime
         var uploadsBefore = _uploads;
         try
         {
-            using var large = await client.PostAsync(upload, new ByteArrayContent(new byte[2 * 1024 * 1024])).ConfigureAwait(false);
+            using var largeBody = new ByteArrayContent(new byte[2 * 1024 * 1024]);
+            using var large = await client.PostAsync(upload, largeBody).ConfigureAwait(false);
             Assert.Equal(HttpStatusCode.RequestEntityTooLarge, large.StatusCode);
         }
         catch (HttpRequestException)
         {
+            // The other way the refusal can show: the connection closed mid-upload.
         }
 
         Assert.Equal(uploadsBefore, _uploads);
@@ -428,7 +435,7 @@ public sealed class ProxyHostTests : IAsyncLifetime
 
     private static int FreePort()
     {
-        var listener = new TcpListener(IPAddress.Loopback, 0);
+        using var listener = new TcpListener(IPAddress.Loopback, 0);
         listener.Start();
         var port = ((IPEndPoint)listener.LocalEndpoint).Port;
         listener.Stop();

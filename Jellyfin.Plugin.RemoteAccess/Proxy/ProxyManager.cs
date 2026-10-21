@@ -399,8 +399,8 @@ public sealed class ProxyManager : IAsyncDisposable
             due = TimeSpan.FromDays(1);
         }
 
-        var timer = new Timer(_ => RetryAcme(), null, due, Timeout.InfiniteTimeSpan);
-        Interlocked.Exchange(ref _acmeRetry, timer)?.Dispose();
+        // The timer belongs to the field from the start, and the one it replaces is disposed.
+        Interlocked.Exchange(ref _acmeRetry, new Timer(_ => RetryAcme(), null, due, Timeout.InfiniteTimeSpan))?.Dispose();
     }
 
     private void RetryAcme()

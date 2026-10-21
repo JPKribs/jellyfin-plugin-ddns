@@ -18,9 +18,49 @@ permissions:
   contents: read
   security-events: write
 
+# The same steps as jellyfin-meta-plugins' shared scan, plus one: results in code the compiler generates
+# under obj/, such as the regex and MaxMind source generators, are dropped before upload. That code is
+# not ours to fix.
 jobs:
-  call:
-    uses: jellyfin/jellyfin-meta-plugins/.github/workflows/scan-codeql.yaml@master
-    with:
-      repository-name: JPKribs/jellyfin-plugin-remoteaccess
-      dotnet-version: 10.0.x
+  analyze:
+    name: Analyze
+    runs-on: ubuntu-latest
+    if: ${{ github.repository == 'JPKribs/jellyfin-plugin-remoteaccess' }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@db488ddef3bf6cb639b32c2e9a7c0a7ea8271d28 # v4.37.8
+        with:
+          languages: csharp
+          queries: +security-and-quality
+
+      - name: Autobuild
+        uses: github/codeql-action/autobuild@db488ddef3bf6cb639b32c2e9a7c0a7ea8271d28 # v4.37.8
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@db488ddef3bf6cb639b32c2e9a7c0a7ea8271d28 # v4.37.8
+        with:
+          category: /language:csharp
+          upload: false
+          output: sarif-results
+
+      - name: Drop results in generated code
+        run: |
+          for f in sarif-results/*.sarif; do
+            jq '.runs[].results |= map(select(all(.locations[]?; (.physicalLocation.artifactLocation.uri // "") | test("(^|/)obj/") | not)))' "$f" > "$f.tmp"
+            mv "$f.tmp" "$f"
+          done
+
+      - name: Upload results
+        uses: github/codeql-action/upload-sarif@db488ddef3bf6cb639b32c2e9a7c0a7ea8271d28 # v4.37.8
+        with:
+          sarif_file: sarif-results
+          category: /language:csharp

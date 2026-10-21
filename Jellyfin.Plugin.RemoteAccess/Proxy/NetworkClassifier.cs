@@ -184,16 +184,10 @@ public sealed class NetworkClassifier
     /// <returns>The parsed networks.</returns>
     public static List<IPNetwork> ParseNetworks(IEnumerable<string>? values)
     {
-        var result = new List<IPNetwork>();
-        foreach (var raw in values ?? Enumerable.Empty<string>())
-        {
-            if (TryParseNetwork(raw, out var network))
-            {
-                result.Add(network);
-            }
-        }
-
-        return result;
+        return (values ?? Enumerable.Empty<string>())
+            .Select(raw => TryParseNetwork(raw, out var network) ? network : (IPNetwork?)null)
+            .OfType<IPNetwork>()
+            .ToList();
     }
 
     /// <summary>

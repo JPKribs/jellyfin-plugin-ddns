@@ -188,7 +188,10 @@ public class IPDetectionFailoverTests
         public StreamHandler(Func<HttpRequestMessage, HttpContent> content) => _content = content;
 
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
-            => Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { Content = _content(request) });
+            => Task.FromResult(Reply(_content(request)));
+
+        // The response is handed to the HTTP client, which disposes it.
+        private static HttpResponseMessage Reply(HttpContent content) => new(HttpStatusCode.OK) { Content = content };
     }
 
     // An endless-looking reply of 'x' bytes that counts how much was actually read.

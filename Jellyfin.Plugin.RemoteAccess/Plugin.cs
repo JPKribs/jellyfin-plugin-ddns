@@ -140,13 +140,10 @@ public class Plugin : PluginBase<Plugin, PluginConfiguration>
         // Status, pending TXT records and the audit all go by record id, so a record saved here without
         // one, or with another's, gets its own, as the dashboard's save does.
         var ids = new HashSet<string>(StringComparer.Ordinal);
-        foreach (var record in incoming.Records)
+        var needsId = incoming.Records.Where(r => string.IsNullOrEmpty(r.Id) || !ids.Add(r.Id)).ToList();
+        foreach (var record in needsId)
         {
-            if (string.IsNullOrEmpty(record.Id) || !ids.Add(record.Id))
-            {
-                record.Id = Guid.NewGuid().ToString("N");
-                ids.Add(record.Id);
-            }
+            record.Id = Guid.NewGuid().ToString("N");
         }
 
         CredentialEncryption.DropForeignCiphertext(incoming.Records, stored?.Records);

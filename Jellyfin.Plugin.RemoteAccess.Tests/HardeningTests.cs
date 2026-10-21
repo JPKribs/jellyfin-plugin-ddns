@@ -48,6 +48,7 @@ public sealed class HardeningTests : IDisposable
         }
         catch (IOException)
         {
+            // A file still held open is left for the system's temporary-file cleanup.
         }
     }
 

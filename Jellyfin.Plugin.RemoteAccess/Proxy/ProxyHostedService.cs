@@ -50,11 +50,10 @@ public sealed class ProxyHostedService : IHostedService, IDisposable
                     await _proxy.ApplyAsync(stopping).ConfigureAwait(false);
                     await _orchestrator.OnStartupAsync(_proxy, stopping).ConfigureAwait(false);
                 }
-                catch (OperationCanceledException) when (stopping.IsCancellationRequested)
+                catch (Exception ex) when (ex is not OperationCanceledException || !stopping.IsCancellationRequested)
                 {
-                }
-                catch (Exception ex)
-                {
+                    // The last stop for a background start: anything left would otherwise be lost unobserved.
+                    // Jellyfin shutting down mid start is not a failure, so it is let through.
                     _logger.LogError(ex, "Reverse proxy start-up failed");
                 }
             },
@@ -77,6 +76,8 @@ public sealed class ProxyHostedService : IHostedService, IDisposable
         }
         catch (OperationCanceledException)
         {
+            // Jellyfin stopped waiting for the start-up to finish. The proxy is shut down below either way.
+            _logger.LogDebug("Stopped waiting for the reverse proxy start-up");
         }
 
         await _proxy.ShutdownAsync().ConfigureAwait(false);
@@ -94,11 +95,9 @@ public sealed class ProxyHostedService : IHostedService, IDisposable
             {
                 await _proxy.ApplyAsync(_stopping.Token).ConfigureAwait(false);
             }
-            catch (OperationCanceledException)
+            catch (Exception ex) when (ex is not OperationCanceledException || !_stopping.IsCancellationRequested)
             {
-            }
-            catch (Exception ex)
-            {
+                // The last stop for a background apply. Jellyfin shutting down meanwhile is not a failure.
                 _logger.LogError(ex, "Applying reverse proxy settings failed");
             }
         });

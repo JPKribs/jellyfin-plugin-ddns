@@ -49,6 +49,9 @@ internal sealed class OrchestratorHarness : IDisposable
     {
     }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="OrchestratorHarness"/> class with extra providers.
+    /// </summary>
     /// <param name="extraProviders">Builds providers added beside the DynDNS v2 one, given the harness's HTTP factory.</param>
     public OrchestratorHarness(Func<IHttpClientFactory, IDNSProvider[]> extraProviders)
     {
@@ -172,6 +175,7 @@ internal sealed class OrchestratorHarness : IDisposable
         }
         catch (IOException)
         {
+            // A file still held open is left for the system's temporary-file cleanup.
         }
     }
 

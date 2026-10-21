@@ -24,7 +24,7 @@ namespace Jellyfin.Plugin.DynamicDns.Tests;
 /// </summary>
 public sealed class BlockingTests : IDisposable
 {
-    private readonly string _dir = Path.Combine(Path.GetTempPath(), "ddns-block-" + Guid.NewGuid().ToString("N"));
+    private readonly string _dir = Path.Join(Path.GetTempPath(), "ddns-block-" + Guid.NewGuid().ToString("N"));
     private readonly BlockFilter _filter;
     private readonly BanList _bans;
     private readonly PeopleStore _store;
@@ -54,6 +54,7 @@ public sealed class BlockingTests : IDisposable
         }
         catch (IOException)
         {
+            // A file still held open is left for the system's temporary-file cleanup.
         }
     }
 

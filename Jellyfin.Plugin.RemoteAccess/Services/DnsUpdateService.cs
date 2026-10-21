@@ -298,10 +298,7 @@ public sealed class DNSUpdateService : IDisposable
             result.IPv4Applied = providerResult.IPv4Applied;
             result.IPv6Applied = providerResult.IPv6Applied;
             result.Transient = !providerResult.Success && transient;
-            result.DnsAlreadyServes = !providerResult.Success && dns.Succeeded
-                && (record.WantsIPv4(ip) || record.WantsIPv6(ip))
-                && (!record.WantsIPv4(ip) || dns.Serves(ip.IPv4))
-                && (!record.WantsIPv6(ip) || dns.Serves(ip.IPv6));
+            result.DnsAlreadyServes = !providerResult.Success && ServesWanted(record, ip, dns);
             statusUpdates[record.Id] = result;
             outcome.Records.Add(result);
         }
@@ -411,9 +408,23 @@ public sealed class DNSUpdateService : IDisposable
 
     // Whether a push only sent the addresses the record already had, as a forced refresh does.
     private static bool Unchanged(DNSRecord record, DetectedIP ip)
-        => (!record.WantsIPv4(ip) || string.Equals(record.LastIPv4, ip.IPv4, StringComparison.Ordinal))
-            && (!record.WantsIPv6(ip) || string.Equals(record.LastIPv6, ip.IPv6, StringComparison.Ordinal))
-            && (record.WantsIPv4(ip) || record.WantsIPv6(ip));
+    {
+        var v4 = record.WantsIPv4(ip);
+        var v6 = record.WantsIPv6(ip);
+        var sameV4 = !v4 || string.Equals(record.LastIPv4, ip.IPv4, StringComparison.Ordinal);
+        var sameV6 = !v6 || string.Equals(record.LastIPv6, ip.IPv6, StringComparison.Ordinal);
+        return (v4 || v6) && sameV4 && sameV6;
+    }
+
+    // Whether DNS already serves every detected address the record keeps, so a failed push cuts nobody off.
+    private static bool ServesWanted(DNSRecord record, DetectedIP ip, DNSResolution dns)
+    {
+        var v4 = record.WantsIPv4(ip);
+        var v6 = record.WantsIPv6(ip);
+        var servesV4 = !v4 || dns.Serves(ip.IPv4);
+        var servesV6 = !v6 || dns.Serves(ip.IPv6);
+        return dns.Succeeded && (v4 || v6) && servesV4 && servesV6;
+    }
 
     private static string NewAddressSummary(DNSRecord? record, DetectedIP ip)
     {

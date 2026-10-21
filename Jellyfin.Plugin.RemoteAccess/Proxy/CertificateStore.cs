@@ -336,40 +336,50 @@ public sealed class CertificateStore : IDisposable
                 "Devices that should trust the self-signed certificate need this root installed once. Download it from the Proxy tab.");
         }
 
-        var path = _paths.SelfSignedFile;
-        var wanted = _hostnames.Append("localhost").Distinct(StringComparer.Ordinal).ToList();
-        if (File.Exists(path))
-        {
-            X509Certificate2? existing = null;
-            try
-            {
-                existing = X509CertificateLoader.LoadPkcs12FromFile(path, null);
-            }
-            catch (CryptographicException ex)
-            {
-                // A damaged file is replaced below rather than leaving the proxy without a certificate.
-                _logger.LogWarning("The self-signed certificate could not be read and is being replaced: {Message}", ex.Message);
-            }
-
-            if (existing is not null
-                && existing.NotAfter.ToUniversalTime() > DateTime.UtcNow.AddDays(30)
-                && wanted.All(h => Covers(existing, h))
-                && LocalAuthority.IssuedBy(existing, root))
-            {
-                root.Dispose();
-                return Build(existing, new X509Certificate2Collection(), "self-signed");
-            }
-
-            existing?.Dispose();
-        }
-
         using (root)
         {
+            var path = _paths.SelfSignedFile;
+            var wanted = _hostnames.Append("localhost").Distinct(StringComparer.Ordinal).ToList();
+            if (File.Exists(path) && ReuseSelfSigned(path, wanted, root) is { } reused)
+            {
+                return reused;
+            }
+
             var issued = LocalAuthority.Issue(root, wanted);
             SecretFile.Write(path, issued);
             _logger.LogInformation("Issued a self-signed proxy certificate for {Names}", string.Join(", ", wanted));
             return Build(X509CertificateLoader.LoadPkcs12(issued, null), new X509Certificate2Collection(), "self-signed");
         }
+    }
+
+    // The saved self-signed certificate, while it lasts another month, covers the names and comes from this root.
+    // Anything else, a damaged file included, is replaced by the caller rather than leaving the proxy without one.
+    private Loaded? ReuseSelfSigned(string path, IReadOnlyList<string> wanted, X509Certificate2 root)
+    {
+        X509Certificate2? existing = null;
+        try
+        {
+            existing = X509CertificateLoader.LoadPkcs12FromFile(path, null);
+            if (existing.NotAfter.ToUniversalTime() > DateTime.UtcNow.AddDays(30)
+                && wanted.All(h => Covers(existing, h))
+                && LocalAuthority.IssuedBy(existing, root))
+            {
+                // Handed to the loaded certificate, so not disposed below.
+                var kept = existing;
+                existing = null;
+                return Build(kept, new X509Certificate2Collection(), "self-signed");
+            }
+        }
+        catch (CryptographicException ex)
+        {
+            _logger.LogWarning("The self-signed certificate could not be read and is being replaced: {Message}", ex.Message);
+        }
+        finally
+        {
+            existing?.Dispose();
+        }
+
+        return null;
     }
 
     /// <summary>

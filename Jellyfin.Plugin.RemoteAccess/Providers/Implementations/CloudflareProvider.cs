@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net.Http;
 using System.Text.Json;
 using System.Threading;
@@ -169,16 +170,11 @@ public sealed class CloudflareProvider : DNSProviderBase, IAcmeDnsProvider
                 return ids;
             }
 
-            foreach (var item in result.EnumerateArray())
-            {
-                if (item.TryGetProperty("content", out var content)
-                    && string.Equals(content.GetString()?.Trim('"'), value, StringComparison.Ordinal)
-                    && item.TryGetProperty("id", out var id)
-                    && id.GetString() is { } text)
-                {
-                    ids.Add(text);
-                }
-            }
+            ids.AddRange(result.EnumerateArray()
+                .Where(item => item.TryGetProperty("content", out var content)
+                    && string.Equals(content.GetString()?.Trim('"'), value, StringComparison.Ordinal))
+                .Select(item => item.TryGetProperty("id", out var id) ? id.GetString() : null)
+                .OfType<string>());
         }
         catch (JsonException)
         {

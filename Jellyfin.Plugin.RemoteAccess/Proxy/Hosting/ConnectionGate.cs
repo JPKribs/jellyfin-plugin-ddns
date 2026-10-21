@@ -120,15 +120,13 @@ public sealed class ConnectionGate : IDisposable
     public void Recheck()
     {
         var runtime = _holder.Current;
-        foreach (var pair in _live)
+        // Already counted when it opened, so closing it now is not recorded as another refusal.
+        var refused = _live.Where(p => !runtime.Classifier.IsLocal(p.Value.Address) && !Allowed(p.Value.Address, runtime, p.Value.Countries, record: false));
+        foreach (var pair in refused)
         {
-            // Already counted when it opened, so closing it now is not recorded as another refusal.
-            if (!runtime.Classifier.IsLocal(pair.Value.Address) && !Allowed(pair.Value.Address, runtime, pair.Value.Countries, record: false))
+            if (_live.TryRemove(pair.Key, out _))
             {
-                if (_live.TryRemove(pair.Key, out _))
-                {
-                    pair.Key.Abort();
-                }
+                pair.Key.Abort();
             }
         }
     }
