@@ -80,8 +80,9 @@ check, and the Certificate section says which is in use:
 
 ### Renewal
 
-Certificates last 90 days and renew automatically within 30 days of expiry. The **Refresh Certificate**
-scheduled task checks daily, and saving the Proxy tab checks too. A new certificate is used straight away.
+Certificates last 90 days. The **Refresh Certificate** scheduled task checks daily, and saving the Proxy tab
+checks too. Either one requests a new certificate when there is none, when it no longer covers your addresses, or
+within 30 days of expiry. A new certificate is used straight away.
 
 If Let's Encrypt refuses, the reason shows on the Proxy tab and in the activity log. The next try waits an hour,
 doubling up to a day, to stay within Let's Encrypt's limits. Changing the address tries again at once.

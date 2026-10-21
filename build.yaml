@@ -1,7 +1,7 @@
 ---
 name: "Dynamic DNS"
 guid: "8150dce5-6153-4924-a985-a6927be95baa"
-version: "12.2.3.1"
+version: "12.2.3.2"
 targetAbi: "12.2.0.0"
 framework: "net10.0"
 overview: "Reach your server from anywhere: Dynamic DNS and a secure HTTPS proxy, inside Jellyfin."
@@ -22,13 +22,5 @@ artifacts:
 - "BouncyCastle.Cryptography.dll"
 changelog:
   changed:
-  - Every field description on every tab is one short sentence, two at most, with units and defaults kept.
-  - Each provider's note under the Provider list names the fields exactly as the form shows them.
-  - Long confirmations and warnings, such as the one for every visitor looking local, are shorter.
-  - The Advanced tab no longer shows the line about every setting starting on its default.
-  fixed:
-  - The Minimum read rate description says what it limits, how slowly a visitor reads pages, not uploads.
-  - The IP detection description no longer says the services are tried in order until one answers, since two must agree.
-  developer:
-  - The documentation is rewritten, with a Beginner's Guide from buying a domain to remote access in one page, a Settings Reference listing every setting with its default, and a page per tab.
-  - Provider pages list only the fields each provider shows, named as on screen.
+  - The Request a New Certificate scheduled task is removed. Refresh Certificate already requests a new certificate whenever one is missing, no longer covers your addresses, or expires within 30 days. To force one now, use Request a New Certificate on the Proxy tab.
+  - The Update Dynamic DNS scheduled task is now Update DDNS, and Update Location Database is now Refresh Locations. Their schedules carry over.

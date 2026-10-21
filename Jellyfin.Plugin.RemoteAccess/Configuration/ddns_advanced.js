@@ -179,7 +179,7 @@ export default function (view) {
         var status;
         if (loc.Detail === 'Off') status = 'Location lookups are off.';
         else if (loc.Downloading) status = 'Downloading the location database...';
-        else if (loc.Loaded) status = 'The location database is ready. It was built ' + new Date(loc.BuiltUtc).toLocaleDateString() + ' and is refreshed by the Update Location Database scheduled task.';
+        else if (loc.Loaded) status = 'The location database is ready. It was built ' + new Date(loc.BuiltUtc).toLocaleDateString() + ' and is refreshed weekly by the Refresh Locations scheduled task.';
         else if (loc.Error) status = loc.Error;
         else status = 'The location database has not been downloaded yet.';
         Shared.getEl('locationStatus').textContent = status;

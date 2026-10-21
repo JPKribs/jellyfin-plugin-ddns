@@ -30,13 +30,13 @@ public sealed class DNSUpdateTask : PluginScheduledTask
     }
 
     /// <inheritdoc />
-    public override string Name => "Update Dynamic DNS";
+    public override string Name => "Update DDNS";
 
     /// <inheritdoc />
     public override string Key => "DynamicDNSUpdate";
 
     /// <inheritdoc />
-    public override string Description => "Detects the server's public IP and updates configured DNS records when it changes.";
+    public override string Description => "Finds the server's public IP and updates each DDNS record that points somewhere else.";
 
     /// <inheritdoc />
     public override async Task ExecuteAsync(IProgress<double> progress, CancellationToken cancellationToken)

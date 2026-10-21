@@ -33,7 +33,7 @@ One record per DNS name. The fields shown, and their labels, depend on the **Pro
 | **Back off duration** | How long a paused record waits. | 24 hours | 1 to 48 hours |
 | **Request timeout** | How long each request may take, in seconds. | 15 | 1 to 300 |
 
-How often updates run is set on the **Update Dynamic DNS** scheduled task, every 15 minutes by default. See
+How often updates run is set on the **Update DDNS** scheduled task, every 15 minutes by default. See
 [How Updates Run](HowItWorks.md).
 
 ## Proxy
@@ -111,7 +111,7 @@ IPv6 bans cover the visitor's whole /64, and widen to the /56 and /48 when failu
 | **Location** | **Country**, **Country and city**, which is a 130 MB download, or **Off**. | Country | |
 
 **Refresh Locations** downloads the newest location database now, and **Clear History** deletes everything
-recorded. The database also updates through the **Update Location Database** scheduled task.
+recorded. The **Refresh Locations** scheduled task also does this weekly.
 
 ### Performance
 
@@ -145,7 +145,9 @@ Under **Dashboard → Scheduled Tasks**:
 
 | Task | What it does | Runs |
 |---|---|---|
-| **Update Dynamic DNS** | Checks and updates every record. | At startup and every 15 minutes |
-| **Refresh Certificate** | Renews the Let's Encrypt certificate within 30 days of expiry. | Daily at 3:00 |
-| **Request a New Certificate** | Orders a new certificate now, whatever the current one's state. | Only when you run it |
-| **Update Location Database** | Downloads the newest DB-IP database. | Weekly |
+| **Update DDNS** | Checks and updates every record. | At startup and every 15 minutes |
+| **Refresh Certificate** | Requests a Let's Encrypt certificate when one is missing, no longer covers your addresses, or expires within 30 days. Reloads certificate files and replaces a self-signed one before it expires. | Daily at 3:00 |
+| **Refresh Locations** | Downloads the newest DB-IP location database. | Weekly |
+
+To force a new certificate now, whatever the current one's state, use **Request a New Certificate** on the
+**Proxy** tab.

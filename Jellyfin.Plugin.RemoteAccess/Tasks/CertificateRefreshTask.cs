@@ -11,10 +11,11 @@ using Microsoft.Extensions.Logging;
 namespace Jellyfin.Plugin.DynamicDns.Tasks;
 
 /// <summary>
-/// Keeps the proxy's certificate current: renews a Let's Encrypt one within 30 days of expiry, reloads it from
-/// its files, replaces a self-signed one before it expires, and warns in the activity log when a certificate is
-/// about to run out or cannot be loaded. The
-/// proxy also notices file changes on its own; this is the scheduled safety net.
+/// Keeps the proxy's certificate current: requests a Let's Encrypt one when it is missing, no longer covers the
+/// addresses, or is within 30 days of expiry, reloads certificate files, replaces a self-signed one before it
+/// expires, and warns in the activity log when a certificate is about to run out or cannot be loaded. The proxy
+/// also notices file changes on its own; this is the scheduled safety net. Forcing a new certificate is the
+/// Proxy tab's button, not a task.
 /// </summary>
 public sealed class CertificateRefreshTask : PluginScheduledTask
 {
@@ -44,7 +45,7 @@ public sealed class CertificateRefreshTask : PluginScheduledTask
     public override string Key => "DynamicDNSCertificateRefresh";
 
     /// <inheritdoc />
-    public override string Description => "Renews the Let's Encrypt certificate within 30 days of expiry, reloads certificate files, replaces a self-signed one before it expires, and warns when a certificate is about to expire.";
+    public override string Description => "Requests a Let's Encrypt certificate when one is missing, no longer covers your addresses or expires within 30 days, and reloads or replaces other certificates as needed.";
 
     /// <inheritdoc />
     public override async Task ExecuteAsync(IProgress<double> progress, CancellationToken cancellationToken)

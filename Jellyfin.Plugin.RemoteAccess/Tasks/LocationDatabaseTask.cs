@@ -25,13 +25,13 @@ public sealed class LocationDatabaseTask : PluginScheduledTask
     }
 
     /// <inheritdoc />
-    public override string Name => "Update Location Database";
+    public override string Name => "Refresh Locations";
 
     /// <inheritdoc />
     public override string Key => "DynamicDNSLocationDatabase";
 
     /// <inheritdoc />
-    public override string Description => "Downloads the newest free DB-IP location database used to show where people connect from.";
+    public override string Description => "Downloads the newest DB-IP location database, used for the Dashboard's map and the country rules.";
 
     /// <inheritdoc />
     public override async Task ExecuteAsync(IProgress<double> progress, CancellationToken cancellationToken)

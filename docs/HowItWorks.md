@@ -1,6 +1,6 @@
 # How Updates Run
 
-A scheduled task named **Update Dynamic DNS** runs when Jellyfin starts and every 15 minutes after. Change how
+A scheduled task named **Update DDNS** runs when Jellyfin starts and every 15 minutes after. Change how
 often under **Dashboard → Scheduled Tasks**. Each run:
 
 1. Finds your public IP.
