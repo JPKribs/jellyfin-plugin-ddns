@@ -1,17 +1,20 @@
-<img src="docs/assets/icon.png" alt="Dynamic DNS" width="96" align="left">
+<img src="docs/assets/icon.png" alt="Remote Access" width="96" align="left">
 
-A simple Jellyfin plugin that keeps your DNS records pointed at your server's current public IP. It runs entirely inside Jellyfin as a scheduled task and updates your DNS provider over outbound HTTP/S.
+A Jellyfin plugin for reaching your server from anywhere. It keeps your DNS records pointed at your server's current public IP, and it can put a secure HTTPS proxy in front of Jellyfin, with automatic Let's Encrypt certificates and protection against unwanted visitors. It runs entirely inside Jellyfin.
 
 <br clear="left">
 
+> [!WARNING]
+> **Remote Access is being actively tested.** The proxy, certificates and blocking are new and still changing between releases. Keep another way into your server while you try it, and please report anything that looks wrong in [Issues](https://github.com/JPKribs/jellyfin-plugin-remoteaccess/issues).
+
 ## Documentation
 
-Installation, record setup, every provider, and security are covered in the **[Dynamic DNS documentation](https://jpkribs.github.io/jellyfin-plugin-ddns/)**.
+Installation, record setup, every provider, and security are covered in the **[Remote Access documentation](https://jpkribs.github.io/jellyfin-plugin-remoteaccess/)**.
 
 Plugin repository URL for Jellyfin:
 
 ```
-https://raw.githubusercontent.com/JPKribs/jellyfin-plugin-ddns/master/manifest.json
+https://raw.githubusercontent.com/JPKribs/jellyfin-plugin-remoteaccess/master/manifest.json
 ```
 
 ## Considerations Before Using

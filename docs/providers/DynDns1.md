@@ -1,6 +1,6 @@
 # DynDNS v1 (legacy)
 
-Set the record's **Provider** to **DynDNS v1 (legacy)**, then fill these fields.
+Set the record's **Provider** to **DynDNS v1**, then fill these fields.
 
 - **Hostname**: the host to update.
 - **Login**: your account username at the DynDNS v1 compatible service.

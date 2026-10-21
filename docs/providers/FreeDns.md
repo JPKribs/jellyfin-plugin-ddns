@@ -1,6 +1,6 @@
 # FreeDNS (afraid.org)
 
-Set the record's **Provider** to **FreeDNS (afraid.org)**, then fill these fields.
+Set the record's **Provider** to **FreeDNS**, then fill these fields.
 
 - **Hostname**: the record to update.
 - **Login**: your afraid.org username.

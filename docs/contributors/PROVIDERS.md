@@ -34,7 +34,7 @@ each provider class, so the JS needs no per provider edit.
    `Hint` is the one line note under it, and `Fields` is the label for each used field with a null for any
    field the provider does not use. The dashboard renders itself from these, so no JS edit is needed.
 5. Add `docs/providers/{Kind}.md` describing where the user gets each field.
-6. Add a test under `Jellyfin.Plugin.DynamicDns.Tests` that exercises the request shape and the success and
+6. Add a test under `Jellyfin.Plugin.RemoteAccess.Tests` that exercises the request shape and the success and
    failure detection, following the existing provider tests.
 
 ## Base class helpers

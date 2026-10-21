@@ -10,10 +10,15 @@ description: >
   Runs entirely in-process as a scheduled task and updates your DNS provider over outbound HTTP/S. Great for anyone who wants 
   to run their entire stack entirely through Jellyfin without external programs or dependencies.
 category: "Administration"
-imageUrl: "https://raw.githubusercontent.com/JPKribs/jellyfin-plugin-ddns/refs/heads/master/Jellyfin.Plugin.DynamicDns/Assets/Logo.png"
+imageUrl: "https://raw.githubusercontent.com/JPKribs/jellyfin-plugin-remoteaccess/refs/heads/master/Jellyfin.Plugin.RemoteAccess/Assets/Logo.png"
 owner: "JPKribs"
 artifacts:
 - "Jellyfin.Plugin.DynamicDns.dll"
+- "Yarp.ReverseProxy.dll"
+- "System.IO.Hashing.dll"
+- "MaxMind.Db.dll"
+- "Certes.dll"
+- "BouncyCastle.Cryptography.dll"
 changelog:
   developer:
   - Built for Jellyfin 12.2 (target ABI 12.2.0.0). Servers on Jellyfin 12.0 or 12.1 keep the previous release.

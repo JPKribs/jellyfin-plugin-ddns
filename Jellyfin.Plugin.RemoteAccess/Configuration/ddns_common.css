@@ -1,0 +1,18 @@
+/* Rules shared by this plugin's own pages, on top of the JPKribs shared style sheet. */
+.ddns-button-row { display: flex; flex-wrap: wrap; gap: 12px; align-items: stretch; margin: 1em 0; }
+.ddns-button-row > button { flex: 1 1 200px; margin: 0; justify-content: center; text-align: center; }
+
+/* The shared dialog builds plain buttons, which otherwise keep the browser's own font and bevelled border. */
+.jpk-dialog .jpk-modal-button-row { gap: 12px; margin-top: 1.2em; }
+.jpk-dialog .jpk-modal-button { font: inherit; font-weight: 600; color: #fff; border: 0; border-radius: 4px; padding: 0.75em 1em; cursor: pointer; }
+.jpk-dialog .jpk-modal-button:focus-visible { outline: 2px solid var(--jpk-accent, #00a4dc); outline-offset: 2px; }
+
+/* A selector stacks its dropdown over its buttons. The field's own bottom margin is the gap, as between any two
+   fields, so the shared rule's extra gap and the buttons' top margin are taken off. */
+div.jpk-selector { gap: 0; }
+div.jpk-selector .jpk-selector-actions .emby-button { margin-top: 0; }
+
+/* The root certificate's fingerprint, in short lines a person compares against their device. The button after
+   the certificate card sits a field's gap below it. */
+#certRootField { margin-top: 1em; }
+.ddns-fingerprint { white-space: pre-line; line-height: 1.5; }

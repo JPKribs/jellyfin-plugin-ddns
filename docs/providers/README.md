@@ -52,7 +52,7 @@ Provider to the matching value on the Domains tab, then fill the fields below fr
 ## Provider notes
 
 * **TTL**: a TTL of `1` (the default) means "use the provider's default". Each provider resolves it to a sensible value its API accepts (for example Gandi's 300 second minimum or GoDaddy's 600 second minimum) instead of sending a literal one second TTL.
-* **IPv4 only protocols**: OVH DynHost, DynDNS v1, DSLReports, and NearlyFreeSpeech.NET carry a single IPv4 address, so the `Update IPv6 (AAAA)` toggle is hidden for them and no AAAA update is ever recorded.
+* **IPv4 only protocols**: OVH DynHost, DynDNS v1, DSLReports, and NearlyFreeSpeech.NET carry a single IPv4 address, so the `Update IPv6` toggle is hidden for them and no AAAA update is ever recorded.
 * **Zones**: when a provider's `Zone` field is left blank the hostname is split on its first dot, and a bare two label hostname (like `example.com`) is treated as the apex domain. Set the zone explicitly for multi label subdomains or multi label TLDs like `.co.uk`.
 
 *I have only personally tested Cloudflare so please let me know if any of these do not work as appropriately.*

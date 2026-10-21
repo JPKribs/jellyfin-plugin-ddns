@@ -1,8 +1,8 @@
-site_name: Dynamic DNS
-site_description: A Jellyfin plugin that keeps your DNS records pointed at your server's current public IP.
-site_url: https://jpkribs.github.io/jellyfin-plugin-ddns/
-repo_url: https://github.com/JPKribs/jellyfin-plugin-ddns
-repo_name: JPKribs/jellyfin-plugin-ddns
+site_name: Remote Access
+site_description: A Jellyfin plugin that keeps your DNS records pointed at your server and puts a secure HTTPS proxy in front of Jellyfin.
+site_url: https://jpkribs.github.io/jellyfin-plugin-remoteaccess/
+repo_url: https://github.com/JPKribs/jellyfin-plugin-remoteaccess
+repo_name: JPKribs/jellyfin-plugin-remoteaccess
 edit_uri: edit/master/docs/
 docs_dir: docs
 
@@ -46,6 +46,7 @@ nav:
       - Installation: Installation.md
       - Adding Records: Records.md
   - Features:
+      - Remote Access: RemoteAccess.md
       - How Updates Run: HowItWorks.md
       - Monitoring: Monitoring.md
   - Providers:

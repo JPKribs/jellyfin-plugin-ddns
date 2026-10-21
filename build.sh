@@ -5,8 +5,8 @@ set -e
 # Configuration
 CONFIGURATION="${1:-Release}"
 OUTPUT_DIR="dist"
-PROJECT_DIR="Jellyfin.Plugin.DynamicDns"
-PROJECT_FILE="$PROJECT_DIR/Jellyfin.Plugin.DynamicDns.csproj"
+PROJECT_DIR="Jellyfin.Plugin.RemoteAccess"
+PROJECT_FILE="$PROJECT_DIR/Jellyfin.Plugin.RemoteAccess.csproj"
 
 # Colors
 RED='\033[0;31m'
@@ -167,7 +167,7 @@ main() {
     log "SUCCESS" "Build completed: $dll_path"
 
     # Create ZIP package
-    local zip_name="jellyfin-plugin-ddns-$VERSION.zip"
+    local zip_name="jellyfin-plugin-remoteaccess-$VERSION.zip"
     local zip_path="$OUTPUT_DIR/$zip_name"
 
     log "INFO" "Creating package: $zip_name"

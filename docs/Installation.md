@@ -7,7 +7,7 @@
 3. Enter this repository URL and click **Save**:
 
 ```
-https://raw.githubusercontent.com/JPKribs/jellyfin-plugin-ddns/master/manifest.json
+https://raw.githubusercontent.com/JPKribs/jellyfin-plugin-remoteaccess/master/manifest.json
 ```
 
 ## Install the Plugin

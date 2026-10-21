@@ -1,0 +1,279 @@
+<div id="DynamicDnsAdvancedPage" data-role="page"
+     class="page type-interior pluginConfigurationPage withTabs"
+     data-require="emby-input,emby-button,emby-select,emby-checkbox"
+     data-controller="__plugin/ddns_advanced.js">
+    <div data-role="content">
+        <div class="content-primary">
+            <form id="DynamicDnsAdvancedForm">
+                <div class="verticalSection verticalSection-extrabottompadding">
+
+                    <div class="sectionTitleContainer flex align-items-center">
+                        <h1 class="sectionTitle">Advanced</h1>
+                    </div>
+
+                    <div class="fieldDescription">Everything starts on its default. Change only what you need.</div>
+
+                    <div class="jpk-collapsible-section">
+                        <button type="button" class="jpk-collapsible-header collapsed" aria-expanded="false" aria-controls="advSecurity" data-target="advSecurity">
+                            <span class="jpk-collapsible-title">Security</span>
+                            <span class="jpk-collapsible-icon">&#9660;</span>
+                        </button>
+                        <div id="advSecurity" class="jpk-collapsible-content collapsed">
+                            <div class="selectContainer">
+                                <label class="selectLabel" for="advJellyfinLoopbackOnly">Only through the proxy</label>
+                                <select id="advJellyfinLoopbackOnly" class="jpk-selector-dropdown" data-adv="JellyfinLoopbackOnly" data-kind="bool">
+                                    <option value="true">On</option>
+                                    <option value="false">Off</option>
+                                </select>
+                                <div class="fieldDescription">While Jellyfin trusts the proxy, it listens on this server alone, so nothing reaches it except through the proxy, not even a port left forwarded on your router. Local apps then connect by your address, which must reach this server from home too. Apps that find servers by searching the network, casting devices that use the server's own address, and DLNA stop seeing Jellyfin. Jellyfin restarts when this changes. <span data-default="JellyfinLoopbackOnly" data-unit="onoff"></span></div>
+                            </div>
+                            <div class="selectContainer">
+                                <label class="selectLabel" for="advPublicNamesAsInternet">Public names follow internet rules</label>
+                                <select id="advPublicNamesAsInternet" class="jpk-selector-dropdown" data-adv="PublicNamesAsInternet" data-kind="bool">
+                                    <option value="true">On</option>
+                                    <option value="false">Off</option>
+                                </select>
+                                <div class="fieldDescription">Requests for your public names get the internet's rules even from a local address. The user list is hidden, setup is blocked, Services set to your network only are refused and the internet's upload limit applies. Turn this on when a tunnel, another proxy or your router makes every visitor look local. Bans, the block list, country rules and sign-in limits still go by the real address, so they still cannot tell those visitors apart, and Jellyfin still treats them as local. People at home who use your public name get the same rules. <span data-default="PublicNamesAsInternet" data-unit="onoff"></span></div>
+                            </div>
+                            <div class="selectContainer">
+                                <label class="selectLabel" for="advHideUserListFromWan">Hide the user list</label>
+                                <select id="advHideUserListFromWan" class="jpk-selector-dropdown" data-adv="HideUserListFromWan" data-kind="bool">
+                                    <option value="true">On</option>
+                                    <option value="false">Off</option>
+                                </select>
+                                <div class="fieldDescription">Sign-in screens on the internet show no user picker. <span data-default="HideUserListFromWan" data-unit="onoff"></span></div>
+                            </div>
+                            <div class="selectContainer">
+                                <label class="selectLabel" for="advHstsEnabled">Always use HTTPS</label>
+                                <select id="advHstsEnabled" class="jpk-selector-dropdown" data-adv="HstsEnabled" data-kind="bool">
+                                    <option value="true">On</option>
+                                    <option value="false">Off</option>
+                                </select>
+                                <div class="fieldDescription">Browsers that have visited once refuse plain HTTP. <span data-default="HstsEnabled" data-unit="onoff"></span></div>
+                            </div>
+                            <div class="inputContainer">
+                                <label for="advHstsMaxAgeDays">HTTPS memory</label>
+                                <input is="emby-input" type="number" id="advHstsMaxAgeDays" data-adv="HstsMaxAgeDays" data-kind="int" min="0" step="1" />
+                                <div class="fieldDescription">How long browsers remember, in days. <span data-default="HstsMaxAgeDays" data-unit="days"></span></div>
+                            </div>
+                            <div class="selectContainer">
+                                <label class="selectLabel" for="advSameOriginFramesOnly">Block embedding</label>
+                                <select id="advSameOriginFramesOnly" class="jpk-selector-dropdown" data-adv="SameOriginFramesOnly" data-kind="bool">
+                                    <option value="true">On</option>
+                                    <option value="false">Off</option>
+                                </select>
+                                <div class="fieldDescription">Other websites cannot frame these pages. <span data-default="SameOriginFramesOnly" data-unit="onoff"></span></div>
+                            </div>
+                            <div class="inputContainer">
+                                <label for="advTrustedNetworks">Trusted networks</label>
+                                <textarea id="advTrustedNetworks" class="emby-input" autocomplete="off" rows="3" data-adv="TrustedNetworks" data-kind="lines" placeholder="100.64.0.0/10"></textarea>
+                                <div class="fieldDescription">Treated like your network, such as a VPN. One address or range per line.</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="jpk-collapsible-section">
+                        <button type="button" class="jpk-collapsible-header collapsed" aria-expanded="false" aria-controls="advCountries" data-target="advCountries">
+                            <span class="jpk-collapsible-title">Blocking</span>
+                            <span class="jpk-collapsible-icon">&#9660;</span>
+                        </button>
+                        <div id="advCountries" class="jpk-collapsible-content collapsed">
+                            <div class="fieldDescription">Internet only. Your network and trusted networks are never blocked.</div>
+                            <div class="inputContainer">
+                                <label for="advBlockedAddresses">Blocked addresses</label>
+                                <textarea id="advBlockedAddresses" class="emby-input" autocomplete="off" rows="3" data-adv="BlockedAddresses" data-kind="lines" placeholder="203.0.113.7"></textarea>
+                                <div class="fieldDescription">Always refused. One address or range per line.</div>
+                            </div>
+                            <div class="inputContainer">
+                                <label for="advBanFailures">Failed sign-ins before a ban</label>
+                                <input is="emby-input" type="number" id="advBanFailures" data-adv="BanFailures" data-kind="int" min="0" step="1" max="1000" />
+                                <div class="fieldDescription">0 turns bans off. <span data-default="BanFailures" data-unit="count-off"></span></div>
+                            </div>
+                            <div class="inputContainer">
+                                <label for="advBanWindowMinutes">Ban window</label>
+                                <input is="emby-input" type="number" id="advBanWindowMinutes" data-adv="BanWindowMinutes" data-kind="int" min="0" step="1" max="1440" />
+                                <div class="fieldDescription">Failures are counted over this many minutes. <span data-default="BanWindowMinutes" data-unit="minutes"></span></div>
+                            </div>
+                            <div class="inputContainer">
+                                <label for="advBanMinutes">Ban length</label>
+                                <input is="emby-input" type="number" id="advBanMinutes" data-adv="BanMinutes" data-kind="int" min="0" step="1" max="525600" />
+                                <div class="fieldDescription">In minutes. 0 bans until lifted. <span data-default="BanMinutes" data-unit="minutes"></span></div>
+                            </div>
+                            <div class="selectContainer">
+                                <label class="selectLabel" for="advCountryMode">Country rule</label>
+                                <select id="advCountryMode" class="jpk-selector-dropdown" data-adv="CountryMode" data-kind="enum">
+                                    <option value="ServerCountry">Server country only</option>
+                                    <option value="Block">Block these countries</option>
+                                    <option value="AllowOnly">Allow only these countries</option>
+                                    <option value="Off">Off</option>
+                                </select>
+                                <div id="countryModeDescription" class="fieldDescription"></div>
+                            </div>
+                            <div id="countryPickerField" style="margin-bottom: 1.8em;">
+                                <h3 class="checkboxListLabel">Countries</h3>
+                                <div id="countryPicker"></div>
+                            </div>
+                            <div class="selectContainer">
+                                <label class="selectLabel" for="advBlockUnknownCountries">Unknown addresses</label>
+                                <select id="advBlockUnknownCountries" class="jpk-selector-dropdown" data-adv="BlockUnknownCountries" data-kind="bool">
+                                    <option value="true">Block</option>
+                                    <option value="false">Allow</option>
+                                </select>
+                                <div class="fieldDescription">Addresses the location database does not know. <span data-default="BlockUnknownCountries" data-unit="allowblock"></span></div>
+                            </div>
+                            <div class="selectContainer">
+                                <label class="selectLabel" for="advBlockWithoutDatabase">Without the location database</label>
+                                <select id="advBlockWithoutDatabase" class="jpk-selector-dropdown" data-adv="BlockWithoutDatabase" data-kind="bool">
+                                    <option value="true">Block</option>
+                                    <option value="false">Allow</option>
+                                </select>
+                                <div class="fieldDescription">While it is missing or downloading. <span data-default="BlockWithoutDatabase" data-unit="allowblock"></span></div>
+                            </div>
+                            <div id="countryStatus" class="jpk-info"></div>
+                        </div>
+                    </div>
+
+                    <div class="jpk-collapsible-section">
+                        <button type="button" class="jpk-collapsible-header collapsed" aria-expanded="false" aria-controls="advHistory" data-target="advHistory">
+                            <span class="jpk-collapsible-title">History</span>
+                            <span class="jpk-collapsible-icon">&#9660;</span>
+                        </button>
+                        <div id="advHistory" class="jpk-collapsible-content collapsed">
+                            <div class="selectContainer">
+                                <label class="selectLabel" for="historyEnabled">Recording</label>
+                                <select id="historyEnabled" class="jpk-selector-dropdown">
+                                    <option value="true">On</option>
+                                    <option value="false">Off</option>
+                                </select>
+                                <div class="fieldDescription">Records who connects, for the Dashboard.</div>
+                            </div>
+                            <div class="inputContainer">
+                                <label for="historyDays">History period</label>
+                                <input is="emby-input" type="number" id="historyDays" min="1" max="3650" step="1" />
+                                <div class="fieldDescription">In days.</div>
+                            </div>
+                            <div class="selectContainer">
+                                <label class="selectLabel" for="locationDetail">Location</label>
+                                <select id="locationDetail" class="jpk-selector-dropdown">
+                                    <option value="Country">Country</option>
+                                    <option value="City">Country and city</option>
+                                    <option value="Off">Off</option>
+                                </select>
+                                <div id="locationDescription" class="fieldDescription"></div>
+                            </div>
+                            <div id="locationStatus" class="jpk-info"></div>
+                            <div class="ddns-button-row">
+                                <button is="emby-button" type="button" id="btnUpdateLocation" class="raised jpk-secondary">
+                                    <span>Refresh Locations</span>
+                                </button>
+                                <button is="emby-button" type="button" id="btnDeleteAll" class="raised jpk-button-destructive">
+                                    <span>Clear History</span>
+                                </button>
+                            </div>
+                            <span id="historyStatus" class="jpk-status-text"></span>
+                        </div>
+                    </div>
+
+                    <div class="jpk-collapsible-section">
+                        <button type="button" class="jpk-collapsible-header collapsed" aria-expanded="false" aria-controls="advPerformance" data-target="advPerformance">
+                            <span class="jpk-collapsible-title">Performance</span>
+                            <span class="jpk-collapsible-icon">&#9660;</span>
+                        </button>
+                        <div id="advPerformance" class="jpk-collapsible-content collapsed">
+                            <div class="selectContainer">
+                                <label class="selectLabel" for="advEnableHttp2">HTTP/2</label>
+                                <select id="advEnableHttp2" class="jpk-selector-dropdown" data-adv="EnableHttp2" data-kind="bool">
+                                    <option value="true">On</option>
+                                    <option value="false">Off</option>
+                                </select>
+                                <div class="fieldDescription">Faster page loads in browsers. <span data-default="EnableHttp2" data-unit="onoff"></span></div>
+                            </div>
+                            <div class="selectContainer">
+                                <label class="selectLabel" for="advCompressJellyfin">Compression</label>
+                                <select id="advCompressJellyfin" class="jpk-selector-dropdown" data-adv="CompressJellyfin" data-kind="bool">
+                                    <option value="true">On</option>
+                                    <option value="false">Off</option>
+                                </select>
+                                <div class="fieldDescription">Shrinks library lists and the web client. Media is never compressed. <span data-default="CompressJellyfin" data-unit="onoff"></span></div>
+                            </div>
+                            <div class="inputContainer">
+                                <label for="advMaxRequestBodyMbWan">Largest upload from the internet</label>
+                                <input is="emby-input" type="number" id="advMaxRequestBodyMbWan" data-adv="MaxRequestBodyMbWan" data-kind="int" min="0" step="1" />
+                                <div class="fieldDescription">In MB. 0 is unlimited. <span data-default="MaxRequestBodyMbWan" data-unit="mb"></span></div>
+                            </div>
+                            <div class="inputContainer">
+                                <label for="advMaxRequestBodyMbLan">Largest upload from your network</label>
+                                <input is="emby-input" type="number" id="advMaxRequestBodyMbLan" data-adv="MaxRequestBodyMbLan" data-kind="int" min="0" step="1" />
+                                <div class="fieldDescription">In MB. 0 is unlimited. <span data-default="MaxRequestBodyMbLan" data-unit="mb"></span></div>
+                            </div>
+                            <div class="inputContainer">
+                                <label for="advMaxConnectionsPerIp">Connections per internet address</label>
+                                <input is="emby-input" type="number" id="advMaxConnectionsPerIp" data-adv="MaxConnectionsPerIp" data-kind="int" min="0" step="1" />
+                                <div class="fieldDescription">0 is unlimited. <span data-default="MaxConnectionsPerIp" data-unit="count"></span></div>
+                            </div>
+                            <div class="inputContainer">
+                                <label for="advMaxConnections">Total connections</label>
+                                <input is="emby-input" type="number" id="advMaxConnections" data-adv="MaxConnections" data-kind="int" min="0" step="1" />
+                                <div class="fieldDescription">0 is unlimited. <span data-default="MaxConnections" data-unit="count"></span></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="jpk-collapsible-section">
+                        <button type="button" class="jpk-collapsible-header collapsed" aria-expanded="false" aria-controls="advTimeouts" data-target="advTimeouts">
+                            <span class="jpk-collapsible-title">Timeouts</span>
+                            <span class="jpk-collapsible-icon">&#9660;</span>
+                        </button>
+                        <div id="advTimeouts" class="jpk-collapsible-content collapsed">
+                            <div class="inputContainer">
+                                <label for="advKeepAliveSeconds">Idle connections</label>
+                                <input is="emby-input" type="number" id="advKeepAliveSeconds" data-adv="KeepAliveSeconds" data-kind="int" min="0" step="1" />
+                                <div class="fieldDescription">In seconds. <span data-default="KeepAliveSeconds" data-unit="seconds"></span></div>
+                            </div>
+                            <div class="inputContainer">
+                                <label for="advRequestHeadersTimeoutSeconds">Request headers</label>
+                                <input is="emby-input" type="number" id="advRequestHeadersTimeoutSeconds" data-adv="RequestHeadersTimeoutSeconds" data-kind="int" min="0" step="1" />
+                                <div class="fieldDescription">In seconds. <span data-default="RequestHeadersTimeoutSeconds" data-unit="seconds"></span></div>
+                            </div>
+                            <div class="inputContainer">
+                                <label for="advMaxRequestHeadersKb">Header size</label>
+                                <input is="emby-input" type="number" id="advMaxRequestHeadersKb" data-adv="MaxRequestHeadersKb" data-kind="int" min="0" step="1" />
+                                <div class="fieldDescription">In KB. <span data-default="MaxRequestHeadersKb" data-unit="kb"></span></div>
+                            </div>
+                            <div class="inputContainer">
+                                <label for="advMinResponseBytesPerSecond">Minimum read rate</label>
+                                <input is="emby-input" type="number" id="advMinResponseBytesPerSecond" data-adv="MinResponseBytesPerSecond" data-kind="int" min="0" step="1" />
+                                <div class="fieldDescription">In bytes per second. Media is exempt. 0 is off. <span data-default="MinResponseBytesPerSecond" data-unit="bps"></span></div>
+                            </div>
+                            <div class="inputContainer">
+                                <label for="advBackendActivityTimeoutSeconds">Jellyfin response</label>
+                                <input is="emby-input" type="number" id="advBackendActivityTimeoutSeconds" data-adv="BackendActivityTimeoutSeconds" data-kind="int" min="0" step="1" />
+                                <div class="fieldDescription">In seconds. <span data-default="BackendActivityTimeoutSeconds" data-unit="seconds"></span></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="inputContainer">
+                        <button is="emby-button" type="button" id="btnSaveAdvanced" class="raised jpk-button-submit block">
+                            <span>Save</span>
+                        </button>
+                        <span id="advancedStatus" class="jpk-status-text"></span>
+                    </div>
+                    <div class="ddns-button-row">
+                        <button is="emby-button" type="button" id="btnResetAdvanced" class="raised jpk-secondary">
+                            <span>Reset to Defaults</span>
+                        </button>
+                        <button is="emby-button" type="button" id="btnRestartProxy" class="raised jpk-secondary">
+                            <span>Restart Proxy</span>
+                        </button>
+                    </div>
+                    <span id="restartStatus" class="jpk-status-text"></span>
+
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <link rel="stylesheet" href="configurationpage?name=ddns_jpkribs_shared.css">
+    <link rel="stylesheet" href="configurationpage?name=ddns_common.css">
+</div>

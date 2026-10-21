@@ -22,5 +22,5 @@ jobs:
   call:
     uses: jellyfin/jellyfin-meta-plugins/.github/workflows/scan-codeql.yaml@master
     with:
-      repository-name: JPKribs/jellyfin-plugin-ddns
+      repository-name: JPKribs/jellyfin-plugin-remoteaccess
       dotnet-version: 10.0.x

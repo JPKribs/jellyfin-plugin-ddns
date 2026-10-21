@@ -48,8 +48,8 @@ jobs:
             TARGET_ABI=$(sed -n 's/^targetAbi:[[:space:]]*//p' build.yaml | tr -d '"')
           fi
 
-          BASE_URL="https://github.com/JPKribs/jellyfin-plugin-ddns/releases/download/${TAG}"
-          ASSET="jellyfin-plugin-ddns-${BUILD_VERSION}.zip"
+          BASE_URL="https://github.com/JPKribs/jellyfin-plugin-remoteaccess/releases/download/${TAG}"
+          ASSET="jellyfin-plugin-remoteaccess-${BUILD_VERSION}.zip"
 
           # -f on every download: a missing asset must fail the job rather than hashing an error page.
           CHECKSUM=$(curl -sfL "${BASE_URL}/${ASSET}.md5" | cut -d' ' -f1 || true)
@@ -99,7 +99,7 @@ jobs:
             --arg version "$BUILD_VERSION" \
             --arg changelog "$SANITIZED_CHANGELOG" \
             --arg targetAbi "$TARGET_ABI" \
-            --arg sourceUrl "https://github.com/JPKribs/jellyfin-plugin-ddns/releases/download/${TAG}/jellyfin-plugin-ddns-${BUILD_VERSION}.zip" \
+            --arg sourceUrl "https://github.com/JPKribs/jellyfin-plugin-remoteaccess/releases/download/${TAG}/jellyfin-plugin-remoteaccess-${BUILD_VERSION}.zip" \
             --arg checksum "$CHECKSUM" \
             --arg timestamp "$TIMESTAMP" \
             '{

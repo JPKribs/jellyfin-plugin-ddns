@@ -9,4 +9,6 @@ Set the record's **Provider** to **Cloudflare**, then fill these fields.
 
 If the record is proxied (the orange cloud is on), Cloudflare's public DNS returns Cloudflare's address, not yours. Turn on **Treat as proxied address** on the record so the plugin compares against the last IP it pushed rather than DNS.
 
+This record can also prove your address to Let's Encrypt for [Remote Access](../RemoteAccess.md#how-lets-encrypt-checks-your-address), so no port has to be open and wildcards are covered. The Edit zone DNS template already allows it.
+
 _Ported from ddclient's `nic_cloudflare_update`._

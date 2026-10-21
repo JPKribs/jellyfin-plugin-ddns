@@ -1,0 +1,90 @@
+<div id="DynamicDnsDashboardPage" data-role="page"
+     class="page type-interior pluginConfigurationPage withTabs"
+     data-require="emby-input,emby-button,emby-select,emby-checkbox"
+     data-controller="__plugin/ddns_dashboard.js">
+    <div data-role="content">
+        <div class="content-primary">
+            <form id="DynamicDnsDashboardForm">
+                <div class="verticalSection verticalSection-extrabottompadding">
+
+                    <div class="sectionTitleContainer flex align-items-center">
+                        <h1 class="sectionTitle">Dashboard</h1>
+                    </div>
+
+                    <div id="peopleOff" class="jpk-info hidden"></div>
+
+                    <h2 class="sectionTitle">Locations</h2>
+                    <div class="ddns-button-row ddns-map-switch">
+                        <button is="emby-button" type="button" id="mapPeople" class="raised jpk-button-submit" aria-pressed="true"><span>Users</span></button>
+                        <button is="emby-button" type="button" id="mapFailed" class="raised jpk-button-submit" aria-pressed="true"><span>Failures</span></button>
+                        <button is="emby-button" type="button" id="mapBlocked" class="raised jpk-button-submit" aria-pressed="true"><span>Blocked</span></button>
+                    </div>
+                    <div id="worldMap" class="ddns-map"></div>
+                    <div id="mapLegend"></div>
+
+                    <h2 class="sectionTitle">Banned</h2>
+                    <div id="banned"></div>
+
+                    <h2 class="sectionTitle">Activity</h2>
+                    <div class="ddns-filters">
+                        <div class="selectContainer">
+                            <label class="selectLabel" for="filterType">Type</label>
+                            <select id="filterType" class="jpk-selector-dropdown">
+                                <option value="">All</option>
+                                <option value="User">User</option>
+                                <option value="Failure">Failure</option>
+                                <option value="Blocked">Blocked</option>
+                                <option value="Seen">Seen</option>
+                            </select>
+                        </div>
+                        <div class="selectContainer">
+                            <label class="selectLabel" for="filterCountry">Country</label>
+                            <select id="filterCountry" class="jpk-selector-dropdown">
+                                <option value="">All</option>
+                            </select>
+                        </div>
+                    </div>
+                    <span id="activityStatus" class="jpk-status-text"></span>
+                    <div id="activity"></div>
+
+                    <div class="fieldDescription">
+                        <a href="https://db-ip.com" target="_blank" rel="noopener noreferrer" class="button-link">IP geolocation by DB-IP</a>
+                    </div>
+
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <link rel="stylesheet" href="configurationpage?name=ddns_jpkribs_shared.css">
+    <link rel="stylesheet" href="configurationpage?name=ddns_common.css">
+    <style>
+        /* The view toggles always split one line, however narrow. */
+        #DynamicDnsDashboardPage .ddns-map-switch > button { flex: 1 1 0; min-width: 0; }
+        #DynamicDnsDashboardPage .ddns-empty { padding: 1.2em 1em; text-align: center; opacity: 0.7; background: var(--jpk-surface, rgba(255, 255, 255, 0.04)); }
+        /* Count headings shrink to icons on a narrow screen so the country and time columns keep their room. */
+        #DynamicDnsDashboardPage .ddns-icon { display: none; }
+        @media (max-width: 600px) {
+            #DynamicDnsDashboardPage .ddns-word { display: none; }
+            #DynamicDnsDashboardPage .ddns-icon { display: inline-block; font-size: 1.2em; vertical-align: middle; }
+        }
+        #DynamicDnsDashboardPage .ddns-map svg { width: 100%; height: auto; display: block; }
+        #DynamicDnsDashboardPage .ddns-map path { fill: rgba(255, 255, 255, 0.07); stroke: rgba(255, 255, 255, 0.18); stroke-width: 0.5; }
+        #DynamicDnsDashboardPage .ddns-map path.ddns-hit { stroke: rgba(255, 255, 255, 0.5); }
+        /* The wrapper scrolls sideways on a narrow screen instead of clipping the table. */
+        #DynamicDnsDashboardPage .ddns-table-wrap { overflow-x: auto; margin: 0.8em 0 1.5em; border: 1px solid var(--jpk-border, rgba(255, 255, 255, 0.12)); border-radius: 6px; }
+        #DynamicDnsDashboardPage .ddns-table { width: 100%; border-collapse: collapse; background: var(--jpk-surface, rgba(255, 255, 255, 0.04)); }
+        #DynamicDnsDashboardPage .ddns-table th { text-align: left; font-weight: 600; opacity: 0.8; padding: 0.6em 0.7em; border-bottom: 1px solid var(--jpk-border, rgba(255, 255, 255, 0.12)); }
+        #DynamicDnsDashboardPage .ddns-table td { padding: 0.55em 0.7em; border-top: 1px solid rgba(255, 255, 255, 0.06); }
+        #DynamicDnsDashboardPage .ddns-table .ddns-num { text-align: right; font-variant-numeric: tabular-nums; }
+        /* The country takes the spare width; the count and date stay as narrow as their contents, on one line. */
+        #DynamicDnsDashboardPage .ddns-table th:not(:first-child), #DynamicDnsDashboardPage .ddns-table td:not(:first-child) { width: 1%; white-space: nowrap; }
+        /* The activity table keeps every cell on one line and scrolls sideways when it does not fit. */
+        #DynamicDnsDashboardPage .ddns-activity th, #DynamicDnsDashboardPage .ddns-activity td { width: auto; white-space: nowrap; vertical-align: middle; }
+        #DynamicDnsDashboardPage .ddns-activity .ddns-action { text-align: right; width: 1%; }
+        #DynamicDnsDashboardPage .ddns-activity .ddns-action button { margin: 0; }
+        #DynamicDnsDashboardPage .ddns-filters { display: flex; flex-wrap: wrap; gap: 12px; }
+        #DynamicDnsDashboardPage .ddns-filters > .selectContainer { flex: 1 1 180px; margin-bottom: 0; }
+        #DynamicDnsDashboardPage .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+    </style>
+</div>

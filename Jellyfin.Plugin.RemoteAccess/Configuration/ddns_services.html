@@ -1,0 +1,169 @@
+<div id="DynamicDnsServicesPage" data-role="page"
+     class="page type-interior pluginConfigurationPage withTabs"
+     data-require="emby-input,emby-button,emby-select,emby-checkbox"
+     data-controller="__plugin/ddns_services.js">
+    <div data-role="content">
+        <div class="content-primary">
+            <form id="DynamicDnsServicesForm">
+                <div class="verticalSection verticalSection-extrabottompadding">
+
+                    <div class="sectionTitleContainer flex align-items-center">
+                        <h1 class="sectionTitle">Services</h1>
+                    </div>
+
+                    <div class="fieldDescription">Reach other apps, like a request manager, through the proxy on their own address. Only add apps with their own login.</div>
+
+                    <div class="jpk-selector">
+                        <div class="selectContainer">
+                            <label class="selectLabel" for="selectRoute">Service</label>
+                            <select id="selectRoute" class="jpk-selector-dropdown"></select>
+                            <div id="routeState" class="fieldDescription hidden"></div>
+                        </div>
+                        <div class="jpk-selector-actions">
+                            <button is="emby-button" type="button" id="btnNewRoute" class="raised jpk-icon-btn jpk-button-submit" title="Add a service">
+                                <span class="material-icons" aria-hidden="true">add</span>
+                            </button>
+                            <button is="emby-button" type="button" id="btnDeleteRoute" class="raised jpk-icon-btn jpk-button-destructive" title="Delete this service">
+                                <span class="material-icons" aria-hidden="true">delete</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div id="emptyState" class="jpk-empty-section hidden">No services yet. Click <strong>+</strong> to add one.</div>
+
+                    <div id="routeEditor" class="hidden">
+                        <div class="inputContainer">
+                            <label for="routeName">Name</label>
+                            <input is="emby-input" type="text" id="routeName" autocomplete="off" placeholder="Statistics" />
+                        </div>
+                        <div class="checkboxContainer">
+                            <label class="emby-checkbox-label">
+                                <input type="checkbox" is="emby-checkbox" id="routeEnabled" />
+                                <span class="checkboxLabel">Enabled</span>
+                            </label>
+                        </div>
+                        <div class="jpk-hostname-field" style="margin-bottom: 1.8em;">
+                            <h3 class="checkboxListLabel">Addresses</h3>
+                            <div id="routeHostnamePicker"></div>
+                            <div class="fieldDescription">The name people use for this app. Each name belongs to one app.</div>
+                        </div>
+                        <div class="inputContainer">
+                            <label for="routeHostnames">Other addresses</label>
+                            <textarea id="routeHostnames" class="emby-input" autocomplete="off" rows="2" placeholder="requests.example.com"></textarea>
+                            <div class="fieldDescription">Names not managed by a Domains record, one per line.</div>
+                        </div>
+                        <div class="inputContainer">
+                            <label for="routeTarget">Target</label>
+                            <input is="emby-input" type="text" id="routeTarget" autocomplete="off" placeholder="http://192.168.1.20:5055" />
+                            <div class="fieldDescription">Where the app listens on your network.</div>
+                        </div>
+                        <div class="selectContainer">
+                            <label class="selectLabel" for="routeExposure">Reachable from</label>
+                            <select id="routeExposure" class="jpk-selector-dropdown">
+                                <option value="LanAndWan">Anywhere</option>
+                                <option value="LanOnly">Your network only</option>
+                            </select>
+                        </div>
+
+                        <div class="jpk-collapsible-section">
+                            <button type="button" class="jpk-collapsible-header collapsed" aria-expanded="false" aria-controls="routeAdvanced" data-target="routeAdvanced">
+                                <span class="jpk-collapsible-title">Advanced</span>
+                                <span class="jpk-collapsible-icon">&#9660;</span>
+                            </button>
+                            <div id="routeAdvanced" class="jpk-collapsible-content collapsed">
+                                <div class="fieldDescription">Empty or Default follows the Advanced tab.</div>
+                                <div class="inputContainer">
+                                    <label for="ovBodyWan">Largest upload from the internet</label>
+                                    <input is="emby-input" type="number" id="ovBodyWan" data-ov="MaxRequestBodyMbWan" min="0" step="1" />
+                                    <div class="fieldDescription">In MB. 0 is unlimited. <span data-inherit-text="MaxRequestBodyMbWan"></span></div>
+                                </div>
+                                <div class="inputContainer">
+                                    <label for="ovBodyLan">Largest upload from your network</label>
+                                    <input is="emby-input" type="number" id="ovBodyLan" data-ov="MaxRequestBodyMbLan" min="0" step="1" />
+                                    <div class="fieldDescription">In MB. 0 is unlimited. <span data-inherit-text="MaxRequestBodyMbLan"></span></div>
+                                </div>
+                                <div class="inputContainer">
+                                    <label for="ovTimeout">App timeout</label>
+                                    <input is="emby-input" type="number" id="ovTimeout" data-ov="BackendActivityTimeoutSeconds" min="61" step="1" />
+                                    <div class="fieldDescription">In seconds. <span data-inherit-text="BackendActivityTimeoutSeconds"></span></div>
+                                </div>
+                                <div class="inputContainer">
+                                    <label for="ovMinRate">Minimum read rate</label>
+                                    <input is="emby-input" type="number" id="ovMinRate" data-ov="MinResponseBytesPerSecond" min="0" step="1" />
+                                    <div class="fieldDescription">In bytes per second. Empty is off.</div>
+                                </div>
+                                <div class="selectContainer">
+                                    <label class="selectLabel" for="ovHsts">Always use HTTPS</label>
+                                    <select id="ovHsts" class="jpk-selector-dropdown" data-ov="HstsEnabled" data-ov-kind="bool">
+                                        <option value="">Default</option>
+                                        <option value="true">On</option>
+                                        <option value="false">Off</option>
+                                    </select>
+                                    <div class="fieldDescription">Browsers that have visited once refuse plain HTTP. <span data-inherit-text="HstsEnabled"></span></div>
+                                </div>
+                                <div class="inputContainer">
+                                    <label for="ovHstsDays">HSTS duration</label>
+                                    <input is="emby-input" type="number" id="ovHstsDays" data-ov="HstsMaxAgeDays" min="1" max="730" step="1" />
+                                    <div class="fieldDescription">In days. <span data-inherit-text="HstsMaxAgeDays"></span></div>
+                                </div>
+                                <div class="selectContainer">
+                                    <label class="selectLabel" for="ovFrames">Framing</label>
+                                    <select id="ovFrames" class="jpk-selector-dropdown" data-ov="SameOriginFramesOnly" data-ov-kind="bool">
+                                        <option value="">Default</option>
+                                        <option value="true">Same site only</option>
+                                        <option value="false">Any site</option>
+                                    </select>
+                                    <div class="fieldDescription">Which websites may embed this app. <span data-inherit-text="SameOriginFramesOnly"></span></div>
+                                </div>
+                                <div class="selectContainer">
+                                    <label class="selectLabel" for="ovCompress">Compression</label>
+                                    <select id="ovCompress" class="jpk-selector-dropdown" data-ov="Compress" data-ov-kind="bool">
+                                        <option value="">Default</option>
+                                        <option value="true">On</option>
+                                        <option value="false">Off</option>
+                                    </select>
+                                    <div class="fieldDescription">Shrinks pages and scripts. Media is left alone. The default is off, since compressing an app's pages over HTTPS can leak secrets they contain. Turn it on for apps that sign in with headers rather than cookies.</div>
+                                </div>
+                                <div class="checkboxContainer">
+                                    <label class="emby-checkbox-label">
+                                        <input type="checkbox" is="emby-checkbox" id="routePreserveHost" />
+                                        <span class="checkboxLabel">Send the original address to the app</span>
+                                    </label>
+                        </div>
+                        <div class="fieldDescription">Passes the requested name to the app. Only if the app needs it.</div>
+                                <div class="selectContainer">
+                                    <label class="selectLabel" for="routeTls">App certificate</label>
+                                    <select id="routeTls" class="jpk-selector-dropdown">
+                                        <option value="Verify">Verify normally</option>
+                                        <option value="Pinned">Accept one pinned certificate</option>
+                                        <option value="Skip">Accept any certificate</option>
+                                    </select>
+                                    <div class="fieldDescription">For an <span class="jpk-mono">https://</span> target. Pin a self-signed certificate instead of trusting any.</div>
+                                </div>
+                                <div id="routePinField" class="inputContainer">
+                                    <label for="routePin">SHA-256 thumbprint</label>
+                                    <input is="emby-input" type="text" id="routePin" autocomplete="off" />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="inputContainer">
+                        <button is="emby-button" type="button" id="btnSaveRoutes" class="raised jpk-button-submit block">
+                            <span>Save</span>
+                        </button>
+                        <span id="routesStatus" class="jpk-status-text"></span>
+                    </div>
+
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <link rel="stylesheet" href="configurationpage?name=ddns_jpkribs_shared.css">
+    <link rel="stylesheet" href="configurationpage?name=ddns_common.css">
+    <style>
+        /* The empty state keeps the same space above and below as a filled-in service. */
+        #DynamicDnsServicesPage #emptyState { margin: 1.5em 0 2em; }
+    </style>
+</div>
