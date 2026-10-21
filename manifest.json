@@ -9,6 +9,14 @@
     "category": "Administration",
     "versions": [
       {
+        "version": "12.2.3.2",
+        "changelog": "\n## Changed\n- The Request a New Certificate scheduled task is removed. Refresh Certificate already requests a new certificate whenever one is missing, no longer covers your addresses, or expires within 30 days. To force one now, use Request a New Certificate on the Proxy tab.\n- The Update Dynamic DNS scheduled task is now Update DDNS, and Update Location Database is now Refresh Locations. Their schedules carry over.",
+        "targetAbi": "12.2.0.0",
+        "sourceUrl": "https://github.com/JPKribs/jellyfin-plugin-remoteaccess/releases/download/v12.2.3.2/jellyfin-plugin-remoteaccess-12.2.3.2.zip",
+        "checksum": "63991170d6c54737cb43561c86ef277c",
+        "timestamp": "2026-10-21T22:11:40Z"
+      },
+      {
         "version": "12.2.3.1",
         "changelog": "\n## Changed\n- Every field description on every tab is one short sentence, two at most, with units and defaults kept.\n- Each provider's note under the Provider list names the fields exactly as the form shows them.\n- Long confirmations and warnings, such as the one for every visitor looking local, are shorter.\n- The Advanced tab no longer shows the line about every setting starting on its default.\n\n## Fixed\n- The Minimum read rate description says what it limits, how slowly a visitor reads pages, not uploads.\n- The IP detection description no longer says the services are tried in order until one answers, since two must agree.\n\n## Developer\n- The documentation is rewritten, with a Beginner's Guide from buying a domain to remote access in one page, a Settings Reference listing every setting with its default, and a page per tab.\n- Provider pages list only the fields each provider shows, named as on screen.",
         "targetAbi": "12.2.0.0",
