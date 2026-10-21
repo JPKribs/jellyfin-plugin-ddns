@@ -122,12 +122,10 @@ public sealed class ConnectionGate : IDisposable
         var runtime = _holder.Current;
         // Already counted when it opened, so closing it now is not recorded as another refusal.
         var refused = _live.Where(p => !runtime.Classifier.IsLocal(p.Value.Address) && !Allowed(p.Value.Address, runtime, p.Value.Countries, record: false));
-        foreach (var pair in refused)
+        // Only the call that removes a connection aborts it, so one closing on its own meanwhile is left alone.
+        foreach (var pair in refused.Where(p => _live.TryRemove(p.Key, out _)))
         {
-            if (_live.TryRemove(pair.Key, out _))
-            {
-                pair.Key.Abort();
-            }
+            pair.Key.Abort();
         }
     }
 

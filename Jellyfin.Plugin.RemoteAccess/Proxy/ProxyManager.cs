@@ -40,7 +40,7 @@ public sealed class ProxyManager : IAsyncDisposable
     private readonly Acme.AcmeCertificateService _acme;
     private readonly JellyfinNetworkView _jellyfin;
     private readonly IConfigurationManager _configuration;
-    private Timer? _acmeRetry;
+    private readonly Timer _acmeRetry;
     private readonly string _systemId;
     private readonly SemaphoreSlim _lifecycle = new(1, 1);
     private ProxyHost? _host;
@@ -100,6 +100,9 @@ public sealed class ProxyManager : IAsyncDisposable
         _blocks = blocks;
         _bans = bans;
         _localTraffic = new LocalTrafficWatch(ReportEveryoneLooksLocal);
+
+        // One timer for the next Let's Encrypt try, armed and disarmed as the state changes.
+        _acmeRetry = new Timer(_ => RetryAcme(), null, Timeout.InfiniteTimeSpan, Timeout.InfiniteTimeSpan);
         _geo = geo;
         _acme = acme;
         _systemId = application.SystemId;
@@ -176,10 +179,7 @@ public sealed class ProxyManager : IAsyncDisposable
 
         await _shutdown.CancelAsync().ConfigureAwait(false);
         _certificates.AvailabilityChanged -= OnCertificateAvailabilityChanged;
-        if (Interlocked.Exchange(ref _acmeRetry, null) is { } retry)
-        {
-            await retry.DisposeAsync().ConfigureAwait(false);
-        }
+        await _acmeRetry.DisposeAsync().ConfigureAwait(false);
 
         await StopAsync().ConfigureAwait(false);
     }
@@ -384,10 +384,9 @@ public sealed class ProxyManager : IAsyncDisposable
         }
 
         var next = _acme.Describe(CertificateHostnames(settings), ReadRecords()).NextAttemptUtc;
-        var old = Interlocked.Exchange(ref _acmeRetry, null);
-        old?.Dispose();
         if (next is not { } when)
         {
+            ArmAcmeRetry(Timeout.InfiniteTimeSpan);
             return;
         }
 
@@ -399,8 +398,20 @@ public sealed class ProxyManager : IAsyncDisposable
             due = TimeSpan.FromDays(1);
         }
 
-        // The timer belongs to the field from the start, and the one it replaces is disposed.
-        Interlocked.Exchange(ref _acmeRetry, new Timer(_ => RetryAcme(), null, due, Timeout.InfiniteTimeSpan))?.Dispose();
+        ArmAcmeRetry(due);
+    }
+
+    private void ArmAcmeRetry(TimeSpan due)
+    {
+        try
+        {
+            _acmeRetry.Change(due, Timeout.InfiniteTimeSpan);
+        }
+        catch (ObjectDisposedException)
+        {
+            // Shutdown disposed it between the check above and here. Nothing is left to retry.
+            _logger.LogDebug("Not scheduling a Let's Encrypt retry during shutdown");
+        }
     }
 
     private void RetryAcme()

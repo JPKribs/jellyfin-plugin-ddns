@@ -35,25 +35,24 @@ internal static class LocalAuthority
         created = false;
         if (File.Exists(path))
         {
-            X509Certificate2? existing = null;
             try
             {
-                existing = X509CertificateLoader.LoadPkcs12FromFile(path, null);
-                if (existing.HasPrivateKey && existing.NotAfter.ToUniversalTime() > DateTime.UtcNow.AddDays(365))
+                // Checked on one copy and handed over as another, so neither is left undisposed if a check throws.
+                var saved = File.ReadAllBytes(path);
+                bool usable;
+                using (var probe = X509CertificateLoader.LoadPkcs12(saved, null))
                 {
-                    // Handed to the caller, so not disposed below.
-                    var kept = existing;
-                    existing = null;
-                    return kept;
+                    usable = probe.HasPrivateKey && probe.NotAfter.ToUniversalTime() > DateTime.UtcNow.AddDays(365);
+                }
+
+                if (usable)
+                {
+                    return X509CertificateLoader.LoadPkcs12(saved, null);
                 }
             }
             catch (CryptographicException)
             {
                 // A damaged root is replaced: nothing issued from it can be renewed without its key.
-            }
-            finally
-            {
-                existing?.Dispose();
             }
         }
 

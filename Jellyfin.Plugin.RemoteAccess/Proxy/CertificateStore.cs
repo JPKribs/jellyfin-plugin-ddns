@@ -356,27 +356,26 @@ public sealed class CertificateStore : IDisposable
     // Anything else, a damaged file included, is replaced by the caller rather than leaving the proxy without one.
     private Loaded? ReuseSelfSigned(string path, IReadOnlyList<string> wanted, X509Certificate2 root)
     {
-        X509Certificate2? existing = null;
         try
         {
-            existing = X509CertificateLoader.LoadPkcs12FromFile(path, null);
-            if (existing.NotAfter.ToUniversalTime() > DateTime.UtcNow.AddDays(30)
-                && wanted.All(h => Covers(existing, h))
-                && LocalAuthority.IssuedBy(existing, root))
+            // Checked on one copy and loaded as another, so neither is left undisposed if a check throws.
+            var bytes = File.ReadAllBytes(path);
+            bool usable;
+            using (var probe = X509CertificateLoader.LoadPkcs12(bytes, null))
             {
-                // Handed to the loaded certificate, so not disposed below.
-                var kept = existing;
-                existing = null;
-                return Build(kept, new X509Certificate2Collection(), "self-signed");
+                usable = probe.NotAfter.ToUniversalTime() > DateTime.UtcNow.AddDays(30)
+                    && wanted.All(h => Covers(probe, h))
+                    && LocalAuthority.IssuedBy(probe, root);
+            }
+
+            if (usable)
+            {
+                return Build(X509CertificateLoader.LoadPkcs12(bytes, null), new X509Certificate2Collection(), "self-signed");
             }
         }
         catch (CryptographicException ex)
         {
             _logger.LogWarning("The self-signed certificate could not be read and is being replaced: {Message}", ex.Message);
-        }
-        finally
-        {
-            existing?.Dispose();
         }
 
         return null;
