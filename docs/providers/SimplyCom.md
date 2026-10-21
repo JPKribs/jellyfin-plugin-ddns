@@ -1,10 +1,11 @@
 # Simply.com
 
-Set the record's **Provider** to **Simply.com**, then fill these fields.
+On the **Domains** tab, set **Provider** to **Simply.com**, then fill in:
 
 - **Hostname**: the record.
-- **Login**: your Simply.com account name (your account number).
-- **Password**: your Simply.com API key.
-- **Zone**: the domain (optional scope).
+- **Account name**: your Simply.com account name, which is your account number.
+- **API key**: your Simply.com API key.
+- **Zone**: optional. The domain to scope the update to.
+- **Server override**: leave blank to use Simply.com's own server.
 
 _Ported from ddclient's `nic_simplycom_update`._

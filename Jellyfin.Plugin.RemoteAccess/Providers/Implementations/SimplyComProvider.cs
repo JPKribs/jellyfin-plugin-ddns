@@ -32,7 +32,7 @@ public sealed class SimplyComProvider : DNSProviderBase
     public override string Label => "Simply.com";
 
     /// <inheritdoc />
-    public override string Hint => "Login and Password are your Simply.com credentials. Zone is optional.";
+    public override string Hint => "Account name is your Simply.com account number. API key is your Simply.com API key. Zone is optional.";
 
     /// <inheritdoc />
     public override ProviderFields Fields => new()

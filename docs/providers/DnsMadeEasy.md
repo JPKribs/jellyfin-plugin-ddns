@@ -1,9 +1,10 @@
 # DNS Made Easy
 
-Set the record's **Provider** to **DNS Made Easy**, then fill these fields.
+On the **Domains** tab, set **Provider** to **DNS Made Easy**, then fill in:
 
-- **Hostname**: the numeric Dynamic DNS record ID, shown on the Dynamic DNS record in the DNS Made Easy panel. This field is the record id, not a host name.
-- **Login**: your account email address.
-- **Password**: the generated dynamic DNS record password.
+- **Record ID**: the numeric ID of the Dynamic DNS record, shown on that record in the DNS Made Easy panel. It is a number, not a host name.
+- **Account email**: your account email address.
+- **Record password**: the dynamic DNS password generated for the record.
+- **Server override**: leave blank to use DNS Made Easy's own server.
 
 _Ported from ddclient's `nic_dnsmadeeasy_update`._

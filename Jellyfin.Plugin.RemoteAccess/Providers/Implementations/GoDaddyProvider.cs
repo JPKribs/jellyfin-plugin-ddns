@@ -39,7 +39,7 @@ public sealed class GoDaddyProvider : DNSProviderBase
     public override string Label => "GoDaddy";
 
     /// <inheritdoc />
-    public override string Hint => "Login is the API key. Password is the API secret. Zone is the domain.";
+    public override string Hint => "API key and API secret come from developer.godaddy.com/keys. Domain is the domain, such as example.com.";
 
     /// <inheritdoc />
     public override ProviderFields Fields => new()

@@ -29,7 +29,7 @@
                             <input type="checkbox" is="emby-checkbox" id="enabled" />
                             <span class="checkboxLabel">Enabled</span>
                         </label>
-                        <div class="fieldDescription checkboxFieldDescription">Starts the proxy. Jellyfin is untouched until you move it below.</div>
+                        <div class="fieldDescription checkboxFieldDescription">Starts the proxy, and Jellyfin is untouched until you select Trust the Proxy below.</div>
                     </div>
                     <div id="powerError" class="jpk-error hidden"></div>
 
@@ -41,7 +41,7 @@
                         <div id="secAddress" class="jpk-collapsible-content">
                             <div class="jpk-hostname-field" style="margin-bottom: 1.8em;">
                                 <div id="hostnamePicker"></div>
-                                <div class="fieldDescription">The names people use to reach Jellyfin. Anything else is turned away.</div>
+                                <div class="fieldDescription">The names people use to reach Jellyfin, with any other name turned away.</div>
                             </div>
                             <div class="inputContainer">
                                 <label for="hostnames">Other addresses</label>
@@ -73,7 +73,7 @@
                                     <input type="checkbox" is="emby-checkbox" id="certTerms" />
                                     <span class="checkboxLabel">I accept the Let's Encrypt terms</span>
                                 </label>
-                                <div class="fieldDescription checkboxFieldDescription"><a href="https://letsencrypt.org/repository/" target="_blank" rel="noopener noreferrer" class="button-link">Read the Let's Encrypt Subscriber Agreement</a>. Nothing is requested until this is ticked.</div>
+                                <div class="fieldDescription checkboxFieldDescription">Nothing is requested until you accept the <a href="https://letsencrypt.org/repository/" target="_blank" rel="noopener noreferrer" class="button-link">Let's Encrypt Subscriber Agreement</a>.</div>
                             </div>
                             <div id="certMethod" class="jpk-info hidden"></div>
                             <div id="certFileFields">
@@ -90,7 +90,7 @@
                                 <div class="inputContainer">
                                     <label for="certPassword">Password</label>
                                     <input is="emby-input" type="password" id="certPassword" autocomplete="new-password" />
-                                    <div class="fieldDescription">Only if the file has one. Stored encrypted.</div>
+                                    <div class="fieldDescription">The file's password if it has one, stored encrypted.</div>
                                 </div>
                             </div>
                             <div id="certStatus" class="jpk-record-card hidden">
@@ -107,7 +107,7 @@
                                         <span>Download Root Certificate</span>
                                     </button>
                                 </div>
-                                <div class="fieldDescription">Install it once on each device that should trust this server. Renewals keep working without installing it again. Before trusting it, check that the device shows the same SHA-256 fingerprint.</div>
+                                <div class="fieldDescription">Install it once on each device that should trust this server, after checking it shows the same SHA-256 fingerprint.</div>
                             </div>
                             <div id="certRequestField" class="hidden">
                                 <div class="ddns-button-row">
@@ -115,7 +115,7 @@
                                         <span>Request a New Certificate</span>
                                     </button>
                                 </div>
-                                <div class="fieldDescription">Renewal is automatic. Use this only to replace a certificate now, for example after its key may have been exposed. Let's Encrypt allows five of the same certificate a week.</div>
+                                <div class="fieldDescription">Renewal is automatic, so use this only to replace a certificate now, such as after its key may have leaked.</div>
                                 <span id="certRequestStatus" class="jpk-status-text"></span>
                             </div>
                         </div>
@@ -139,7 +139,7 @@
                         </button>
                         <div id="secJellyfin" class="jpk-collapsible-content">
                             <div id="jellyfinState" class="jpk-info"></div>
-                            <div class="fieldDescription">Lets Jellyfin see each visitor's real address through the proxy. Its ports are not changed. Jellyfin restarts once.</div>
+                            <div class="fieldDescription">Lets Jellyfin see each visitor's real address while keeping its own ports, and restarts Jellyfin once.</div>
                             <div id="jellyfinError" class="jpk-error hidden"></div>
                             <div id="jellyfinExposed" class="jpk-warn hidden"></div>
                             <div class="ddns-button-row">

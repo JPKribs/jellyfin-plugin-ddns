@@ -33,7 +33,7 @@ public sealed class Hosting1984Provider : DNSProviderBase
     public override string Label => "1984 Hosting";
 
     /// <inheritdoc />
-    public override string Hint => "Password is your 1984 API key. Hostname is the domain. Login and Zone are unused.";
+    public override string Hint => "API key is the FreeDNS API key in your 1984 Hosting account.";
 
     /// <inheritdoc />
     public override ProviderFields Fields => new()

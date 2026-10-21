@@ -34,7 +34,7 @@ public sealed class NjallaProvider : DNSProviderBase
     public override string Label => "Njalla";
 
     /// <inheritdoc />
-    public override string Hint => "Hostname is the host. Password is your Njalla dynamic DNS key.";
+    public override string Hint => "DDNS key is the dynamic DNS key Njalla shows for the record.";
 
     /// <inheritdoc />
     public override ProviderFields Fields => new()

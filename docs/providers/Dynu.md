@@ -1,10 +1,11 @@
 # Dynu
 
-Set the record's **Provider** to **Dynu**, then fill these fields.
+On the **Domains** tab, set **Provider** to **Dynu**, then fill in:
 
 - **Hostname**: the fully qualified host.
-- **Login**: your Dynu username.
+- **Username**: your Dynu username.
 - **Password**: your Dynu password, or the IP Update Password.
-- **Zone**: the apex domain (optional). When set, the hostname splits into zone and subdomain.
+- **Custom domain**: optional. The apex domain of a custom domain. When set, the hostname splits into the domain and the subdomain.
+- **Server override**: leave blank to use Dynu's own server.
 
 _Ported from ddclient's `nic_dynu_update`._

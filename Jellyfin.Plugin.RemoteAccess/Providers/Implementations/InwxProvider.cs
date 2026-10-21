@@ -49,7 +49,7 @@ public sealed class InwxProvider : DNSProviderBase
     public override string Label => "INWX";
 
     /// <inheritdoc />
-    public override string Hint => "Login and Password are your INWX DynDNS account. The host is derived from the account.";
+    public override string Hint => "Username and Password are your INWX DynDNS account. INWX works out the host from the account.";
 
     /// <inheritdoc />
     public override ProviderFields Fields => new()

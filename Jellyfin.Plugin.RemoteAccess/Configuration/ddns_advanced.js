@@ -207,7 +207,7 @@ export default function (view) {
     }
 
     function clearHistory() {
-        confirmDialog('Everything the Remote Access page recorded is deleted: who connected, failed sign-ins, blocked and seen addresses. The block list itself is not changed. This cannot be undone.', { title: 'Clear History', confirmText: 'Clear', destructive: true }).then(function (ok) {
+        confirmDialog('Every recorded visit, sign-in and refusal is deleted, and the block list is kept. This cannot be undone.', { title: 'Clear History', confirmText: 'Clear', destructive: true }).then(function (ok) {
             if (!ok) return;
             Shared.apiRequest('People/History', 'DELETE').then(function () {
                 Shared.setStatus('historyStatus', 'History cleared.', false);
@@ -244,7 +244,7 @@ export default function (view) {
         var current = read();
         var effective = function (v) { return v == null ? !!(defaults && defaults.JellyfinLoopbackOnly) : v; };
         if (effective(current.JellyfinLoopbackOnly) && !effective(loaded.JellyfinLoopbackOnly)) {
-            confirmDialog('Jellyfin will only answer through the proxy. Everyone, at home too, then opens it by your Remote Access address, which must reach this server from your network. Apps and casting that use the server\'s own address stop working until they are changed. Disabling the plugin while this is on cuts everyone off, so use Undo first. If you lose access, create the DISABLE file described in the documentation, or put back network.before-remote-access.xml from Jellyfin\'s config folder.', { title: 'Only Through the Proxy', confirmText: 'Turn On' }).then(function (ok) {
+            confirmDialog('Everyone, at home too, will reach Jellyfin only through your Remote Access address, so apps and casting that use the server\'s own address stop working. Use Undo before disabling the plugin, and see Recovery in the documentation if you lose access.', { title: 'Only Through the Proxy', confirmText: 'Turn On' }).then(function (ok) {
                 if (ok) doSave();
             });
             return;
@@ -291,7 +291,7 @@ export default function (view) {
     var KEPT_ON_RESET = ['TrustedNetworks', 'BlockedAddresses', 'CountryMode', 'Countries'];
 
     function reset() {
-        confirmDialog('Every limit and security setting goes back to its default. Trusted networks, the block list, country rules and history settings are kept. Nothing changes until you save.', { title: 'Reset to Defaults', confirmText: 'Reset' }).then(function (ok) {
+        confirmDialog('Every limit and security setting goes back to its default, keeping trusted networks, the block list, country rules and history. Nothing changes until you save.', { title: 'Reset to Defaults', confirmText: 'Reset' }).then(function (ok) {
             if (!ok) return;
             var current = read();
             var kept = {};

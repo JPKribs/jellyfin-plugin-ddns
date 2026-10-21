@@ -1,12 +1,14 @@
-# DynDNS v1 (legacy)
+# DynDNS v1
 
-Set the record's **Provider** to **DynDNS v1**, then fill these fields.
+On the **Domains** tab, set **Provider** to **DynDNS v1**, then fill in:
 
 - **Hostname**: the host to update.
-- **Login**: your account username at the DynDNS v1 compatible service.
+- **Username**: your account username at the DynDNS v1 compatible service.
 - **Password**: your account password.
-- **Server**: the update endpoint host. Defaults to members.dyndns.org. Set it to your provider's update host.
+- **Server override**: the update host. Left blank, members.dyndns.org is used. Set it to your service's update host.
 
-This protocol carries a single IPv4 address, so the IPv6 (AAAA) toggle is hidden for it.
+DynDNS v1 is a legacy protocol.
+
+This protocol carries a single IPv4 address, so the **Update IPv6** toggle is hidden for it.
 
 _Ported from ddclient's `nic_dyndns1_update`._

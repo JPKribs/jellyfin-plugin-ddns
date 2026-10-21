@@ -1,9 +1,10 @@
 # DonDominio
 
-Set the record's **Provider** to **DonDominio**, then fill these fields.
+On the **Domains** tab, set **Provider** to **DonDominio**, then fill in:
 
-- **Hostname**: the host.
-- **Login**: your DonDominio API user.
-- **Password**: your DonDominio API key. Enable the API in your DonDominio account.
+- **Host**: the host.
+- **User**: your DonDominio API user.
+- **API key**: your DonDominio API key. Turn on the API in your DonDominio account first.
+- **Server override**: leave blank to use DonDominio's own server.
 
 _Ported from ddclient's `nic_dondominio_update`._

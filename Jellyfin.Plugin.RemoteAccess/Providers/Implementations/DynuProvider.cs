@@ -47,7 +47,7 @@ public sealed class DynuProvider : DNSProviderBase
     public override string Label => "Dynu";
 
     /// <inheritdoc />
-    public override string Hint => "Login and Password are your Dynu credentials. Set Zone for a custom domain to split the hostname into zone and alias.";
+    public override string Hint => "Username and Password are your Dynu credentials. Fill in Custom domain only for your own domain.";
 
     /// <inheritdoc />
     public override ProviderFields Fields => new()

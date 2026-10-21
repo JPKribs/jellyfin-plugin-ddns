@@ -23,7 +23,7 @@
                                     <option value="true">On</option>
                                     <option value="false">Off</option>
                                 </select>
-                                <div class="fieldDescription">While Jellyfin trusts the proxy, it listens on this server alone, so nothing reaches it except through the proxy, not even a port left forwarded on your router. Local apps then connect by your address, which must reach this server from home too. Apps that find servers by searching the network, casting devices that use the server's own address, and DLNA stop seeing Jellyfin. Jellyfin restarts when this changes. <span data-default="JellyfinLoopbackOnly" data-unit="onoff"></span></div>
+                                <div class="fieldDescription">Jellyfin only listens on this server while it trusts the proxy, so apps, casting and DLNA at home must use your address too. <span data-default="JellyfinLoopbackOnly" data-unit="onoff"></span></div>
                             </div>
                             <div class="selectContainer">
                                 <label class="selectLabel" for="advHstsEnabled">Always use HTTPS</label>
@@ -36,7 +36,7 @@
                             <div class="inputContainer">
                                 <label for="advHstsMaxAgeDays">HTTPS memory</label>
                                 <input is="emby-input" type="number" id="advHstsMaxAgeDays" data-adv="HstsMaxAgeDays" data-kind="int" min="0" step="1" />
-                                <div class="fieldDescription">How long browsers remember, in days. <span data-default="HstsMaxAgeDays" data-unit="days"></span></div>
+                                <div class="fieldDescription">How long browsers keep using HTTPS after a visit, in days. <span data-default="HstsMaxAgeDays" data-unit="days"></span></div>
                             </div>
                             <div class="selectContainer">
                                 <label class="selectLabel" for="advSameOriginFramesOnly">Block embedding</label>
@@ -49,7 +49,7 @@
                             <div class="inputContainer">
                                 <label for="advTrustedNetworks">Trusted networks</label>
                                 <textarea id="advTrustedNetworks" class="emby-input" autocomplete="off" rows="3" data-adv="TrustedNetworks" data-kind="lines" placeholder="100.64.0.0/10"></textarea>
-                                <div class="fieldDescription">Treated like your network, such as a VPN. One address or range per line.</div>
+                                <div class="fieldDescription">Addresses or ranges treated like your own network, such as a VPN, one per line.</div>
                             </div>
                         </div>
                     </div>
@@ -60,16 +60,16 @@
                             <span class="jpk-collapsible-icon">&#9660;</span>
                         </button>
                         <div id="advCountries" class="jpk-collapsible-content collapsed">
-                            <div class="fieldDescription">Internet only. Your network and trusted networks are never blocked.</div>
+                            <div class="fieldDescription">These only apply to the internet, never to your own or trusted networks.</div>
                             <div class="inputContainer">
                                 <label for="advBlockedAddresses">Blocked addresses</label>
                                 <textarea id="advBlockedAddresses" class="emby-input" autocomplete="off" rows="3" data-adv="BlockedAddresses" data-kind="lines" placeholder="203.0.113.7"></textarea>
-                                <div class="fieldDescription">Always refused. One address or range per line.</div>
+                                <div class="fieldDescription">Addresses or ranges always refused, one per line.</div>
                             </div>
                             <div class="inputContainer">
                                 <label for="advBanFailures">Failed sign-ins before a ban</label>
                                 <input is="emby-input" type="number" id="advBanFailures" data-adv="BanFailures" data-kind="int" min="0" step="1" max="1000" />
-                                <div class="fieldDescription">0 turns bans off. <span data-default="BanFailures" data-unit="count-off"></span></div>
+                                <div class="fieldDescription">Failed sign-ins within the window that ban an address, with 0 for no bans. <span data-default="BanFailures" data-unit="count-off"></span></div>
                             </div>
                             <div class="inputContainer">
                                 <label for="advBanWindowMinutes">Ban window</label>
@@ -79,7 +79,7 @@
                             <div class="inputContainer">
                                 <label for="advBanMinutes">Ban length</label>
                                 <input is="emby-input" type="number" id="advBanMinutes" data-adv="BanMinutes" data-kind="int" min="0" step="1" max="525600" />
-                                <div class="fieldDescription">In minutes. 0 bans until lifted. <span data-default="BanMinutes" data-unit="minutes"></span></div>
+                                <div class="fieldDescription">How long a ban lasts in minutes, with 0 until you lift it. <span data-default="BanMinutes" data-unit="minutes"></span></div>
                             </div>
                             <div class="selectContainer">
                                 <label class="selectLabel" for="advCountryMode">Country rule</label>
@@ -101,7 +101,7 @@
                                     <option value="true">Block</option>
                                     <option value="false">Allow</option>
                                 </select>
-                                <div class="fieldDescription">Addresses the location database does not know. <span data-default="BlockUnknownCountries" data-unit="allowblock"></span></div>
+                                <div class="fieldDescription">What to do with addresses the location database has no country for. <span data-default="BlockUnknownCountries" data-unit="allowblock"></span></div>
                             </div>
                             <div class="selectContainer">
                                 <label class="selectLabel" for="advBlockWithoutDatabase">Without the location database</label>
@@ -109,7 +109,7 @@
                                     <option value="true">Block</option>
                                     <option value="false">Allow</option>
                                 </select>
-                                <div class="fieldDescription">While it is missing or downloading. <span data-default="BlockWithoutDatabase" data-unit="allowblock"></span></div>
+                                <div class="fieldDescription">What to do while the location database is missing or downloading. <span data-default="BlockWithoutDatabase" data-unit="allowblock"></span></div>
                             </div>
                             <div id="countryStatus" class="jpk-info"></div>
                         </div>
@@ -127,12 +127,12 @@
                                     <option value="true">On</option>
                                     <option value="false">Off</option>
                                 </select>
-                                <div class="fieldDescription">Records who connects, for the Dashboard.</div>
+                                <div class="fieldDescription">Records who connects and what they did, for the Dashboard.</div>
                             </div>
                             <div class="inputContainer">
                                 <label for="historyDays">History period</label>
                                 <input is="emby-input" type="number" id="historyDays" min="1" max="3650" step="1" />
-                                <div class="fieldDescription">In days.</div>
+                                <div class="fieldDescription">How long history is kept, in days.</div>
                             </div>
                             <div class="selectContainer">
                                 <label class="selectLabel" for="locationDetail">Location</label>
@@ -168,7 +168,7 @@
                                     <option value="true">On</option>
                                     <option value="false">Off</option>
                                 </select>
-                                <div class="fieldDescription">Faster page loads in browsers. <span data-default="EnableHttp2" data-unit="onoff"></span></div>
+                                <div class="fieldDescription">Lets browsers load pages faster over one connection. <span data-default="EnableHttp2" data-unit="onoff"></span></div>
                             </div>
                             <div class="selectContainer">
                                 <label class="selectLabel" for="advCompressJellyfin">Compression</label>
@@ -176,27 +176,27 @@
                                     <option value="true">On</option>
                                     <option value="false">Off</option>
                                 </select>
-                                <div class="fieldDescription">Shrinks library lists and the web client. Media is never compressed. <span data-default="CompressJellyfin" data-unit="onoff"></span></div>
+                                <div class="fieldDescription">Shrinks library lists and the web client, never media. <span data-default="CompressJellyfin" data-unit="onoff"></span></div>
                             </div>
                             <div class="inputContainer">
                                 <label for="advMaxRequestBodyMbWan">Largest upload from the internet</label>
                                 <input is="emby-input" type="number" id="advMaxRequestBodyMbWan" data-adv="MaxRequestBodyMbWan" data-kind="int" min="0" step="1" />
-                                <div class="fieldDescription">In MB. 0 is unlimited. <span data-default="MaxRequestBodyMbWan" data-unit="mb"></span></div>
+                                <div class="fieldDescription">Largest upload accepted from the internet, in MB, with 0 for unlimited. <span data-default="MaxRequestBodyMbWan" data-unit="mb"></span></div>
                             </div>
                             <div class="inputContainer">
                                 <label for="advMaxRequestBodyMbLan">Largest upload from your network</label>
                                 <input is="emby-input" type="number" id="advMaxRequestBodyMbLan" data-adv="MaxRequestBodyMbLan" data-kind="int" min="0" step="1" />
-                                <div class="fieldDescription">In MB. 0 is unlimited. <span data-default="MaxRequestBodyMbLan" data-unit="mb"></span></div>
+                                <div class="fieldDescription">Largest upload accepted from your network, in MB, with 0 for unlimited. <span data-default="MaxRequestBodyMbLan" data-unit="mb"></span></div>
                             </div>
                             <div class="inputContainer">
                                 <label for="advMaxConnectionsPerIp">Connections per internet address</label>
                                 <input is="emby-input" type="number" id="advMaxConnectionsPerIp" data-adv="MaxConnectionsPerIp" data-kind="int" min="0" step="1" />
-                                <div class="fieldDescription">0 is unlimited. <span data-default="MaxConnectionsPerIp" data-unit="count"></span></div>
+                                <div class="fieldDescription">Connections one internet address may hold open, with 0 for unlimited. <span data-default="MaxConnectionsPerIp" data-unit="count"></span></div>
                             </div>
                             <div class="inputContainer">
                                 <label for="advMaxConnections">Total connections</label>
                                 <input is="emby-input" type="number" id="advMaxConnections" data-adv="MaxConnections" data-kind="int" min="0" step="1" />
-                                <div class="fieldDescription">0 is unlimited. <span data-default="MaxConnections" data-unit="count"></span></div>
+                                <div class="fieldDescription">Connections the proxy holds open in all, with 0 for unlimited. <span data-default="MaxConnections" data-unit="count"></span></div>
                             </div>
                         </div>
                     </div>
@@ -210,27 +210,27 @@
                             <div class="inputContainer">
                                 <label for="advKeepAliveSeconds">Idle connections</label>
                                 <input is="emby-input" type="number" id="advKeepAliveSeconds" data-adv="KeepAliveSeconds" data-kind="int" min="0" step="1" />
-                                <div class="fieldDescription">In seconds. <span data-default="KeepAliveSeconds" data-unit="seconds"></span></div>
+                                <div class="fieldDescription">How long an unused connection stays open, in seconds. <span data-default="KeepAliveSeconds" data-unit="seconds"></span></div>
                             </div>
                             <div class="inputContainer">
                                 <label for="advRequestHeadersTimeoutSeconds">Request headers</label>
                                 <input is="emby-input" type="number" id="advRequestHeadersTimeoutSeconds" data-adv="RequestHeadersTimeoutSeconds" data-kind="int" min="0" step="1" />
-                                <div class="fieldDescription">In seconds. <span data-default="RequestHeadersTimeoutSeconds" data-unit="seconds"></span></div>
+                                <div class="fieldDescription">How long a visitor may take to send a request's headers, in seconds. <span data-default="RequestHeadersTimeoutSeconds" data-unit="seconds"></span></div>
                             </div>
                             <div class="inputContainer">
                                 <label for="advMaxRequestHeadersKb">Header size</label>
                                 <input is="emby-input" type="number" id="advMaxRequestHeadersKb" data-adv="MaxRequestHeadersKb" data-kind="int" min="0" step="1" />
-                                <div class="fieldDescription">In KB. <span data-default="MaxRequestHeadersKb" data-unit="kb"></span></div>
+                                <div class="fieldDescription">Largest set of request headers accepted, in KB. <span data-default="MaxRequestHeadersKb" data-unit="kb"></span></div>
                             </div>
                             <div class="inputContainer">
                                 <label for="advMinResponseBytesPerSecond">Minimum read rate</label>
                                 <input is="emby-input" type="number" id="advMinResponseBytesPerSecond" data-adv="MinResponseBytesPerSecond" data-kind="int" min="0" step="1" />
-                                <div class="fieldDescription">In bytes per second. Media is exempt. 0 is off. <span data-default="MinResponseBytesPerSecond" data-unit="bps"></span></div>
+                                <div class="fieldDescription">The slowest a visitor may read Jellyfin's pages before the connection is cut, in bytes per second, with 0 for off and media exempt. <span data-default="MinResponseBytesPerSecond" data-unit="bps"></span></div>
                             </div>
                             <div class="inputContainer">
                                 <label for="advBackendActivityTimeoutSeconds">Jellyfin response</label>
                                 <input is="emby-input" type="number" id="advBackendActivityTimeoutSeconds" data-adv="BackendActivityTimeoutSeconds" data-kind="int" min="0" step="1" />
-                                <div class="fieldDescription">In seconds. <span data-default="BackendActivityTimeoutSeconds" data-unit="seconds"></span></div>
+                                <div class="fieldDescription">How long Jellyfin may go silent before a request is dropped, in seconds. <span data-default="BackendActivityTimeoutSeconds" data-unit="seconds"></span></div>
                             </div>
                         </div>
                     </div>

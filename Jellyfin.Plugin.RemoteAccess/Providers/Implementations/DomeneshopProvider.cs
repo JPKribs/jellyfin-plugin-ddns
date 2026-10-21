@@ -32,7 +32,7 @@ public sealed class DomeneshopProvider : DNSProviderBase
     public override string Label => "Domeneshop";
 
     /// <inheritdoc />
-    public override string Hint => "Login and Password are your Domeneshop API token and secret. Hostname is the host.";
+    public override string Hint => "API token and API secret come from the Domeneshop API admin.";
 
     /// <inheritdoc />
     public override ProviderFields Fields => new()

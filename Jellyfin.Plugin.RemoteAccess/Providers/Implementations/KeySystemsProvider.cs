@@ -34,7 +34,7 @@ public sealed class KeySystemsProvider : DNSProviderBase
     public override string Label => "Key-Systems";
 
     /// <inheritdoc />
-    public override string Hint => "Hostname is the host. Password is your Key Systems password.";
+    public override string Hint => "Password is the record's dynamic DNS password from the Key-Systems panel.";
 
     /// <inheritdoc />
     public override ProviderFields Fields => new()

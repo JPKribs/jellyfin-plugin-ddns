@@ -35,7 +35,7 @@ public sealed class CloudNsProvider : DNSProviderBase
     public override string Label => "ClouDNS";
 
     /// <inheritdoc />
-    public override string Hint => "Password is the full ClouDNS DynURL, which is the secret update URL. Hostname, Login and Zone are not used.";
+    public override string Hint => "Update URL is the full ClouDNS Dynamic URL for the record. Keep it secret, since anyone with it can change the record.";
 
     /// <inheritdoc />
     public override ProviderFields Fields => new()

@@ -1,9 +1,10 @@
 # easyDNS
 
-Set the record's **Provider** to **easyDNS**, then fill these fields.
+On the **Domains** tab, set **Provider** to **easyDNS**, then fill in:
 
 - **Hostname**: the fully qualified host.
-- **Login**: your easyDNS username or token.
-- **Password**: your easyDNS password or token.
+- **Username**: your easyDNS username or token.
+- **API token**: your easyDNS password or token.
+- **Server override**: leave blank to use easyDNS's own server.
 
 _Ported from ddclient's `nic_easydns_update`._

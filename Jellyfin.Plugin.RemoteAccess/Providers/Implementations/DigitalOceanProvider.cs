@@ -36,7 +36,7 @@ public sealed class DigitalOceanProvider : DNSProviderBase
     public override string Label => "DigitalOcean";
 
     /// <inheritdoc />
-    public override string Hint => "Password is a DigitalOcean API token. Zone is the apex domain. Hostname is the record name.";
+    public override string Hint => "API token is a DigitalOcean API token with read and write scope. Apex domain is the domain, such as example.com.";
 
     /// <inheritdoc />
     public override ProviderFields Fields => new()

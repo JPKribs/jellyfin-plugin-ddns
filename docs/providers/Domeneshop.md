@@ -1,9 +1,10 @@
 # Domeneshop
 
-Set the record's **Provider** to **Domeneshop**, then fill these fields.
+On the **Domains** tab, set **Provider** to **Domeneshop**, then fill in:
 
-- **Hostname**: the host, such as home.example.com.
-- **Login**: your Domeneshop API token.
-- **Password**: your Domeneshop API secret. Create both in the Domeneshop API admin.
+- **Host**: the host, such as home.example.com.
+- **API token**: your Domeneshop API token.
+- **API secret**: your Domeneshop API secret. Create the token and secret in the Domeneshop API admin.
+- **Server override**: leave blank to use Domeneshop's own server.
 
 _Ported from ddclient's `nic_domeneshop_update`._

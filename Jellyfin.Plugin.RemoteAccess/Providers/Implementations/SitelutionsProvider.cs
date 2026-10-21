@@ -34,7 +34,7 @@ public sealed class SitelutionsProvider : DNSProviderBase
     public override string Label => "Sitelutions";
 
     /// <inheritdoc />
-    public override string Hint => "Hostname is the numeric record ID. Login is the account email. Password is the account password.";
+    public override string Hint => "Record ID is the numeric ID from your Sitelutions Recordbook. Account email and Account password are your sign-in.";
 
     /// <inheritdoc />
     public override ProviderFields Fields => new()

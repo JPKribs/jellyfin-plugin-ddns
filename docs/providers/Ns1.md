@@ -1,11 +1,11 @@
 # NS1
 
-Set the record's **Provider** to **NS1**, then fill these fields.
+On the **Domains** tab, set **Provider** to **NS1**, then fill in:
 
-- **Hostname**: the record name.
-- **Login**: your NS1 API key, sent as the X-NSONE-Key header. Create it under Account Settings then API Keys.
-- **Zone**: the zone name. Inferred from the hostname when left blank; set it explicitly for multi-label subdomains or multi-label TLDs like .co.uk.
-
-A record that does not exist yet is created with the resolved TTL (300 seconds when the TTL is left at `1`).
+- **Record name**: the record name.
+- **API key**: your NS1 API key. Create it under Account Settings, then API Keys.
+- **Zone**: optional. The zone name. Left blank, it is taken from the record name. Fill it in for multi-label subdomains or multi-label TLDs like .co.uk.
+- **TTL**: optional, in seconds. A record that does not exist yet is created with this TTL. `1`, the default, uses 300 seconds.
+- **Server override**: leave blank to use NS1's own server.
 
 _Ported from ddclient's `nic_ns1_update`._

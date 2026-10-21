@@ -41,7 +41,7 @@ public sealed class HetznerProvider : DNSProviderBase
     public override string Label => "Hetzner DNS";
 
     /// <inheritdoc />
-    public override string Hint => "Password is a Hetzner API token. Zone is the DNS zone.";
+    public override string Hint => "API token is a Hetzner DNS API token. DNS zone is the domain, such as example.com.";
 
     /// <inheritdoc />
     public override ProviderFields Fields => new()

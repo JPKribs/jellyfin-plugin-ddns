@@ -31,7 +31,7 @@ public sealed class ChangeIpProvider : DNSProviderBase
     public override string Label => "ChangeIP";
 
     /// <inheritdoc />
-    public override string Hint => "Login and Password are your ChangeIP account credentials.";
+    public override string Hint => "Username and Password are your ChangeIP account credentials.";
 
     /// <inheritdoc />
     public override ProviderFields Fields => new()

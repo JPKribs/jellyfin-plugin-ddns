@@ -46,7 +46,7 @@ public sealed class ZoneEdit1Provider : DNSProviderBase
     public override string Label => "ZoneEdit";
 
     /// <inheritdoc />
-    public override string Hint => "Login and Password are your ZoneEdit username and dynamic DNS token. Zone is optional.";
+    public override string Hint => "Username is your ZoneEdit username. DDNS token is your ZoneEdit dynamic DNS token. Zone is optional.";
 
     /// <inheritdoc />
     public override ProviderFields Fields => new()

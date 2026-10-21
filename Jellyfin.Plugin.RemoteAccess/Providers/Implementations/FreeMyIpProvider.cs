@@ -31,7 +31,7 @@ public sealed class FreeMyIpProvider : DNSProviderBase
     public override string Label => "freemyip.com";
 
     /// <inheritdoc />
-    public override string Hint => "Hostname is your domain. Password is the freemyip token.";
+    public override string Hint => "Domain is your freemyip domain. Token is from the link shown when you claim it.";
 
     /// <inheritdoc />
     public override ProviderFields Fields => new()

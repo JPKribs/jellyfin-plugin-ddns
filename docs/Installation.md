@@ -1,27 +1,28 @@
 # Installation
 
-## Add the Plugin Repository
+The plugin needs **Jellyfin 12.2**. Servers on Jellyfin 12.0 or 12.1 are offered an earlier version without
+Remote Access.
 
-1. Open Jellyfin and go to **Dashboard → Plugins → Repositories**.
-2. Click **Add Repository**.
-3. Enter this repository URL and click **Save**:
+## Add the repository
 
-```
-https://raw.githubusercontent.com/JPKribs/jellyfin-plugin-remoteaccess/master/manifest.json
-```
+1. In Jellyfin, open **Dashboard → Plugins → Repositories**.
+2. Select **Add Repository** and enter this URL:
 
-## Install the Plugin
+    ```
+    https://raw.githubusercontent.com/JPKribs/jellyfin-plugin-remoteaccess/master/manifest.json
+    ```
 
-1. Open the **Catalog** tab in the Plugins section.
-2. Find **Dynamic DNS** and click **Install**.
-3. Wait for the installation to complete.
+3. Select **Save**.
 
-## Restart Jellyfin
+## Install the plugin
 
-Restart your Jellyfin server completely and wait for it to fully start up.
+1. Open the **Catalog** tab under **Plugins**.
+2. Find **Dynamic DNS** and select **Install**. The catalog still lists it under its original name.
+3. When it says to, restart Jellyfin, and wait until it is fully back up.
 
-## Check It Works
+## Find it
 
-After the restart, open the Dynamic DNS page from the dashboard, add a record, choose its provider, and use `Update Now` to confirm it reaches your provider.
+After the restart, the plugin is in the dashboard menu under **Plugins → Remote Access**. It opens on the
+**Dashboard** tab. The other tabs are **Domains**, **Address**, **Proxy**, **Services** and **Advanced**.
 
 Next: [Adding Records](Records.md).

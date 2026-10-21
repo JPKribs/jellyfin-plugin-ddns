@@ -1,9 +1,11 @@
 # Sitelutions
 
-Set the record's **Provider** to **Sitelutions**, then fill these fields.
+On the **Domains** tab, set **Provider** to **Sitelutions**, then fill in:
 
-- **Hostname**: the numeric record id from your Sitelutions Recordbook. This field is the record id, not a host name.
-- **Login**: your Sitelutions account email.
-- **Password**: your Sitelutions password.
+- **Record ID**: the numeric record ID from your Sitelutions Recordbook. It is a number, not a host name.
+- **Account email**: your Sitelutions account email.
+- **Account password**: your Sitelutions password.
+- **TTL**: optional, in seconds. `1` uses the provider's default.
+- **Server override**: leave blank to use Sitelutions's own server.
 
 _Ported from ddclient's `nic_sitelutions_update`._

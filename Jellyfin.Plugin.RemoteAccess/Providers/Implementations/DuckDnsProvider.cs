@@ -32,7 +32,7 @@ public sealed class DuckDnsProvider : DNSProviderBase, IAcmeDnsProvider
     public override string Label => "Duck DNS";
 
     /// <inheritdoc />
-    public override string Hint => "Hostname is your DuckDNS labels. Password is your account token. Login and Zone are unused.";
+    public override string Hint => "Labels are your Duck DNS subdomains, such as myhost. Token is shown at the top of duckdns.org after you sign in.";
 
     /// <inheritdoc />
     public override ProviderFields Fields => new()

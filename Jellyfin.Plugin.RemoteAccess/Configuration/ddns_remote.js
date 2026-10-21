@@ -24,7 +24,7 @@ export default function (view) {
         None: 'Browsers and apps need a certificate for your address before they connect.',
         PemFiles: 'From certbot, acme.sh and similar tools. Renewals apply on their own.',
         Pkcs12File: 'A .pfx or .p12 file. A renewed file applies on its own.',
-        SelfSigned: 'Made on this server, with no outside service. Devices trust it once its root certificate is installed on them. TVs cannot install one.'
+        SelfSigned: 'Made on this server, and trusted by each device once its root is installed, which TVs cannot do.'
     };
 
     function getSettings() { return Shared.apiRequest('Proxy/Settings', 'GET'); }
@@ -134,7 +134,7 @@ export default function (view) {
         var text = !automatic ? ''
             : acme.Method === 'Dns'
                 ? 'Checked through ' + (acme.DnsProviders || []).join(' and ') + ' DNS, so port 80 is not needed and wildcards are covered.'
-                : 'Checked over port 80. Wildcards are left off. A Cloudflare or Duck DNS record for the address avoids both.';
+                : 'Checked over port 80, which leaves wildcards off. A Cloudflare or Duck DNS record for the address avoids both.';
         show('certMethod', text);
     }
 
@@ -166,7 +166,7 @@ export default function (view) {
         show('powerError', st.Enabled && !st.Running ? st.Error : '');
         show('folderProblem', st.FolderProblem);
         show('everyoneLocal', st.Enabled && st.EveryoneLooksLocal
-            ? 'Every visitor in the last hour came from one local address, none from the internet. If people reach this server from outside, something in front of the proxy, such as rootless Docker, a tunnel or another proxy, is hiding their addresses. Bans, the block list and country rules cannot apply to them. Pass the real addresses through to the proxy.'
+            ? 'Every visitor in the last hour came from one local address, so something in front of the proxy, such as rootless Docker or a tunnel, may be hiding their real addresses. Bans, the block list and country rules cannot work until those addresses reach the proxy.'
             : '');
         show('countryNote', st.Enabled && st.CountryRule ? st.CountryRule + ' Change it under Advanced → Blocking.' : '');
 

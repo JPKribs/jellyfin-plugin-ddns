@@ -52,7 +52,7 @@ public sealed class EasyDnsProvider : DNSProviderBase
     public override string Label => "easyDNS";
 
     /// <inheritdoc />
-    public override string Hint => "Login and Password are your easyDNS API credentials.";
+    public override string Hint => "Username and API token are your easyDNS API credentials.";
 
     /// <inheritdoc />
     public override ProviderFields Fields => new()

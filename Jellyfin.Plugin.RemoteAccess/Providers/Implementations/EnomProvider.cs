@@ -33,7 +33,7 @@ public sealed class EnomProvider : DNSProviderBase
     public override string Label => "eNom";
 
     /// <inheritdoc />
-    public override string Hint => "Login is the base domain. Password is the domain password. Hostname is the host.";
+    public override string Hint => "Base domain is your domain, such as example.com. Domain password is the domain's Dynamic DNS password.";
 
     /// <inheritdoc />
     public override ProviderFields Fields => new()

@@ -45,7 +45,7 @@ public sealed class NoIpProvider : DNSProviderBase
     public override string Label => "No-IP";
 
     /// <inheritdoc />
-    public override string Hint => "Login and Password are your No-IP credentials. A DDNS key is recommended over your account password.";
+    public override string Hint => "Username is your No-IP username or email. A DDNS key is safer than your account password.";
 
     /// <inheritdoc />
     public override ProviderFields Fields => new()

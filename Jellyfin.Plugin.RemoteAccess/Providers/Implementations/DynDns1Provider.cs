@@ -33,7 +33,7 @@ public sealed class DynDns1Provider : DNSProviderBase
     public override string Label => "DynDNS v1";
 
     /// <inheritdoc />
-    public override string Hint => "Legacy DynDNS v1. Login and Password are your credentials. This protocol carries IPv4 only.";
+    public override string Hint => "Legacy DynDNS v1. Username and Password are your account credentials. This protocol carries IPv4 only.";
 
     /// <inheritdoc />
     public override ProviderFields Fields => new()

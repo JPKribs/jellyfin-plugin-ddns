@@ -1,11 +1,13 @@
 # Hetzner DNS
 
-Set the record's **Provider** to **Hetzner DNS**, then fill these fields.
+On the **Domains** tab, set **Provider** to **Hetzner DNS**, then fill in:
 
-- **Hostname**: the record name.
-- **Password**: a Hetzner DNS API token (DNS Console then API Tokens then New token).
-- **Zone**: the domain, such as example.com.
+- **Record name**: the record name.
+- **API token**: a Hetzner DNS API token. Create one in the DNS Console under API Tokens, then New token.
+- **DNS zone**: the domain, such as example.com.
+- **TTL**: optional, in seconds. `1`, the default, leaves the TTL to the zone default when a record set is created.
+- **Server override**: leave blank to use Hetzner DNS's own server.
 
-A TTL of `1` (the default) leaves the TTL to the zone default when a record set is created. Hetzner applies changes asynchronously; an update it has accepted but not yet finished applying is reported as success.
+Hetzner applies changes in the background. An update it has accepted but not finished applying is reported as success.
 
 _Ported from ddclient's `nic_hetzner_update`._

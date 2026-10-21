@@ -1,8 +1,9 @@
 # freemyip.com
 
-Set the record's **Provider** to **freemyip.com**, then fill these fields.
+On the **Domains** tab, set **Provider** to **freemyip.com**, then fill in:
 
-- **Hostname**: your freemyip domain.
-- **Password**: the token from the link shown when you claim the domain at freemyip.com.
+- **Domain**: your freemyip domain.
+- **Token**: the token from the link shown when you claim the domain at freemyip.com.
+- **Server override**: leave blank to use freemyip.com's own server.
 
 _Ported from ddclient's `nic_freemyip_update`._

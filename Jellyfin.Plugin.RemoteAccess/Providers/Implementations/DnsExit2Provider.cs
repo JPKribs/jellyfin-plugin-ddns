@@ -52,7 +52,7 @@ public sealed class DnsExit2Provider : DNSProviderBase
     public override string Label => "DNSExit";
 
     /// <inheritdoc />
-    public override string Hint => "Password is your DNSExit API key. Zone is the domain and defaults to the hostname. Hostname is the record.";
+    public override string Hint => "API key is your DNSExit API key. Domain is the domain, such as example.com. Left blank, the record name is used.";
 
     /// <inheritdoc />
     public override ProviderFields Fields => new()

@@ -33,7 +33,7 @@ public sealed class RegfishDeProvider : DNSProviderBase
     public override string Label => "regfish.de";
 
     /// <inheritdoc />
-    public override string Hint => "Password is your regfish update token.";
+    public override string Hint => "Update token is the regfish DDNS token for the record.";
 
     /// <inheritdoc />
     public override ProviderFields Fields => new()

@@ -1,4 +1,4 @@
-# Yandex PDD (legacy)
+# Yandex PDD
 
 !!! warning "Retired API"
     Yandex has retired the PDD (Pochta dlya domena) API this provider talks to. Its documentation now
@@ -6,10 +6,11 @@
     name, so updates are expected to fail. The provider is kept so existing records still load. Move the
     domain's DNS to another supported provider for new setups.
 
-Set the record's **Provider** to **Yandex PDD**, then fill these fields.
+On the **Domains** tab, set **Provider** to **Yandex PDD**, then fill in:
 
-- **Hostname**: the fully qualified host to match.
-- **Login**: your Yandex domain. It is used to list the domain's records.
-- **Password**: your Yandex PDD API token, sent as the PddToken header.
+- **FQDN**: the fully qualified host to match.
+- **Domain**: your Yandex domain. It is used to list the domain's records.
+- **PDD token**: your Yandex PDD API token.
+- **Server override**: leave blank to use Yandex PDD's own server.
 
 _Ported from ddclient's `nic_yandex_update`._

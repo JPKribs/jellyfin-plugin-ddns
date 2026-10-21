@@ -35,7 +35,7 @@ public sealed class DirectnicProvider : DNSProviderBase
     public override string Label => "Directnic";
 
     /// <inheritdoc />
-    public override string Hint => "Login is your IPv4 gateway URL and Password is your IPv6 gateway URL. Paste the full per record gateway URLs.";
+    public override string Hint => "Paste the full gateway URLs Directnic gives you for the record. Leave IPv6 gateway URL blank if you only update IPv4.";
 
     /// <inheritdoc />
     public override ProviderFields Fields => new()

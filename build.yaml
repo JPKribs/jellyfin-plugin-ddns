@@ -1,7 +1,7 @@
 ---
 name: "Dynamic DNS"
 guid: "8150dce5-6153-4924-a985-a6927be95baa"
-version: "12.2.3.0"
+version: "12.2.3.1"
 targetAbi: "12.2.0.0"
 framework: "net10.0"
 overview: "Reach your server from anywhere: Dynamic DNS and a secure HTTPS proxy, inside Jellyfin."
@@ -21,19 +21,14 @@ artifacts:
 - "Certes.dll"
 - "BouncyCastle.Cryptography.dll"
 changelog:
-  added:
-  - Remote Access, a secure HTTPS proxy in front of Jellyfin on ports 80 and 443, with Let's Encrypt, your own certificate files, or a self-signed certificate from the plugin's own root that devices install once.
-  - Trust the Proxy, which lets Jellyfin see each visitor's real address while keeping its own ports, and Undo, which puts its settings back. Only through the proxy, an opt-in Advanced setting, makes the proxy the only way in.
-  - Protection for internet visitors, with bans for failed sign-ins on the address and its wider IPv6 networks, a block list, country rules, sign-in limits and connection caps.
-  - Services, so other apps on your network such as a request manager can be reached through the proxy on their own address.
-  - A Dashboard with a world map, bans and a history of who connected, signed in or was turned away. Locations come from DB-IP.
-  - The Proxy tab warns when every visitor looks local, as behind rootless Docker or a tunnel, where bans and country rules cannot work.
   changed:
-  - The project and its repository are now Remote Access, at JPKribs/jellyfin-plugin-remoteaccess. Existing records and settings carry over.
-  - Logging is quieter. A problem that repeats is logged once, with a line when it clears, and a failed DNS update is a warning when DNS still serves the right address.
+  - Every field description on every tab is one short sentence, two at most, with units and defaults kept.
+  - Each provider's note under the Provider list names the fields exactly as the form shows them.
+  - Long confirmations and warnings, such as the one for every visitor looking local, are shorter.
+  - The Advanced tab no longer shows the line about every setting starting on its default.
   fixed:
-  - Blank records are no longer saved, a failed delete puts the record back, and unsaved edits survive switching records.
-  - FreeDNS update links are only followed back to FreeDNS itself.
+  - The Minimum read rate description says what it limits, how slowly a visitor reads pages, not uploads.
+  - The IP detection description no longer says the services are tried in order until one answers, since two must agree.
   developer:
-  - Built for Jellyfin 12.2 (target ABI 12.2.0.0). Servers on Jellyfin 12.0 or 12.1 keep the previous release.
-  - CodeQL runs in this repository and leaves compiler-generated code out of its results.
+  - The documentation is rewritten, with a Beginner's Guide from buying a domain to remote access in one page, a Settings Reference listing every setting with its default, and a page per tab.
+  - Provider pages list only the fields each provider shows, named as on screen.

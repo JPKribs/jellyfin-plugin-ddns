@@ -32,7 +32,7 @@ public sealed class DdnssProvider : DNSProviderBase
     public override string Label => "DDNSS.de";
 
     /// <inheritdoc />
-    public override string Hint => "Hostname is your host. Password is your DDNSS.de key.";
+    public override string Hint => "Host is your DDNSS.de host. Key is your DDNSS.de update key.";
 
     /// <inheritdoc />
     public override ProviderFields Fields => new()

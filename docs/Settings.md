@@ -1,0 +1,151 @@
+# Settings Reference
+
+Every setting on every tab, with its default and range. For what each tab is for, see
+[The Plugin's Pages](Pages.md).
+
+## Domains
+
+One record per DNS name. The fields shown, and their labels, depend on the **Provider**. Each
+[provider page](providers/README.md) lists exactly what it shows.
+
+| Setting | What it does | Default |
+|---|---|---|
+| **Name** | A label for your own reference. | Empty |
+| **Provider** | The DNS company, out of 45. | Cloudflare |
+| **Enabled** | Whether the record is updated. Paused records keep their settings. | On |
+| **Update IPv4** | Keeps the A record current. | On |
+| **Update IPv6** | Keeps the AAAA record current. Hidden for providers that only take IPv4. | On |
+| Name, login, password and zone fields | What the provider needs. Their labels change per provider. | Empty |
+| **Server override** | Sends updates to another server, for providers with compatible services. | The provider's own |
+| **TTL** | How long DNS may cache the record, in seconds, for providers that take one. `1` uses the provider's default. | `1` |
+| **Treat as proxied address** | Compares against the last address sent instead of looking up DNS. For records behind a proxy or CDN. | Off |
+| **Advanced options** | Wildcard, static DNS and mail settings, for the DynDNS family only. | Off |
+
+## Address
+
+| Setting | What it does | Default | Range |
+|---|---|---|---|
+| **IPv4 Detection URLs** | Services that reply with your IPv4 address, one per line. Only `https` is used. | A built-in list | Any number |
+| **IPv6 Detection URLs** | The same, for IPv6. | A built-in list | Any number |
+| **Skip update if internal** | Never publishes a private, loopback or CGNAT address. | On | |
+| **Force update** | Sends the address again after this long, even when DNS matches. | Off | 1 hour to weekly |
+| **Back off after failures** | Failures in a row before a record is paused. | 3 | Off, 3, 5 or 10 |
+| **Back off duration** | How long a paused record waits. | 24 hours | 1 to 48 hours |
+| **Request timeout** | How long each request may take, in seconds. | 15 | 1 to 300 |
+
+How often updates run is set on the **Update Dynamic DNS** scheduled task, every 15 minutes by default. See
+[How Updates Run](HowItWorks.md).
+
+## Proxy
+
+| Setting | What it does | Default |
+|---|---|---|
+| **Enabled** | Starts the proxy on ports 80 and 443. | Off |
+| **Address** | The names people use to reach Jellyfin. Names from Domains records are listed, others go under **Other addresses**. | None |
+| **Source** | Where the certificate comes from: Let's Encrypt, PEM files, a PKCS#12 file, self-signed, or none. | Let's Encrypt |
+| **I accept the Let's Encrypt terms** | Nothing is requested from Let's Encrypt until this is ticked. | Off |
+| **Certificate file**, **Private key file**, **Password** | The files for PEM or PKCS#12. The password is stored encrypted. | Empty |
+| **Trust the Proxy** | Lets Jellyfin see each visitor's real address. Jellyfin restarts once. **Undo** reverses it. | Not set |
+
+See [Remote Access](RemoteAccess.md).
+
+## Services
+
+Each Service is another app behind the proxy. The settings marked **Default** follow the Advanced tab unless set,
+and the page says what that currently is.
+
+| Setting | What it does | Default |
+|---|---|---|
+| **Name** | A label for your own reference. | Empty |
+| **Enabled** | Whether the proxy serves it. | On |
+| **Addresses**, **Other addresses** | The names people use for this app. Each name belongs to one app only. | None |
+| **Target** | Where the app listens on your network, such as `http://192.168.1.20:5055`. | Empty |
+| **Reachable from** | **Anywhere**, or **Your network only**. | Anywhere |
+| **Largest upload from the internet** | In MB, with 0 for unlimited. | Default, 100 MB |
+| **Largest upload from your network** | In MB, with 0 for unlimited. | Default, unlimited |
+| **App timeout** | How long the app may go silent before a request is dropped, in seconds. | Default, 300 |
+| **Minimum read rate** | The slowest a visitor may read the app's pages, in bytes per second. | Off |
+| **Always use HTTPS** | Browsers that have visited once refuse plain HTTP. | Default, on |
+| **HSTS duration** | How long browsers keep using HTTPS, in days, from 1 to 730. | Default, 180 |
+| **Framing** | **Same site only**, or **Any site** may embed the app. | Default, same site only |
+| **Compression** | Shrinks pages and scripts. Off unless the app signs in with headers rather than cookies, since compressed pages can leak secrets. | Off |
+| **Send the original address to the app** | Passes the name the visitor asked for, for apps that need it. | Off |
+| **App certificate** | For an `https://` target: **Verify normally**, **Accept one pinned certificate** by its SHA-256 thumbprint, or **Accept any certificate**. | Verify normally |
+
+## Advanced
+
+### Security
+
+| Setting | What it does | Default |
+|---|---|---|
+| **Only through the proxy** | Jellyfin only listens on this server while it trusts the proxy. See [Only through the proxy](RemoteAccess.md#only-through-the-proxy). | Off |
+| **Always use HTTPS** | Browsers that have visited once refuse plain HTTP, known as HSTS. | On |
+| **HTTPS memory** | How long browsers keep using HTTPS after a visit, in days. | 180 |
+| **Block embedding** | Other websites cannot frame Jellyfin's pages. | On |
+| **Trusted networks** | Addresses or ranges treated like your own network, such as a VPN, one per line. | None |
+
+### Blocking
+
+These only ever apply to the internet, never to your own or trusted networks.
+
+| Setting | What it does | Default | Range |
+|---|---|---|---|
+| **Blocked addresses** | Addresses or ranges always refused, one per line. | None | |
+| **Failed sign-ins before a ban** | Failures within the window that ban an address. 0 turns bans off. | 5 | 0 to 1000 |
+| **Ban window** | The minutes failures are counted over. | 10 | 0 to 1440 |
+| **Ban length** | How long a ban lasts in minutes. 0 bans until you lift it. | 60 | 0 to 525600 |
+| **Country rule** | **Server country only**, **Block these countries**, **Allow only these countries**, or **Off**. | Server country only | |
+| **Countries** | The countries the rule names. | None | |
+| **Unknown addresses** | Allow or block addresses the location database has no country for. | Allow | |
+| **Without the location database** | Allow or block everyone while the database is missing or downloading. | Allow | |
+
+IPv6 bans cover the visitor's whole /64, and widen to the /56 and /48 when failures spread across them. See
+[Protection](RemoteAccess.md#protection).
+
+### History
+
+| Setting | What it does | Default | Range |
+|---|---|---|---|
+| **Recording** | Records who connects and what they did, for the Dashboard. | On | |
+| **History period** | How long history is kept, in days. | 90 | 1 to 3650 |
+| **Location** | **Country**, **Country and city**, which is a 130 MB download, or **Off**. | Country | |
+
+**Refresh Locations** downloads the newest location database now, and **Clear History** deletes everything
+recorded. The database also updates through the **Update Location Database** scheduled task.
+
+### Performance
+
+| Setting | What it does | Default |
+|---|---|---|
+| **HTTP/2** | Lets browsers load pages faster over one connection. | On |
+| **Compression** | Shrinks library lists and the web client, never media. | On |
+| **Largest upload from the internet** | In MB, with 0 for unlimited. | 100 |
+| **Largest upload from your network** | In MB, with 0 for unlimited. | Unlimited |
+| **Connections per internet address** | Connections one internet address may hold open. | Auto: 64, or 32 on low memory |
+| **Total connections** | Connections the proxy holds open in all. | Auto: 2000, or 500 on low memory |
+
+### Timeouts
+
+| Setting | What it does | Default |
+|---|---|---|
+| **Idle connections** | How long an unused connection stays open, in seconds. | Auto: 130, or 60 on low memory |
+| **Request headers** | How long a visitor may take to send a request's headers, in seconds. | 15 |
+| **Header size** | The largest set of request headers accepted, in KB. | 32 |
+| **Minimum read rate** | The slowest a visitor may read Jellyfin's pages, in bytes per second. Media is exempt. 0 is off. | 240 |
+| **Jellyfin response** | How long Jellyfin may go silent before a request is dropped, in seconds. | 300 |
+
+**Auto** settings follow the server's memory. Below 3 GB available to Jellyfin they use the lower value. See
+[Low-memory servers](RemoteAccess.md#low-memory-servers). **Reset to Defaults** puts every limit and security
+setting back, and keeps trusted networks, the block list, country rules and history. **Restart Proxy** restarts
+the listener without restarting Jellyfin.
+
+## Scheduled tasks
+
+Under **Dashboard → Scheduled Tasks**:
+
+| Task | What it does | Runs |
+|---|---|---|
+| **Update Dynamic DNS** | Checks and updates every record. | At startup and every 15 minutes |
+| **Refresh Certificate** | Renews the Let's Encrypt certificate within 30 days of expiry. | Daily at 3:00 |
+| **Request a New Certificate** | Orders a new certificate now, whatever the current one's state. | Only when you run it |
+| **Update Location Database** | Downloads the newest DB-IP database. | Weekly |

@@ -40,7 +40,7 @@ public sealed class GandiProvider : DNSProviderBase
     public override string Label => "Gandi LiveDNS";
 
     /// <inheritdoc />
-    public override string Hint => "Password is a Gandi API key. Or set Login to the word token with a personal access token. Zone is the domain.";
+    public override string Hint => "Set Auth keyword to the word token for a Personal Access Token. Any other value uses an API key. Domain is the domain, such as example.com.";
 
     /// <inheritdoc />
     public override ProviderFields Fields => new()

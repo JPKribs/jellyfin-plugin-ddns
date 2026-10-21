@@ -37,7 +37,7 @@ public sealed class DinahostingProvider : DNSProviderBase
     public override string Label => "Dinahosting";
 
     /// <inheritdoc />
-    public override string Hint => "Login and Password are your Dinahosting credentials. Hostname is host.domain. Zone is optional and names the domain when the hostname has more than two labels.";
+    public override string Hint => "Username and Password are your Dinahosting credentials. Fill in Domain only when the host has more than two labels.";
 
     /// <inheritdoc />
     public override ProviderFields Fields => new()

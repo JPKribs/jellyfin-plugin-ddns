@@ -1,9 +1,12 @@
-# FreeDNS (afraid.org)
+# FreeDNS
 
-Set the record's **Provider** to **FreeDNS**, then fill these fields.
+On the **Domains** tab, set **Provider** to **FreeDNS**, then fill in:
 
 - **Hostname**: the record to update.
-- **Login**: your afraid.org username.
+- **Username**: your afraid.org username.
 - **Password**: your afraid.org password.
+- **Server override**: leave blank to use FreeDNS's own server.
+
+FreeDNS is the service at afraid.org.
 
 _Ported from ddclient's `nic_freedns_update`._

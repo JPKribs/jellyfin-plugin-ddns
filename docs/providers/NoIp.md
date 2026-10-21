@@ -1,9 +1,10 @@
 # No-IP
 
-Set the record's **Provider** to **No-IP**, then fill these fields.
+On the **Domains** tab, set **Provider** to **No-IP**, then fill in:
 
 - **Hostname**: the host to update.
-- **Login**: your No-IP username or email.
-- **Password**: your No-IP password, or a DDNS key.
+- **Username**: your No-IP username or email.
+- **Password or DDNS key**: your No-IP password, or a DDNS key.
+- **Server override**: leave blank to use No-IP's own server.
 
 _Ported from ddclient's `nic_noip_update`._

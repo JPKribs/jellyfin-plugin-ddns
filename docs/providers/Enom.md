@@ -1,9 +1,10 @@
 # eNom
 
-Set the record's **Provider** to **eNom**, then fill these fields.
+On the **Domains** tab, set **Provider** to **eNom**, then fill in:
 
-- **Hostname**: the host relative to the base domain.
-- **Login**: your base domain, such as example.com.
-- **Password**: the domain password (Dynamic DNS password) from eNom.
+- **Host**: the host, relative to the base domain.
+- **Base domain**: your base domain, such as example.com.
+- **Domain password**: the Dynamic DNS domain password from eNom.
+- **Server override**: leave blank to use eNom's own server.
 
 _Ported from ddclient's `nic_enom_update`._

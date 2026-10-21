@@ -1,8 +1,9 @@
 # DDNSS.de
 
-Set the record's **Provider** to **DDNSS.de**, then fill these fields.
+On the **Domains** tab, set **Provider** to **DDNSS.de**, then fill in:
 
-- **Hostname**: your DDNSS.de host.
-- **Password**: the update key from your DDNSS.de account (My Hosts then the update key).
+- **Host**: your DDNSS.de host.
+- **Key**: the update key from your DDNSS.de account, under My Hosts.
+- **Server override**: leave blank to use DDNSS.de's own server.
 
 _Ported from ddclient's `nic_ddnss_update`._

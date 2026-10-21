@@ -43,7 +43,7 @@ public sealed class HeNetProvider : DNSProviderBase
     public override string Label => "Hurricane Electric";
 
     /// <inheritdoc />
-    public override string Hint => "Hostname is the record. Password is the per record DDNS key. Login is unused.";
+    public override string Hint => "Record is the record name. DDNS key is the key dns.he.net generates for that record.";
 
     /// <inheritdoc />
     public override ProviderFields Fields => new()

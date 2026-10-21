@@ -31,7 +31,7 @@ public sealed class DdnsFmProvider : DNSProviderBase
     public override string Label => "DDNS.fm";
 
     /// <inheritdoc />
-    public override string Hint => "Hostname is your domain. Password is your DDNS.fm key.";
+    public override string Hint => "Domain is your DDNS.fm domain. Key is the update key from your DDNS.fm dashboard.";
 
     /// <inheritdoc />
     public override ProviderFields Fields => new()

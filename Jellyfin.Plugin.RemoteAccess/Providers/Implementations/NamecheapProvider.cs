@@ -32,7 +32,7 @@ public sealed class NamecheapProvider : DNSProviderBase
     public override string Label => "Namecheap";
 
     /// <inheritdoc />
-    public override string Hint => "Login is the domain. Password is the domain DDNS password. Hostname is host.domain.";
+    public override string Hint => "Domain is your domain, such as example.com. DDNS password is from Advanced DNS after you turn on Dynamic DNS.";
 
     /// <inheritdoc />
     public override ProviderFields Fields => new()

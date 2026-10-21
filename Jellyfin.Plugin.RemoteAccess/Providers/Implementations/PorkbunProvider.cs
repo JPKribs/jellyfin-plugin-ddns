@@ -39,7 +39,7 @@ public sealed class PorkbunProvider : DNSProviderBase
     public override string Label => "Porkbun";
 
     /// <inheritdoc />
-    public override string Hint => "Login is the apikey. Password is the secretapikey. Zone is an optional root domain.";
+    public override string Hint => "API key starts with pk1_ and Secret API key starts with sk1_. Root domain is optional.";
 
     /// <inheritdoc />
     public override ProviderFields Fields => new()

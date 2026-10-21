@@ -1,30 +1,48 @@
 # How Updates Run
 
-The scheduled task named `Update Dynamic DNS` runs every 15 minutes and on startup by default, but you can set the interval under `Scheduled Tasks`. On each run the plugin detects the public IP, looks up what each hostname currently resolves to in DNS, and pushes the detected IP to any record whose DNS does not already serve it. Each record shows its last action, updated, unchanged, or failed, and when it was last checked.
+A scheduled task named **Update Dynamic DNS** runs when Jellyfin starts and every 15 minutes after. Change how
+often under **Dashboard → Scheduled Tasks**. Each run:
 
-The status card at the bottom of each record shows the result of its last run.
+1. Finds your public IP.
+2. Looks up what each record's name points at right now.
+3. Sends the new address to the provider only for records that point somewhere else.
+
+So a run where nothing changed sends nothing. The status card at the bottom of each record shows what its last run
+did and when.
 
 ![Last update status](screenshots/Last%20Update.png)
 
-## Force Update
+!!! tip "Run it less often than your record's TTL"
+    DNS answers can be cached for as long as the record's TTL. A run before the change has spread may still see
+    the old address and send the update again for nothing.
 
-If you want a record refreshed even when DNS already matches, choose an interval under `Force Update` in the `Update Behavior` section of the `Address` tab. When that period has passed since the last successful push, the plugin re-sends the current IP, which keeps the record alive on providers that age out stale entries. `Force Update` is `Off` by default, so records are pushed only when DNS does not already serve your detected IP.
+## Force update
 
-## Backoff
+Some providers drop a record that is not refreshed for a while. **Force update**, under **Update Behavior** on the
+**Address** tab, sends the current address again once that long has passed since the last successful update,
+even when DNS already matches. It is off by default.
 
-If a record keeps failing, for example because a token is wrong, the plugin pauses it after a set number of failures in a row and then retries it only once each backoff window, so a misconfiguration does not keep spamming your provider and risk a rate limit or ban. Both the failure count and the window are set under `Update Behavior` and default to three failures and twenty four hours. The record card shows when a record is backing off and when it will next be tried.
+## When a record keeps failing
 
-Only failures that point at the record itself count toward that pause: rejected credentials, a request the provider refuses, or an error the provider reports in its reply. Temporary failures (a timeout, a network error, a rate limit, or a provider server error) never count toward it. After the same number of temporary failures in a row the record instead pauses briefly, starting at fifteen minutes and doubling up to two hours. A failure that never clears can look temporary too (a mistyped server override, a provider host that no longer resolves), so once the two hour pause has been reached three times the record takes the full backoff window. Either pause is lifted as soon as your public IP changes, so a paused record never holds back a new address.
+A record that keeps failing is paused, so a mistake such as a wrong token does not keep hitting your provider and
+risk a ban. **Back off after failures** and **Back off duration**, under **Update Behavior**, set when and for how
+long. The defaults are 3 failures in a row and 24 hours. The record's status card says when it is paused and when
+it will be tried next.
 
-Editing a record's provider, hostname, zone, server, or credentials starts its status over, clearing any pause and the last pushed address.
+Only failures that point at the record itself count: rejected credentials, a request the provider refuses, or an
+error in its reply. Timeouts, network errors, rate limits and provider outages do not. After as many of those in a
+row, the record pauses briefly instead, starting at 15 minutes and doubling up to 2 hours. A problem that never
+clears can look temporary too, such as a mistyped server, so once the 2 hour pause has been reached three times
+the record takes the full pause.
 
-!!! tip "Set the scheduled interval longer than your record TTL"
-    If a run happens before the change has propagated, your resolver may still answer with the old address and the record can be pushed again needlessly.
+A pause ends at once when your public IP changes, so it never holds back a new address. Editing a record's
+provider, name, zone, server or credentials also starts it over.
 
-## Split Horizon DNS
+## Names that resolve differently at home
 
-If your server resolves its own hostname through a local resolver that answers with an internal address, which is common in a split horizon setup using a router or an ad blocking resolver or a hosts file, the live DNS check cannot see your public record. The plugin handles this by comparing the IP against the last IP it pushed instead of that answer, so an unchanged IP is not re-pushed every run.
-
-You can still turn on `Treat as Proxied Address` to force that comparison for a record at all times (E.G. Cloudflare's Proxy).
+Some home networks answer a name with a local address, through the router, an ad-blocking DNS server or a hosts
+file. The plugin then cannot see your public record. It notices and compares against the last address it sent
+instead, so an unchanged address is not sent every run. **Treat as proxied address** on a record makes it always
+work that way.
 
 Next: [Monitoring](Monitoring.md).

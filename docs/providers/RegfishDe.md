@@ -1,8 +1,9 @@
 # regfish.de
 
-Set the record's **Provider** to **regfish.de**, then fill these fields.
+On the **Domains** tab, set **Provider** to **regfish.de**, then fill in:
 
 - **Hostname**: the fully qualified host.
-- **Password**: your regfish update token, the DDNS token for the record.
+- **Update token**: the regfish DDNS token for the record.
+- **Server override**: leave blank to use regfish.de's own server.
 
 _Ported from ddclient's `nic_regfishde_update`._

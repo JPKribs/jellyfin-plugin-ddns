@@ -32,7 +32,7 @@ public sealed class DslReports1Provider : DNSProviderBase
     public override string Label => "DSLReports";
 
     /// <inheritdoc />
-    public override string Hint => "Login and Password are your DSLReports credentials. This protocol carries IPv4 only.";
+    public override string Hint => "Username and Password are your DSLReports credentials. This protocol carries IPv4 only.";
 
     /// <inheritdoc />
     public override ProviderFields Fields => new()

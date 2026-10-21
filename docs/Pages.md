@@ -1,7 +1,8 @@
 # The Plugin's Pages
 
 Remote Access adds one entry to Jellyfin's dashboard menu, under **Plugins → Remote Access**. Its pages share a
-tab bar along the top: **Dashboard**, **Domains**, **Address**, **Proxy**, **Services** and **Advanced**.
+tab bar along the top: **Dashboard**, **Domains**, **Address**, **Proxy**, **Services** and **Advanced**. Every
+setting, with its default, is listed in the [Settings Reference](Settings.md).
 
 ## Dashboard
 

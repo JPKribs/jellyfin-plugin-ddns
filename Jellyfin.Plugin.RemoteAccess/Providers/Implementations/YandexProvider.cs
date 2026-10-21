@@ -39,7 +39,7 @@ public sealed class YandexProvider : DNSProviderBase
     public override string Label => "Yandex PDD";
 
     /// <inheritdoc />
-    public override string Hint => "Legacy: Yandex has retired the PDD API, so updates are expected to fail. Login is the domain. Password is your PDD token. Hostname is the FQDN.";
+    public override string Hint => "Legacy. Yandex has retired the PDD API, so updates are expected to fail. Move the domain to another provider.";
 
     /// <inheritdoc />
     public override ProviderFields Fields => new()

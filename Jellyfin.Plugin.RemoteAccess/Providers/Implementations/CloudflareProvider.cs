@@ -35,7 +35,7 @@ public sealed class CloudflareProvider : DNSProviderBase, IAcmeDnsProvider
     public override string Label => "Cloudflare";
 
     /// <inheritdoc />
-    public override string Hint => "Set Login to the word token for a scoped API token, or to your account email for a global key. Password is the token or global API key. Zone is the zone name such as example.com.";
+    public override string Hint => "For a scoped API token, set Auth email or token to the word token. For the Global API Key, set it to your account email. Zone name is the zone, such as example.com.";
 
     /// <inheritdoc />
     public override ProviderFields Fields => new()

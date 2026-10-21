@@ -1,12 +1,30 @@
 # Security
 
-* **Administrators only**: Records can be authored only by administrators, and the `Update Now` endpoint is gated by Jellyfin's administrator policy.
-* **Encrypted**: Credentials are encrypted in the plugin configuration with ASP.NET Core Data Protection, so they are never written to disk in plain text. The key lives in the Jellyfin data directory, **so still use the most limited token or scoped key a provider offers.** Your encrypted data is only as secure as your Jellyfin configuration!
-* **Outbound only for DNS**: All provider traffic is outbound HTTP/S, and credentials are never written to logs.
-* **Listeners only with Remote Access**: The plugin opens ports only when [Remote Access](RemoteAccess.md) is turned on. Its proxy refuses unknown names before the connection is encrypted, never lets the internet reach the setup wizard, and leaves your network out of every block. See [Protection](RemoteAccess.md#protection).
-* **Private keys stay on the server**: Let's Encrypt and certificate keys are generated on this server and stored readable only by Jellyfin's account.
-* **Private folders**: The folder holding the encryption key, and the one holding certificate keys, the Let's Encrypt account and visitor history, are restricted to Jellyfin's account at every start. On Linux and macOS they are owner-only. On Windows only Jellyfin's account, SYSTEM and Administrators can open them, and files created inside inherit that.
-* **Encryption key on Windows**: The key that encrypts saved credentials is itself encrypted with Windows data protection for this machine, at every start and daily. A copy of the data folder, such as a backup, cannot decrypt the credentials anywhere else. Linux and macOS have no such store for services, so there the private folder is the protection: keep backups of Jellyfin's data folder private.
-* **Account changes**: If Jellyfin later runs as another account and cannot open these folders, the plugin says so at startup in the server log, the activity log and the Proxy tab, with the command that gives the folders to the new account.
+## Credentials
 
-See [Storage](Storage.md) for where the encrypted credentials and their key are kept.
+* **Administrators only**: only Jellyfin administrators can see or change records and settings.
+* **Encrypted at rest**: DNS credentials and certificate passwords are encrypted before they are saved. The key
+  that decrypts them is kept in Jellyfin's data folder, so anyone with a copy of that folder could read them.
+  Use the most limited token your provider offers, so a leak can only change DNS.
+* **Key protected on Windows**: on Windows the key itself is encrypted for this machine, so a copy of the folder,
+  such as a backup, cannot decrypt anything elsewhere. Linux and macOS have no such store for services. There,
+  keep backups of Jellyfin's data folder private.
+* **Never logged**: credentials, and tokens inside addresses, are removed from everything written to the logs.
+
+## Files
+
+* **Private folders**: the folders holding the encryption key, certificate keys, the Let's Encrypt account and
+  visitor history are made readable only by Jellyfin's account at every start. On Windows, SYSTEM and
+  Administrators keep access too.
+* **Keys stay here**: certificate keys are made on this server and never leave it.
+* **Account changes**: if Jellyfin later runs as a different account that cannot open these folders, the Proxy
+  tab, the activity log and the server log say so, with the command that fixes it.
+
+## Network
+
+* **Dynamic DNS only connects out**, over HTTPS, to your DNS provider and the IP detection services.
+* **Ports open only with Remote Access**: nothing listens until the proxy is turned on. Then it refuses names you
+  did not add before encrypting anything, keeps the setup wizard off the internet, and never blocks your own
+  network. See [Protection](RemoteAccess.md#protection).
+
+See [Storage](Storage.md) for where everything is kept.

@@ -36,7 +36,7 @@ public sealed class IonosProvider : DNSProviderBase
     public override string Label => "IONOS";
 
     /// <inheritdoc />
-    public override string Hint => "Password is your IONOS API key in the form prefix.secret. Login is unused.";
+    public override string Hint => "API key is your IONOS API key, in the form prefix.secret.";
 
     /// <inheritdoc />
     public override ProviderFields Fields => new()

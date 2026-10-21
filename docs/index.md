@@ -2,26 +2,34 @@
 
 ![Remote Access](assets/logo.png){ width="160" }
 
-Remote Access is a Jellyfin plugin for reaching your server from anywhere. Its Dynamic DNS keeps your DNS records pointed at your server's current public IP, running inside Jellyfin as a scheduled task that updates your DNS provider over outbound HTTP/S. Its proxy can put HTTPS in front of Jellyfin, described under [Remote Access](RemoteAccess.md).
+Remote Access is a Jellyfin plugin for reaching your server from anywhere. It does two things, both inside
+Jellyfin:
+
+* **Dynamic DNS** keeps a domain name, such as `media.example.com`, pointed at your home's public IP, even when
+  your internet provider changes it. It supports [45 DNS providers](providers/README.md).
+* **The proxy** puts a secure HTTPS address in front of Jellyfin, with a free certificate from Let's Encrypt and
+  protection against people trying to break in. See [Remote Access](RemoteAccess.md).
+
+You can use Dynamic DNS on its own, or both together. There is no separate reverse proxy or updater to run.
 
 !!! danger "Actively being tested"
-    Remote Access is being actively tested. The proxy, certificates and blocking are new and still changing between releases. Keep another way into your server while you try it, and please report anything that looks wrong in [Issues](https://github.com/JPKribs/jellyfin-plugin-remoteaccess/issues).
+    The proxy, certificates and blocking are new and still changing between releases. Keep another way into your
+    server while you try them, and report anything that looks wrong in
+    [Issues](https://github.com/JPKribs/jellyfin-plugin-remoteaccess/issues).
 
-!!! warning "Considerations before using"
-    This plugin exists to simplify some of the networking around Jellyfin and to minimize the number of external applications that you need to run this. Please keep in mind that **this centralizes your setup around Jellyfin**. If you run into issues with Jellyfin, your DDNS will be offline as well. If you rely on your DDNS for administrative access to your system, I would recommend an external solution so your access isn't lost if Jellyfin goes down.
+!!! warning "Everything depends on Jellyfin"
+    If Jellyfin is down, so are your DNS updates and your remote access. If you rely on this address to manage the
+    server itself, keep another way in as well.
 
-## How It Works
+## Where to start
 
-Each record has a name, a provider, a hostname, and the credentials that provider needs. A scheduled task named `Update Dynamic DNS` detects your public IP, looks up what each hostname currently resolves to in DNS, and pushes the detected IP to any record whose DNS does not already serve it. See [Adding Records](Records.md) and [How Updates Run](HowItWorks.md).
-
-The `Domains` tab lists every record with a health summary and the editor for the selected record.
+* **New to all of this?** Follow [the Beginner's Guide](BeginnersGuide.md). It goes from buying a
+  domain to watching from your phone, in one pass.
+* **Already have a domain?** [Install the plugin](Installation.md), [add a record](Records.md), then set up
+  [Remote Access](RemoteAccess.md).
+* **Want a tour first?** [The Plugin's Pages](Pages.md) shows every tab.
 
 ![Domains tab](screenshots/Domains.png)
 
-Dynamic DNS supports 45 providers based on the great work done by [ddclient](https://github.com/ddclient/ddclient). They are the recommended tool for an external, standalone DDNS solution! See [Providers](providers/README.md) for the fields each one needs.
-
-[Remote Access](RemoteAccess.md) can also put a secure HTTPS proxy in front of Jellyfin, with automatic Let's Encrypt certificates and protection against unwanted visitors.
-
-Every tab is shown in [The Plugin's Pages](Pages.md).
-
-Next: [Installation](Installation.md).
+The DNS providers are ported from [ddclient](https://github.com/ddclient/ddclient), which is the recommended tool
+if you want Dynamic DNS outside Jellyfin.

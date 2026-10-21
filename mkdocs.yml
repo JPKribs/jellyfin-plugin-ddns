@@ -42,6 +42,7 @@ markdown_extensions:
 
 nav:
   - Overview: index.md
+  - "Beginner's Guide": BeginnersGuide.md
   - Getting Started:
       - Installation: Installation.md
       - The Plugin's Pages: Pages.md
@@ -68,17 +69,17 @@ nav:
       - DSLReports: providers/DslReports1.md
       - Duck DNS: providers/DuckDns.md
       - Dynadot: providers/Dynadot.md
-      - "DynDNS v1 (legacy)": providers/DynDns1.md
+      - DynDNS v1: providers/DynDns1.md
       - DynDNS v2: providers/DynDns2.md
       - Dynu: providers/Dynu.md
       - easyDNS: providers/EasyDns.md
       - eNom: providers/Enom.md
-      - "FreeDNS (afraid.org)": providers/FreeDns.md
+      - FreeDNS: providers/FreeDns.md
       - freemyip.com: providers/FreeMyIp.md
       - Gandi LiveDNS: providers/Gandi.md
       - GoDaddy: providers/GoDaddy.md
       - Hetzner DNS: providers/Hetzner.md
-      - "Hurricane Electric (dns.he.net)": providers/HeNet.md
+      - Hurricane Electric: providers/HeNet.md
       - Infomaniak: providers/Infomaniak.md
       - INWX: providers/Inwx.md
       - IONOS: providers/Ionos.md
@@ -95,9 +96,10 @@ nav:
       - Simply.com: providers/SimplyCom.md
       - Sitelutions: providers/Sitelutions.md
       - Spaceship: providers/Spaceship.md
-      - "Yandex PDD (legacy)": providers/Yandex.md
+      - Yandex PDD: providers/Yandex.md
       - ZoneEdit: providers/ZoneEdit1.md
   - Reference:
+      - Settings Reference: Settings.md
       - Security: Security.md
       - Storage: Storage.md
       - Versioning: Versioning.md

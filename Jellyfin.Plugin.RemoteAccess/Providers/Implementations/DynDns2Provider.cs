@@ -49,7 +49,7 @@ public sealed class DynDns2Provider : DNSProviderBase
     public override string Label => "DynDNS v2";
 
     /// <inheritdoc />
-    public override string Hint => "Login and Password are your account credentials. Server defaults to members.dyndns.org. Override it for a compatible service.";
+    public override string Hint => "Username and Password are your account credentials. Server override defaults to members.dyndns.org. Change it for a compatible service.";
 
     /// <inheritdoc />
     public override ProviderFields Fields => new()

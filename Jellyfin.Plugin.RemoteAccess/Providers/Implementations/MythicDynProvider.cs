@@ -34,7 +34,7 @@ public sealed class MythicDynProvider : DNSProviderBase
     public override string Label => "Mythic Beasts";
 
     /// <inheritdoc />
-    public override string Hint => "Login and Password are your Mythic Beasts dynamic DNS credentials.";
+    public override string Hint => "Username is your Mythic Beasts dynamic DNS API key. Password is its secret.";
 
     /// <inheritdoc />
     public override ProviderFields Fields => new()

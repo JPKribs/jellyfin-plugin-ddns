@@ -1,30 +1,56 @@
 # Adding Records
 
-## Adding a Record
+A **record** is one DNS name the plugin keeps pointed at your server, such as `media.example.com`. Records are on
+the **Domains** tab.
 
-Each record has a name, a provider, a hostname, and the credentials that provider needs. The `Domains` tab shows only the fields a provider actually uses to try and minimize confusion. Records live in the plugin configuration, so they are captured by your normal Jellyfin config backups. See [Providers](providers/README.md) for the fields each provider needs.
+## Add a record
 
-This is the editor for a Cloudflare record. Saved credentials show only as dots and are never sent back to the browser. Leaving a credential field blank keeps the saved value; use `Clear saved value` under the field to remove it.
+1. On the **Domains** tab, select **New**.
+2. Give it a **Name**, for your own reference.
+3. Pick your DNS company in **Provider**. The note under it says what each field means for that provider, and only
+   the fields it uses are shown. [Providers](providers/README.md) has a page for each one.
+4. Fill in the fields and choose **Update IPv4**, **Update IPv6** or both. IPv4 keeps the A record current, IPv6
+   the AAAA record.
+5. Select **Save Record**.
 
 ![Record editor](screenshots/Record%20Editor.png)
 
-Pick the provider from the `Provider` list, and the hint below it explains what each field means for that provider.
+The first update runs within 15 minutes. To run it now, select **Update Now** on the **Address** tab. The status
+card at the bottom of the record then shows how it went.
 
 ![Provider picker](screenshots/Provider%20Picker.png)
 
-Providers in the dyndns family add an `Advanced Options` section with wildcard and MX settings.
+## Credentials
+
+Credentials are encrypted when saved, and never sent back to the browser. A saved one shows as dots. Leaving the
+field blank keeps it, and **Clear saved value** under the field removes it. Use the most limited token your
+provider offers. See [Security](Security.md).
+
+## Advanced options
+
+Providers in the DynDNS family add an **Advanced options** section, for a wildcard record, a static DNS service
+and mail settings.
 
 ![Advanced options for DynDNS v2](screenshots/Advanced%20Options.png)
 
-If a record's hostname sits behind a proxy or CDN, turn on `Treat as Proxied Address`. The plugin then compares against the last IP it pushed rather than live DNS, since the DNS will return the proxied address. It's recommended to pair that with `Force Update` on the `Address` tab, which re-sends the record periodically in case it was changed from elsewhere.
+## Records behind a CDN or proxy
 
-## Address Families and Detection
+If DNS for a name returns someone else's address, such as Cloudflare's when its orange cloud is on, the plugin
+cannot tell whether your record is current. Turn on **Treat as proxied address** on that record. The plugin then
+compares against the last address it sent instead of looking the name up. Pair it with **Force update** on the
+**Address** tab, so the record is sent again now and then in case it was changed elsewhere.
 
-Each record chooses its address families with `Update IPv4` and `Update IPv6` on the `Domains` tab: IPv4 keeps the A record current and IPv6 the AAAA record. Detection reads your public IP from endpoints that return it as plain text. The `IPv4 Detection URLs` and `IPv6 Detection URLs` fields list every endpoint, one per line. Only `https` endpoints are used, since a tampered reply could point your DNS at the wrong address. This process attempts to find two endpoints that agree on the address before submitting that IP. It falls back to only a single provider if there is only one active provider available.
+## How your public IP is found
 
-The `Address` tab also shows the current public IP and an `Update Now` button that runs the task immediately. If detection finds only an internal address, which usually means the server has no public IP, the `Address` tab shows a warning so you know nothing was published. An address counts as internal when it falls in a private, loopback, link local, CGNAT, or other reserved range, and you can turn off `Skip Update if Internal` to publish such an address anyway.
+The **Address** tab shows the public IP the server was last seen at, and how it is found:
 
-Here is the `Address` tab with both sections expanded.
+* **IPv4 Detection URLs** and **IPv6 Detection URLs** list services that reply with your address, one per line.
+  Leave them empty to use the built-in list. Only `https` addresses are used, since a tampered reply could point
+  your DNS somewhere else.
+* Two services must agree on the address before it is used. If only one answers, its answer is used.
+* If the only address found is a private one, the server most likely has no public IP of its own. The tab warns
+  and nothing is published. Turn off **Skip update if internal** to
+  publish such an address anyway.
 
 ![Address tab](screenshots/Address.png)
 

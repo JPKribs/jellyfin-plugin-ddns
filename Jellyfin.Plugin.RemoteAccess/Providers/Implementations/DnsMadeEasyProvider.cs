@@ -48,7 +48,7 @@ public sealed class DnsMadeEasyProvider : DNSProviderBase
     public override string Label => "DNS Made Easy";
 
     /// <inheritdoc />
-    public override string Hint => "Login is your account email. Password is the dynamic DNS record password. Hostname is the numeric record ID.";
+    public override string Hint => "Record ID is the numeric ID of the Dynamic DNS record. Record password is the password generated for that record.";
 
     /// <inheritdoc />
     public override ProviderFields Fields => new()

@@ -42,7 +42,7 @@ public sealed class InfomaniakProvider : DNSProviderBase
     public override string Label => "Infomaniak";
 
     /// <inheritdoc />
-    public override string Hint => "Login and Password are your Infomaniak credentials.";
+    public override string Hint => "Username and Password are the dynamic DNS credentials you create in the Infomaniak Manager.";
 
     /// <inheritdoc />
     public override ProviderFields Fields => new()

@@ -46,7 +46,7 @@ public sealed class NfsnProvider : DNSProviderBase
     public override string Label => "NearlyFreeSpeech.NET";
 
     /// <inheritdoc />
-    public override string Hint => "Login is the member login. Password is the API key. Zone is the DNS zone. This protocol carries IPv4 only.";
+    public override string Hint => "Member login is your NFSN member login. API key comes from Profile, then API. This protocol carries IPv4 only.";
 
     /// <inheritdoc />
     public override ProviderFields Fields => new()

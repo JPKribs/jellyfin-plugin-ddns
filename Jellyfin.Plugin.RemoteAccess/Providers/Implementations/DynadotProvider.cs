@@ -31,7 +31,7 @@ public sealed class DynadotProvider : DNSProviderBase
     public override string Label => "Dynadot";
 
     /// <inheritdoc />
-    public override string Hint => "Password is your DDNS password. Zone is optional and splits the hostname into domain and subdomain.";
+    public override string Hint => "DDNS password is from the domain's Dynamic DNS settings at Dynadot. Domain is optional and splits the hostname into domain and subdomain.";
 
     /// <inheritdoc />
     public override ProviderFields Fields => new()

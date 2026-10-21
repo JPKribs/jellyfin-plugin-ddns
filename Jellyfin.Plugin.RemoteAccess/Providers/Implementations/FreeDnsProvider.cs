@@ -41,7 +41,7 @@ public sealed class FreeDnsProvider : DNSProviderBase
     public override string Label => "FreeDNS";
 
     /// <inheritdoc />
-    public override string Hint => "FreeDNS at afraid.org. Login and Password are your afraid.org credentials, used to derive the update token.";
+    public override string Hint => "FreeDNS at afraid.org. Username and Password are your afraid.org credentials, used to get the update token.";
 
     /// <inheritdoc />
     public override ProviderFields Fields => new()

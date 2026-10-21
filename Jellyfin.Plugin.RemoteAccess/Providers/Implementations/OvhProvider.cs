@@ -35,7 +35,7 @@ public sealed class OvhProvider : DNSProviderBase
     public override string Label => "OVH";
 
     /// <inheritdoc />
-    public override string Hint => "Login and Password are your OVH DynHost credentials. DynHost carries IPv4 only.";
+    public override string Hint => "Username and Password are your OVH DynHost credentials. DynHost carries IPv4 only.";
 
     /// <inheritdoc />
     public override ProviderFields Fields => new()

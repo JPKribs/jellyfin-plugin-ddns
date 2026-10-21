@@ -1,9 +1,10 @@
 # Namecheap
 
-Set the record's **Provider** to **Namecheap**, then fill these fields.
+On the **Domains** tab, set **Provider** to **Namecheap**, then fill in:
 
-- **Hostname**: the full host. The domain is stripped to form the host label.
-- **Login**: your domain, such as example.com.
-- **Password**: the Dynamic DNS Password from Domain List then Manage then Advanced DNS, after enabling Dynamic DNS.
+- **Host and domain**: the full host, such as home.example.com. The domain is removed to form the host label.
+- **Domain**: your domain, such as example.com.
+- **DDNS password**: the Dynamic DNS Password. Find it under Domain List, then Manage, then Advanced DNS, after you turn on Dynamic DNS.
+- **Server override**: leave blank to use Namecheap's own server.
 
 _Ported from ddclient's `nic_namecheap_update`._

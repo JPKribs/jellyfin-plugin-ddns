@@ -1,8 +1,10 @@
 # IONOS
 
-Set the record's **Provider** to **IONOS**, then fill these fields.
+On the **Domains** tab, set **Provider** to **IONOS**, then fill in:
 
 - **Hostname**: the record name.
-- **Password**: your IONOS API key in prefix.secret format, sent as the X-API-Key header. Create it in the IONOS Developer / DNS API.
+- **API key**: your IONOS API key, in the form prefix.secret. Create it in the IONOS Developer DNS API.
+- **TTL**: optional, in seconds. `1` uses the provider's default.
+- **Server override**: leave blank to use IONOS's own server.
 
 _Ported from ddclient's `nic_ionos_update`._

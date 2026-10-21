@@ -33,7 +33,7 @@ public sealed class DonDominioProvider : DNSProviderBase
     public override string Label => "DonDominio";
 
     /// <inheritdoc />
-    public override string Hint => "Login is the user. Password is your DonDominio API key. Hostname is the host.";
+    public override string Hint => "User is your DonDominio API user. API key is your DonDominio API key.";
 
     /// <inheritdoc />
     public override ProviderFields Fields => new()

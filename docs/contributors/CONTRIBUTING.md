@@ -1,6 +1,6 @@
 # Contributing
 
-How to add and document parts of the Dynamic DNS plugin. Follow this so every file reads the same way.
+How to add and document parts of the Remote Access plugin. Follow this so every file reads the same way.
 
 ## Naming
 
@@ -17,15 +17,35 @@ The only exception is a selector that styles Jellyfin's own markup. Those must m
 
 ## Layout
 
+The plugin is in `Jellyfin.Plugin.RemoteAccess/` and its tests in `Jellyfin.Plugin.RemoteAccess.Tests/`. The
+assembly and namespace keep the name `Jellyfin.Plugin.DynamicDns`, since Jellyfin names the settings file after
+the assembly.
+
 ```
-API/            controller endpoints for the dashboard
-Configuration/  html and js pages plus the shared asset hooks
-Models/         data types and the configuration object
-Providers/      one class per provider plus the shared base
-Services/       detection, lookup, the update run, the scheduled task, secret protection
+API/            controller endpoints for the dashboard pages
+Configuration/  the html and js pages, and the plugin configuration
+Models/         data types for records and detection
+People/         visitor history, bans, the block list and country rules
+Providers/      one class per DNS provider plus the shared base
+Proxy/          the reverse proxy, certificates, Let's Encrypt and Trust the Proxy
+Services/       IP detection, DNS lookup and the update run
+Tasks/          the scheduled tasks
+Utilities/      shared helpers such as credential encryption
 ```
 
-Keep a type in its own file named after it. Providers are discovered by scanning the assembly, so a new one needs no wiring. Add the value to `DnsProviderKind`, add a `{Kind}Provider` class deriving from `DnsProviderBase`, and add its fields and hint in `Configuration/ddns_domains.js`.
+Keep a type in its own file named after it. Providers are discovered by scanning the assembly, so a new one needs
+no wiring. See [Creating a Provider](PROVIDERS.md).
+
+## On-screen text
+
+Text a person reads on the plugin's pages follows these rules:
+
+* A field's description is one sentence, or two when one cannot say it. The default note the page adds counts.
+* Units and notes go in the description, never in the field's label, and never in parentheses.
+* No semicolons. Split the sentence, or join with a comma or "and".
+* Plain words, and the same name for a thing everywhere: the label on the page is the name the docs use.
+
+Log messages and code comments are not on-screen text.
 
 ## How to document
 
