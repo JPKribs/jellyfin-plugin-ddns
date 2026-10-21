@@ -21,6 +21,7 @@ public sealed class CertificateStore : IDisposable
     private static readonly TimeSpan _pollInterval = TimeSpan.FromMinutes(1);
 
     private readonly ILogger<CertificateStore> _logger;
+    private readonly ActivityLogger? _activity;
     private readonly SecretProtector _secrets;
     private readonly ProxyPaths _paths;
     private readonly object _lock = new();
@@ -42,12 +43,14 @@ public sealed class CertificateStore : IDisposable
     /// <param name="paths">The proxy's data paths.</param>
     /// <param name="secrets">The secret protector for the certificate password.</param>
     /// <param name="logger">The logger.</param>
-    public CertificateStore(ProxyPaths paths, SecretProtector secrets, ILogger<CertificateStore> logger)
+    /// <param name="activity">The activity log writer. Passed in rather than shared, so each server, and each test, writes to its own.</param>
+    public CertificateStore(ProxyPaths paths, SecretProtector secrets, ILogger<CertificateStore> logger, ActivityLogger? activity = null)
     {
         ArgumentNullException.ThrowIfNull(paths);
         _paths = paths;
         _secrets = secrets;
         _logger = logger;
+        _activity = activity;
     }
 
     /// <summary>
@@ -327,7 +330,7 @@ public sealed class CertificateStore : IDisposable
         if (created)
         {
             _logger.LogInformation("Created the root certificate for self-signed HTTPS; install it on each device from the Proxy tab");
-            ActivityLogger.Current?.Log(
+            _activity?.Log(
                 "Remote Access created a root certificate",
                 "DynamicDNS.RootCertificateCreated",
                 "Devices that should trust the self-signed certificate need this root installed once. Download it from the Proxy tab.");
