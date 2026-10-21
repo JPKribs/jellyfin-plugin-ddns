@@ -22,4 +22,6 @@ Dynamic DNS supports 45 providers based on the great work done by [ddclient](htt
 
 [Remote Access](RemoteAccess.md) can also put a secure HTTPS proxy in front of Jellyfin, with automatic Let's Encrypt certificates and protection against unwanted visitors.
 
+Every tab is shown in [The Plugin's Pages](Pages.md).
+
 Next: [Installation](Installation.md).

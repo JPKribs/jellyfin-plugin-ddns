@@ -24,6 +24,8 @@ Everything is on the **Proxy** tab. The cards at the top show what is left to do
 
 Then open your address on a phone with Wi-Fi off.
 
+![Proxy tab](screenshots/Proxy.png)
+
 ### Ports
 
 The proxy uses the standard web ports, and Jellyfin keeps its own:
@@ -173,6 +175,8 @@ The **Dashboard** tab, also in the sidebar as **Remote Access**, shows who conne
 Locations come from the free DB-IP database, downloaded to this server; addresses are never sent anywhere. What
 is recorded, and for how long, is under **Advanced → History**.
 
+![Dashboard tab](screenshots/Dashboard.png)
+
 ## Protection
 
 These are on by default. Each can be changed under **Advanced**.
@@ -208,6 +212,8 @@ The **Services** tab puts other apps on your network, such as a request manager,
 own address. Only add apps that have their own sign-in. The certificate has to cover each app's address; with
 Let's Encrypt it is added automatically. Services set to your network only, and names that only your own DNS
 knows, such as `nas.lan`, are left off a Let's Encrypt certificate, since it can never check them.
+
+![Services tab](screenshots/Services.png)
 
 ## Recovery
 

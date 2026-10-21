@@ -44,6 +44,7 @@ nav:
   - Overview: index.md
   - Getting Started:
       - Installation: Installation.md
+      - The Plugin's Pages: Pages.md
       - Adding Records: Records.md
   - Features:
       - Remote Access: RemoteAccess.md
