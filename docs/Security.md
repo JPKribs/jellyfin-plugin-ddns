@@ -17,8 +17,8 @@
   visitor history are made readable only by Jellyfin's account at every start. On Windows, SYSTEM and
   Administrators keep access too.
 * **Keys stay here**: certificate keys are made on this server and never leave it.
-* **Account changes**: if Jellyfin later runs as a different account that cannot open these folders, the Proxy
-  tab, the activity log and the server log say so, with the command that fixes it.
+* **Account changes**: if Jellyfin later runs as a different account that cannot open these folders, the
+  Configuration tab, the activity log and the server log say so, with the command that fixes it.
 
 ## Network
 
@@ -28,5 +28,10 @@
 * **Ports open only with Remote Access**: nothing listens until the proxy is turned on. Then it refuses names you
   did not add before encrypting anything, keeps the setup wizard off the internet, and never blocks your own
   network. See [Protection](RemoteAccess.md#protection).
+* **The router**: with **Automatic port forwarding** on, the plugin asks the router on your own network to forward
+  ports 80 and 443, and nothing else. A port the router already forwards to another device is left alone, and the
+  forwards are removed when Jellyfin stops or the plugin is uninstalled. See
+  [Automatic port forwarding](RemoteAccess.md#automatic-port-forwarding).
+* **Test from Outside** sends the hostname and port 443 to check-host.net, and only when you select it.
 
 See [Storage](Storage.md) for where everything is kept.

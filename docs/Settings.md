@@ -3,10 +3,11 @@
 Every setting on every tab, with its default and range. For what each tab is for, see
 [The Plugin's Pages](Pages.md).
 
-## Domains
+## DDNS records
 
-One record per DNS name. The fields shown, and their labels, depend on the **Provider**. Each
-[provider page](providers/README.md) lists exactly what it shows.
+In step 2, **Address**, of the **Configuration** tab. One record per DNS name. The fields shown, and their labels,
+depend on the **Provider**. Each [provider page](providers/README.md) lists exactly what it shows. A record is kept
+with **Save Record**.
 
 | Setting | What it does | Default |
 |---|---|---|
@@ -21,7 +22,28 @@ One record per DNS name. The fields shown, and their labels, depend on the **Pro
 | **Treat as proxied address** | Compares against the last address sent instead of looking up DNS. For records behind a proxy or CDN. | Off |
 | **Advanced options** | Wildcard, static DNS and mail settings, for the DynDNS family only. | Off |
 
-## Address
+## Configuration
+
+The proxy's settings, in the numbered steps of the **Configuration** tab. **Save** at the bottom keeps steps 1 to 3.
+
+| Setting | What it does | Default |
+|---|---|---|
+| **Enabled** | Step 1. Starts the proxy on ports 80 and 443. | Off |
+| **Proxy Address** | Step 2. The names people use to reach Jellyfin. Names from DDNS records are listed to tick. | None |
+| **Other addresses** | Step 2. Names without a DDNS record, one per line. | None |
+| **Source** | Step 3. Where the certificate comes from: Let's Encrypt, PEM files, a PKCS#12 file, self-signed, or none. | Let's Encrypt |
+| **I accept the Let's Encrypt terms** | Step 3. Nothing is requested from Let's Encrypt until this is ticked. | Off |
+| **Certificate file**, **Private key file**, **Password** | Step 3. The files for PEM or PKCS#12. The password is stored encrypted. | Empty |
+| **Automatic port forwarding** | Step 4. Asks the router to forward ports 80 and 443 to this server through NAT-PMP or UPnP. Saved as soon as you change it. See [Automatic port forwarding](RemoteAccess.md#automatic-port-forwarding). | On |
+| **Trust the Proxy** | Step 5. Lets Jellyfin see each visitor's real address. Until it is done, internet visitors are turned away. Jellyfin restarts once. **Undo** reverses it. | Not set |
+
+See [Remote Access](RemoteAccess.md).
+
+## Advanced
+
+### Dynamic DNS
+
+How the DDNS records find your public IP and when they send it.
 
 | Setting | What it does | Default | Range |
 |---|---|---|---|
@@ -35,21 +57,6 @@ One record per DNS name. The fields shown, and their labels, depend on the **Pro
 
 How often updates run is set on the **Update DDNS** scheduled task, every 15 minutes by default. See
 [How Updates Run](HowItWorks.md).
-
-## Proxy
-
-| Setting | What it does | Default |
-|---|---|---|
-| **Enabled** | Starts the proxy on ports 80 and 443. | Off |
-| **Address** | The names people use to reach Jellyfin. Names from Domains records are listed, others go under **Other addresses**. | None |
-| **Source** | Where the certificate comes from: Let's Encrypt, PEM files, a PKCS#12 file, self-signed, or none. | Let's Encrypt |
-| **I accept the Let's Encrypt terms** | Nothing is requested from Let's Encrypt until this is ticked. | Off |
-| **Certificate file**, **Private key file**, **Password** | The files for PEM or PKCS#12. The password is stored encrypted. | Empty |
-| **Trust the Proxy** | Lets Jellyfin see each visitor's real address. Until it is done, internet visitors are turned away. Jellyfin restarts once. **Undo** reverses it. | Not set |
-
-See [Remote Access](RemoteAccess.md).
-
-## Advanced
 
 ### Security
 
@@ -115,7 +122,7 @@ Jellyfin compresses its own pages, through the proxy too, so the proxy leaves th
 **Auto** settings follow the server's memory. Below 3 GB available to Jellyfin they use the lower value. See
 [Low-memory servers](RemoteAccess.md#low-memory-servers). **Reset to Defaults** puts every limit and security
 setting back, **Unknown addresses** and **Without the location database** included. It keeps trusted networks,
-the block list, **Country rule**, **Countries** and history. Nothing changes until you save. **Restart Proxy** restarts
+the block list, **Country rule**, **Countries**, history and the **Dynamic DNS** settings. Nothing changes until you save. **Restart Proxy** restarts
 the listener without restarting Jellyfin.
 
 ## Scheduled tasks

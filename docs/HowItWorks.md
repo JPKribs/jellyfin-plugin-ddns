@@ -20,14 +20,14 @@ did and when.
 
 ## Force update
 
-Some providers drop a record that is not refreshed for a while. **Force update**, under **Update Behavior** on the
-**Address** tab, sends the current address again once that long has passed since the last successful update,
+Some providers drop a record that is not refreshed for a while. **Force update**, under
+**Advanced → Dynamic DNS**, sends the current address again once that long has passed since the last successful update,
 even when DNS already matches. It is off by default.
 
 ## When a record keeps failing
 
 A record that keeps failing is paused, so a mistake such as a wrong token does not keep hitting your provider and
-risk a ban. **Back off after failures** and **Back off duration**, under **Update Behavior**, set when and for how
+risk a ban. **Back off after failures** and **Back off duration**, under **Advanced → Dynamic DNS**, set when and for how
 long. The defaults are 3 failures in a row and 24 hours. The record's status card says when it is paused and when
 it will be tried next.
 

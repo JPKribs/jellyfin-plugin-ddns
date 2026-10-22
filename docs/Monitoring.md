@@ -2,7 +2,7 @@
 
 ## Record health
 
-The cards at the top of the **Domains** tab count your records:
+The cards above the records, in step 2, **Address**, of the **Configuration** tab, count your records:
 
 * **Healthy**: the last check succeeded, and happened within the last 24 hours.
 * **Unhealthy**: the last check failed, or none happened within the last 24 hours.
@@ -23,8 +23,8 @@ Each entry has a level:
   there is no working certificate, Jellyfin does not answer through the proxy, or the plugin cannot use its own
   files.
 * **Warning**: something needs attention but still works. A certificate expires soon, a renewal failed while the
-  current certificate is still valid, a record is paused, an address was banned, or a Let's Encrypt TXT record
-  was left at the provider.
+  current certificate is still valid, a record is paused, an address was banned, the router did not open the
+  ports, or a Let's Encrypt TXT record was left at the provider.
 * **Information**: everything else.
 
 A problem is written once when it starts, and once more when it clears, not on every run. A run where every
@@ -38,7 +38,7 @@ record is already current writes nothing.
 * **Update works again**: a record that was failing updated.
 * **Updates paused**: a record was paused after repeated failures, once per streak.
 * **Detection unhealthy**: no public IP was found for about an hour, with an entry when it is found again.
-* **Configuration changes**: a record was added, changed or removed, or the Address tab's settings changed.
+* **Configuration changes**: a record was added, changed or removed, or the settings under **Advanced → Dynamic DNS** changed.
 * **Plaintext credentials**: credentials cannot be encrypted on this server, once per outage.
 * **Remote Access cannot use its own files**: Jellyfin runs as an account that cannot open the plugin's folders.
   It is an error, and names the command that fixes it. See [Recovery](RemoteAccess.md#recovery).
@@ -51,6 +51,14 @@ record is already current writes nothing.
   and says why.
 * **Trust the Proxy**: Jellyfin was set to trust the proxy, answered through it after the restart or did not,
   or **Undo** put its settings back.
+* **Router ports**: written once when something changes, not on every hourly renewal.
+    * **Remote Access opened ports 80 and 443 on your router**: the router forwards the ports, and the entry names
+      the address they go to and whether UPnP or NAT-PMP was used. Before a certificate is ready, only port 80 is
+      opened.
+    * **Remote Access could not open ports on your router**: a warning with the router's reason, such as a port
+      another device already holds.
+    * **Remote Access found no router that opens ports**: a warning that no router answered over UPnP or NAT-PMP.
+      Turn one of them on in the router's settings, or forward the ports by hand.
 * **Certificates**: a certificate was issued, renewed, could not be, could not be loaded, or expires soon. Asking
   for a new one is logged with who asked.
 * **Root certificate created**: the plugin made a new self-signed root. Every device that should trust the

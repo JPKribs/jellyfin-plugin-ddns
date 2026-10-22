@@ -14,9 +14,9 @@ For a complete walkthrough, see the Beginner's Guides: [free with Duck DNS](Begi
 
 You need:
 
-* **A domain name pointed at your home.** A [Domains record](Records.md) keeps it pointed at your public IP.
-* **A router you can forward ports on**, and a public IP of your own, not one shared through carrier-grade NAT.
-  See [Check you are not behind CGNAT](BeginnersGuide.md#0-check-you-are-not-behind-cgnat).
+* **A domain name pointed at your home.** A [DDNS record](Records.md) keeps it pointed at your public IP.
+* **A router that forwards ports**, on its own through UPnP or NAT-PMP or by hand, and a public IP of your own,
+  not one shared through carrier-grade NAT. See [Shared addresses](#shared-addresses-and-cgnat).
 * **On Linux**, permission for Jellyfin to use ports below 1024. Run `sudo systemctl edit jellyfin`, add
   `AmbientCapabilities=CAP_NET_BIND_SERVICE` under `[Service]`, and restart Jellyfin. Windows and macOS need
   nothing.
@@ -24,35 +24,114 @@ You need:
 
 ## Setup
 
-Everything is on the **Proxy** tab. The cards at the top show what is left to do, and each section is one step.
+Everything is on the **Configuration** tab, as six numbered steps. Each step shows its state, and the summary at
+the top names the first step that needs attention.
 
-1. **Remote Access**: tick **Enabled** and save.
-2. **Address**: tick the names people will use. Names your Domains records keep pointed at this server are listed
-   for you. Add any others under **Other addresses**.
+1. **Proxy on**: tick **Enabled** and select **Save** at the bottom of the page.
+2. **Address**: under **Proxy Address**, tick the names people will use. Names your DDNS records keep pointed at
+   this server are listed for you. Add any others under **Other addresses**. The step then checks that the name
+   points at this server. See [Name check](#name-check).
 3. **Certificate**: leave **Let's Encrypt** selected, tick **I accept the Let's Encrypt terms**, and save. See
    [Certificates](#certificates).
-4. **Router**: forward TCP ports **80** and **443** on your router to the address this section shows.
-5. **Jellyfin**: select **Trust the Proxy**. Until then, internet visitors are turned away. Jellyfin restarts once
-   so it can see each visitor's real address through the proxy. Its own ports stay the same. **Undo** puts its
-   settings back.
+4. **Router**: with **Automatic port forwarding** on, the plugin asks the router to forward the ports. If the
+   router does not, forward TCP ports **80** and **443** by hand to the address this step shows. See
+   [Automatic port forwarding](#automatic-port-forwarding).
+5. **Trust the Proxy**: select **Trust the Proxy**. Until then, internet visitors are turned away. Jellyfin
+   restarts once so it can see each visitor's real address through the proxy. Its own ports stay the same.
+   **Undo** puts its settings back.
+6. **Reachable from outside**: select **Test from Outside**. See [Test from Outside](#test-from-outside).
 
-Then open your address on a phone with Wi-Fi turned off. The summary at the top of the tab says when everything is
-ready.
+When every step is done, the summary says the server is fully accessible from outside your network. Then open your
+address on a phone with Wi-Fi turned off.
 
-![Proxy tab](screenshots/Proxy.png)
+![Configuration tab](screenshots/Configuration.png)
 
 ### Ports
 
 | Port | Used for |
 |---|---|
-| 443 | HTTPS for everyone outside your home. Forward it. |
-| 80 | Sends `http://` links on to HTTPS, and lets Let's Encrypt check your address. Forward it too. |
+| 443 | HTTPS for everyone outside your home. The router forwards it, or you do. |
+| 80 | Sends `http://` links on to HTTPS, and lets Let's Encrypt check your address. Forwarded the same way. |
 | Jellyfin's own | Usually 8096 and 8920. Unchanged, and your home network keeps using them. |
 
 Do not forward Jellyfin's own ports. Internet traffic should only reach the proxy. If this server has a public
-address of its own, such as a VPS or a public IPv6 address, block Jellyfin's ports in its firewall too. The Proxy
-tab warns when it finds one. To close that gap from the plugin instead, see
+address of its own, such as a VPS or a public IPv6 address, block Jellyfin's ports in its firewall too. Step 5 of
+the Configuration tab warns when it finds one. To close that gap from the plugin instead, see
 [Only through the proxy](#only-through-the-proxy).
+
+## Name check
+
+Step 2 looks up the first public name under **Proxy Address** and compares it with this server's public IP.
+
+* **Ready**: the name points to this server.
+* **Not pointed here**: the name does not point anywhere yet, or points somewhere else. A new record can take a few
+  minutes to appear. Otherwise check its DDNS record. The step lists where the name points and this server's
+  public IP.
+* **Not found**: the name could not be looked up.
+* **Home only**: every name ends in a home network ending, such as `.local`, `.lan` or `.home.arpa`, so it only
+  works at home. Choose a public name.
+
+A name behind Cloudflare's orange cloud points at Cloudflare, so it shows as **Not pointed here**.
+
+## Automatic port forwarding
+
+**Automatic port forwarding**, in step 4 of the Configuration tab, asks your router to forward the ports for you.
+It is on by default, and is saved as soon as you change it.
+
+* The plugin asks the router through NAT-PMP first, then UPnP. Most home routers support one of them, though some
+  ship with it turned off.
+* Port 80 is forwarded while the proxy runs. Port 443 follows once a certificate lets the proxy answer HTTPS.
+* Each forward points at this server's address on your network, the one step 4 shows.
+* The router keeps a forward for 2 hours, and the plugin renews it every hour.
+* The forwards are removed when Jellyfin shuts down, when the proxy or this setting is turned off, and when the
+  plugin is uninstalled.
+* A port the router already forwards to another device is left alone. Step 4 says which port is taken. Remove that
+  rule on the router, or forward by hand.
+* It only covers IPv4. For visitors over IPv6, allow ports 80 and 443 to this server in the router's firewall.
+* **Try Again** asks the router once more straight away.
+* Each change is written to the activity log. See [Monitoring](Monitoring.md#remote-access-entries).
+
+When the router does not open the ports, or the setting is off, step 4 shows **Forward by hand** with the rule to
+add: TCP ports **80** and **443** to the address it shows. The server cannot see ports forwarded by hand, so step 4
+turns green once **Test from Outside** reaches the server.
+
+![Step 4, Router](screenshots/Router%20Step.png)
+
+### Shared addresses and CGNAT
+
+Some internet providers share one public address between many homes, called carrier-grade NAT or CGNAT. Behind it,
+no forwarded port can be reached from the internet. Step 4 compares the internet address the router reports with
+the public IP the internet sees, and shows **Shared address** when:
+
+* the router's internet address is in `100.64.0.0/10`, the range providers use for shared addresses,
+* the router's internet address is a private one, such as `192.168.0.1`, so another router or your provider stands
+  between it and the internet. Forward the ports on that one too, or set it to bridge mode,
+* the router's internet address differs from the public IP, so your provider likely shares one address between
+  customers, or this server reaches the internet through a VPN.
+
+Ask your provider for a public IP. Many give one for free or a small monthly fee. The check needs a router that
+answers over UPnP or NAT-PMP. Without one, compare the addresses yourself as in
+[Check you are not behind CGNAT](BeginnersGuide.md#0-check-you-are-not-behind-cgnat).
+
+![Step 4 behind a shared address](screenshots/CGNAT.png)
+
+## Test from Outside
+
+Step 6, **Reachable from outside**, checks your address the way a visitor would. **Test from Outside** asks
+[check-host.net](https://check-host.net) to connect to your public name on port 443 from up to three places around
+the world. It can take 20 seconds.
+
+* **Reachable**: at least one place connected. Each place is listed with its result.
+* **Not reachable**: no place could connect. Check step 4, and ask your provider whether it blocks port 443.
+* **Test failed**: check-host.net could not be reached or was busy. Try again in a minute.
+
+The test needs a public name under **Proxy Address**. A connection counts even when the country rule closes it at
+once, since the test is about the port.
+
+!!! note "What is sent"
+    Only the hostname and the port are sent to check-host.net, and only when you select **Test from Outside**.
+
+![Step 6, Reachable from outside](screenshots/Outside%20Test.png)
 
 ## Certificates
 
@@ -69,9 +148,9 @@ Let's Encrypt is only contacted once **I accept the Let's Encrypt terms** is tic
 ### How Let's Encrypt checks your address
 
 Let's Encrypt only issues a certificate after checking that the address really points at you. The plugin picks the
-check, and the Certificate section says which is in use:
+check, and the Certificate step says which is in use:
 
-* **Through DNS**, when every address is covered by a **Cloudflare** or **Duck DNS** record on the Domains tab.
+* **Through DNS**, when every address is covered by a **Cloudflare** or **Duck DNS** DDNS record.
   The plugin publishes a short-lived TXT record with that provider. Port 80 is not needed, and wildcard addresses
   such as `*.example.com` work. A Cloudflare token needs the **Edit zone DNS** permission.
 * **Through port 80** otherwise. Let's Encrypt fetches a file from `http://your-address/`, so port 80 must be
@@ -79,15 +158,15 @@ check, and the Certificate section says which is in use:
 
 ### Renewal
 
-Certificates last 90 days. The **Refresh Certificate** scheduled task checks daily, and saving the Proxy tab
-checks too. Either one requests a new certificate when there is none, when it no longer covers your addresses, or
+Certificates last 90 days. The **Refresh Certificate** scheduled task checks daily, and saving the
+Configuration tab checks too. Either one requests a new certificate when there is none, when it no longer covers your addresses, or
 within 30 days of expiry. A new certificate is used straight away.
 
-If Let's Encrypt refuses, the reason shows on the Proxy tab and in the activity log. The next try waits an hour,
+If Let's Encrypt refuses, the reason shows in step 3, **Certificate**, and in the activity log. The next try waits an hour,
 doubling up to a day, to stay within Let's Encrypt's limits. Changing the address tries again at once.
 
 To replace a certificate now, for example if its key may have leaked, select **Request a New Certificate** in the
-Certificate section. Let's Encrypt allows five copies of the same certificate a week.
+Certificate step. Let's Encrypt allows five copies of the same certificate a week.
 
 !!! tip "Testing first"
     Set the environment variable `DDNS_ACME_DIRECTORY` to
@@ -100,10 +179,10 @@ The plugin makes its own root certificate once, valid for ten years, and issues 
 That certificate renews itself about every 13 months, and whenever your addresses change. A device that trusts
 the root trusts every renewal, so you only install the root once per device.
 
-1. In the Certificate section, select **Download Root Certificate**. It saves `remote-access-root.crt`, which
+1. In the Certificate step, select **Download Root Certificate**. It saves `remote-access-root.crt`, which
    holds no private key.
 2. Install it on each device as below. Before trusting it, check that the device shows the same SHA-256
-   fingerprint as the Proxy tab.
+   fingerprint as the Certificate step.
 
 | Device | How to install |
 |---|---|
@@ -205,19 +284,20 @@ treats everyone as part of your home network, strangers included:
 * the Dashboard shows only local visitors, with no countries.
 
 The only fix is to let the real addresses reach the proxy, for example with host networking. There is no setting
-that works around it. The Proxy tab warns, and the activity log notes it once, when an hour brings 100 or more
+that works around it. The Configuration tab warns, and the activity log notes it once, when an hour brings 100 or more
 requests for your public names, all from one local address and none from the internet.
 
 ## Recovery
 
-* **Undo** on the Proxy tab puts Jellyfin's network settings back as they were before **Trust the Proxy**.
+* **Undo** in step 5 of the Configuration tab puts Jellyfin's network settings back as they were before **Trust the Proxy**.
 * **Locked out of the dashboard?** Create an empty file named `DISABLE` in
   `plugins/configurations/Jellyfin.Plugin.DynamicDns.Proxy/` under Jellyfin's data folder, and restart
   Jellyfin. The proxy stays off and Jellyfin's network settings go back as they were. Putting them back may
   restart Jellyfin a second time. Delete the file to turn the proxy on again.
 * **Files the plugin cannot open?** Jellyfin is running as a different account than the one that made them. Run
-  the command the Proxy tab shows, then restart Jellyfin.
-* **Uninstalling** puts Jellyfin's network settings back first.
+  the command the Configuration tab shows, then restart Jellyfin.
+* **Uninstalling** puts Jellyfin's network settings back first, and removes the forwards the plugin opened on the
+  router.
 
 !!! warning "Disabling the plugin"
     Disabling the plugin on Jellyfin's Plugins page stops the proxy but leaves Jellyfin trusting it. With

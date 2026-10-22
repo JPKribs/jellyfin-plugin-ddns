@@ -30,7 +30,7 @@ You can use Dynamic DNS on its own, or both together. There is no separate rever
   [Remote Access](RemoteAccess.md).
 * **Want a tour first?** [The Plugin's Pages](Pages.md) shows every tab.
 
-![Domains tab](screenshots/Domains.png)
+![Configuration tab](screenshots/Configuration.png)
 
 The DNS providers are ported from [ddclient](https://github.com/ddclient/ddclient), which is the recommended tool
 if you want Dynamic DNS outside Jellyfin.

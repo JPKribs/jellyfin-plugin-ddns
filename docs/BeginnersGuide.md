@@ -15,7 +15,7 @@ works.
 ## What you need
 
 * Jellyfin 12.2 running at home, and an administrator account on it.
-* Access to your home router's settings, to forward two ports.
+* Access to your home router's settings, in case it does not forward two ports on its own.
 * A public IP from your internet provider. Step 0 shows how to check.
 * **On Linux**, permission for Jellyfin to use ports 80 and 443. Run `sudo systemctl edit jellyfin`, add
   `AmbientCapabilities=CAP_NET_BIND_SERVICE` under `[Service]`, and restart Jellyfin. Windows and macOS need
@@ -34,6 +34,9 @@ public or static IP**. Many give one for free or a small monthly fee. Check befo
 
 If the two match, you are fine. If they differ, or the router's address starts with `100.64` to `100.127`, you
 are behind CGNAT. Ask your provider for a public IP before going further.
+
+Once the plugin is set up, it checks this too. Step 4, **Router**, of its **Configuration** tab shows
+**Shared address** when your provider shares your public IP. Checking now saves buying a domain you cannot use.
 
 ## 1. Buy a domain
 
@@ -92,7 +95,8 @@ The plugin now has a **Remote Access** entry in the dashboard's side menu.
 
 ## 5. Add the record to the plugin
 
-1. Open the **Remote Access** entry in the dashboard's side menu, then the **Domains** tab, and select **New**.
+1. Open the **Remote Access** entry in the dashboard's side menu, then the **Configuration** tab. In step 2,
+   **Address**, select **New**.
 2. Fill it in:
     * **Name**: anything, such as `Home`
     * **Provider**: **Cloudflare**
@@ -103,10 +107,10 @@ The plugin now has a **Remote Access** entry in the dashboard's side menu.
     * **API token or key**: the token from step 3
     * **Zone name**: `example.com`
 3. Select **Save Record**.
-4. On the **Address** tab, select **Update Now**.
+4. Select **Update Now** above the records.
 
-Back on the **Domains** tab, the record's status card should say **Updated**, and Cloudflare's record should now
-show your real address instead of `192.0.2.1`. From now on the plugin checks every 15 minutes and updates the
+The record's status card should say **Updated**, and Cloudflare's record should now show your real address
+instead of `192.0.2.1`. From now on the plugin checks every 15 minutes and updates the
 record whenever your address changes.
 
 ## 6. Turn on Remote Access
@@ -114,40 +118,55 @@ record whenever your address changes.
 Check the Linux or Docker item in [What you need](#what-you-need) first. Without it the proxy cannot use ports 80
 and 443, and no certificate arrives.
 
-On the **Proxy** tab:
+On the **Configuration** tab:
 
-1. Under **Remote Access**, tick **Enabled**.
-2. Under **Address**, tick `media.example.com`. It is listed because of the record from step 5.
-3. Under **Certificate**, leave **Source** on **Let's Encrypt** and tick **I accept the Let's Encrypt terms**.
-4. Select **Save**.
+1. In step 1, **Proxy on**, tick **Enabled**.
+2. In step 2, **Address**, under **Proxy Address**, tick `media.example.com`. It is listed because of the record
+   from step 5.
+3. In step 3, **Certificate**, leave **Source** on **Let's Encrypt** and tick **I accept the Let's Encrypt terms**.
+4. Select **Save** at the bottom of the page.
 
-Within a minute or two the certificate status shows a certificate for `media.example.com`. Because the address is
-a Cloudflare record, the plugin proves it to Let's Encrypt through DNS, so this works even before your router is
-set up.
+Step 2 then shows **Ready** once `media.example.com` points to this server. Within a minute or two step 3 shows a
+certificate for `media.example.com`. Because the address is a Cloudflare record, the plugin proves it to Let's
+Encrypt through DNS, so this works even before your router is set up.
 
 ## 7. Forward ports on your router
 
-The **Router** section of the Proxy tab shows the address to forward to, such as `192.168.1.10`. In your router's
-settings, usually under **Port forwarding**, **NAT** or **Virtual servers**, add two rules:
+Look at step 4, **Router**, of the **Configuration** tab. **Automatic port forwarding** is on, so the plugin has
+already asked your router to forward ports 80 and 443 through UPnP or NAT-PMP.
+
+* **Forwarded**: the router did it. Go on to step 8.
+* **Shared address**: your provider shares your public IP. See step 0.
+* **Forward by hand**: the router did not answer, or has UPnP and NAT-PMP turned off. Either turn one on in the
+  router's settings and select **Try Again**, or add the rules yourself as below.
+
+Step 4 shows the address to forward to, such as `192.168.1.10`. In your router's settings, usually under
+**Port forwarding**, **NAT** or **Virtual servers**, add two rules:
 
 | External port | Internal address | Internal port | Protocol |
 |---|---|---|---|
-| 443 | the address from the Router section | 443 | TCP |
-| 80 | the address from the Router section | 80 | TCP |
+| 443 | the address from step 4 | 443 | TCP |
+| 80 | the address from step 4 | 80 | TCP |
 
 Port 443 carries everything. Port 80 only sends `http://` links on to HTTPS. Do not forward Jellyfin's own ports,
 8096 or 8920.
 
 ## 8. Trust the Proxy
 
-Until this step is done, the proxy turns every internet visitor away. On the **Proxy** tab, under **Jellyfin**,
-select **Trust the Proxy** and confirm. Jellyfin restarts once. After that it sees each visitor's real address, so
-its own remote-access rules and bitrate limits work, and the proxy's bans and country rules apply.
+Until this step is done, the proxy turns every internet visitor away. In step 5, **Trust the Proxy**, of the
+**Configuration** tab, select **Trust the Proxy** and confirm. Jellyfin restarts once. After that it sees each
+visitor's real address, so its own remote-access rules and bitrate limits work, and the proxy's bans and country
+rules apply.
 
 ## 9. Test it
 
-On your phone, turn Wi-Fi off and open `https://media.example.com`. You should see Jellyfin's sign-in page with a
-padlock in the address bar. Then add the same address as a server in the Jellyfin apps you use away from home.
+In step 6, **Reachable from outside**, of the **Configuration** tab, select **Test from Outside**. check-host.net
+connects to your address from up to three places in the world, and the step shows **Reachable** when one gets
+through. Only the hostname and port are sent to check-host.net. See
+[Test from Outside](RemoteAccess.md#test-from-outside).
+
+Then, on your phone, turn Wi-Fi off and open `https://media.example.com`. You should see Jellyfin's sign-in page
+with a padlock in the address bar. Then add the same address as a server in the Jellyfin apps you use away from home.
 
 At home, keep using Jellyfin's local address in your apps. Many routers cannot open your own public address from
 inside your home.
@@ -168,9 +187,11 @@ inside your home.
 | `no 'AAAA' record at Cloudflare` | Turn off **Update IPv6**, or add an `AAAA` record as in step 2. |
 | `zone lookup failed`, or another authentication or permission error | The token is wrong. Make a new one as in step 3, and check **Auth email or token** is `token`. |
 | `no zone ID found for zone ...` | **Zone name** must be the domain alone, such as `example.com`, not `media.example.com`. It can also mean the token is limited to a different zone. |
-| The Address tab warns that the address is internal | The server has no public IP of its own. See step 0. |
-| The Proxy tab shows no certificate | Its Certificate section shows Let's Encrypt's reason. Jellyfin's activity log has it too. |
-| The phone cannot connect | Check the forwarding rules in step 7, and step 0. Some providers block ports 80 and 443 on home lines. Ask them. |
+| Configuration step 2 warns that the address is internal | The server has no public IP of its own. See step 0. |
+| Configuration step 2 shows **Not pointed here** | The record has not updated yet, or its name differs. Select **Update Now** and wait a few minutes. |
+| Configuration step 3 shows no certificate | It shows Let's Encrypt's reason. Jellyfin's activity log has it too. |
+| Configuration step 4 shows **Shared address** | Your provider shares your public IP. See step 0. |
+| **Test from Outside** shows **Not reachable**, or the phone cannot connect | Check the forwarding in step 7, and step 0. Some providers block ports 80 and 443 on home lines. Ask them. |
 | Works away from home, not at home | Normal for many routers. Use Jellyfin's local address at home. |
 | The sign-in page loads, but everyone shows as local on the Dashboard | Something in front of the proxy hides visitors' addresses. See [When every visitor looks local](RemoteAccess.md#when-every-visitor-looks-local). |
 | Locked out after a setting change | See [Recovery](RemoteAccess.md#recovery). |

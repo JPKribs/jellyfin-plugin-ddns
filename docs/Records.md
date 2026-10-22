@@ -1,11 +1,11 @@
 # Adding Records
 
-A **record** is one DNS name the plugin keeps pointed at your server, such as `media.example.com`. Records are on
-the **Domains** tab.
+A **record** is one DNS name the plugin keeps pointed at your server, such as `media.example.com`. Records are in
+step 2, **Address**, of the **Configuration** tab, under **DDNS Records**.
 
 ## Add a record
 
-1. On the **Domains** tab, select **New**.
+1. In step 2, **Address**, of the **Configuration** tab, select **New**.
 2. Give it a **Name**, for your own reference.
 3. Pick your DNS company in **Provider**. The note under it says what each field means for that provider, and only
    the fields it uses are shown. [Providers](providers/README.md) has a page for each one.
@@ -15,7 +15,7 @@ the **Domains** tab.
 
 ![Record editor](screenshots/Record%20Editor.png)
 
-The first update runs within 15 minutes. To run it now, select **Update Now** on the **Address** tab. The status
+The first update runs within 15 minutes. To run it now, select **Update Now** above the records. The status
 card at the bottom of the record then shows how it went.
 
 ![Provider picker](screenshots/Provider%20Picker.png)
@@ -40,21 +40,22 @@ and mail settings.
 
 If DNS for a name returns someone else's address, such as Cloudflare's when its orange cloud is on, the plugin
 cannot tell whether your record is current. Turn on **Treat as proxied address** on that record. The plugin then
-compares against the last address it sent instead of looking the name up. Pair it with **Force update** on the
-**Address** tab, so the record is sent again now and then in case it was changed elsewhere.
+compares against the last address it sent instead of looking the name up. Pair it with **Force update** under
+**Advanced → Dynamic DNS**, so the record is sent again now and then in case it was changed elsewhere.
 
 ## How your public IP is found
 
-The **Address** tab shows the public IP the server was last seen at, and how it is found:
+Step 2 of the **Configuration** tab shows the public IP the server was last seen at. How it is found is set under
+**Advanced → Dynamic DNS**:
 
 * **IPv4 Detection URLs** and **IPv6 Detection URLs** list services that reply with your address, one per line.
   Leave them empty to use the built-in list. Only `https` addresses are used, since a tampered reply could point
   your DNS somewhere else.
 * Two services must agree on the address before it is used. If only one answers, its answer is used. If services
   answer with different addresses and no two agree, nothing is published that run.
-* If the only address found is a private one, the server most likely has no public IP of its own. The tab warns
+* If the only address found is a private one, the server most likely has no public IP of its own. Step 2 warns
   and nothing is published. Turn off **Skip update if internal** to publish such an address anyway.
 
-![Address tab](screenshots/Address.png)
+![Advanced, Dynamic DNS](screenshots/Dynamic%20DNS.png)
 
 Next: [How Updates Run](HowItWorks.md).
