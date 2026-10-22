@@ -1056,29 +1056,44 @@ export default function (view) {
         Shared.getEl('text' + key).textContent = result.text;
     }
 
+    // The summary above the steps: how many are done, a bar segment per step, and the next one to look at.
     function renderSummary(st, results) {
-        var box = Shared.getEl('summary');
+        var segments = Shared.getEl('summaryBar').children;
+        var done = 0;
+        var first = -1;
+        results.forEach(function (r, i) {
+            segments[i].setAttribute('data-state', st.Enabled ? r.state : 'gray');
+            if (r.state === 'green') done++;
+            else if (first < 0) first = i;
+        });
         // Someone using only Dynamic DNS is not asked to finish the proxy steps.
         if (!st.Enabled) {
-            box.className = 'jpk-info';
-            box.textContent = 'The proxy is off. The DDNS records in step 2 still keep your address pointed at this server.';
+            summary('The proxy is off', 'gray', 'DDNS only', 'The DDNS records in step 2 still keep your address pointed at this server.', -1);
             return -1;
         }
-        var first = -1;
-        for (var i = 0; i < results.length; i++) {
-            if (results[i].state !== 'green') { first = i; break; }
-        }
         if (first < 0) {
-            box.className = 'jpk-success';
-            box.textContent = st.PublicUrl
-                ? 'Fully accessible from outside your network at ' + st.PublicUrl + '.'
-                : 'Fully accessible from outside your network.';
+            summary('Ready to share', 'green', 'All set', st.PublicUrl
+                ? 'Jellyfin can be reached from outside your network at ' + st.PublicUrl + '.'
+                : 'Jellyfin can be reached from outside your network.', -1);
             return first;
         }
         var r = results[first];
-        box.className = r.state === 'red' ? 'jpk-error' : r.state === 'amber' ? 'jpk-warn' : 'jpk-info';
-        box.textContent = 'Step ' + (first + 1) + ', ' + STEPS[first].title + ', ' + (r.state === 'gray' ? 'is not done yet.' : 'needs attention.');
+        summary(done + ' of ' + results.length + ' steps done', BADGES[r.state],
+            r.state === 'gray' ? 'Not done' : 'Needs attention',
+            STEPS[first].title + ': ' + r.text, first);
         return first;
+    }
+
+    function summary(title, color, word, text, step) {
+        Shared.getEl('summaryTitle').textContent = title;
+        var badge = Shared.getEl('summaryBadge');
+        badge.className = 'jpk-badge ' + color;
+        badge.textContent = word;
+        Shared.getEl('summaryText').textContent = text;
+        var open = Shared.getEl('summaryOpen');
+        open.textContent = step >= 0 ? 'Open step ' + (step + 1) : '';
+        open.setAttribute('data-step', step >= 0 ? STEPS[step].key : '');
+        Shared.setVisible('summaryOpen', step >= 0);
     }
 
     function renderAddressDetails(st, result) {
@@ -1208,14 +1223,18 @@ export default function (view) {
             // Wait for the records, so the address step is not judged before they are known.
             return recordsDone.then(function () { render(results[1]); });
         }).catch(function () {
-            var box = Shared.getEl('summary');
-            box.className = 'jpk-error';
-            box.textContent = 'Could not load the proxy status.';
+            summary('Status unavailable', 'red', 'Error', 'Could not load the proxy status.', -1);
         });
     }
 
     function bind() {
         hostnames = createHostnamePicker(Shared, 'hostnamePicker', 'hostnames');
+        Shared.getEl('summaryOpen').addEventListener('click', function () {
+            var key = this.getAttribute('data-step');
+            if (!key) return;
+            setStepOpen(key, true);
+            Shared.getEl('step' + key).scrollIntoView({ behavior: 'smooth', block: 'start' });
+        });
 
         // Step 2: records and the public IP.
         Shared.getEl('selectRecord').addEventListener('change', function () {

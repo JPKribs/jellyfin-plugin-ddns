@@ -13,7 +13,15 @@
 
                     <div class="fieldDescription">Work through these steps to reach Jellyfin from outside your network. Each step opens to show its settings.</div>
 
-                    <div id="summary" class="jpk-info" aria-live="polite">Checking...</div>
+                    <!-- Where the setup stands: steps done, one bar segment per step, and what to do next. -->
+                    <div id="summary" class="ddns-summary" aria-live="polite">
+                        <div class="ddns-summary-head">
+                            <span id="summaryTitle" class="ddns-summary-title">Checking...</span>
+                            <span id="summaryBadge" class="jpk-badge gray hidden"></span>
+                        </div>
+                        <div id="summaryBar" class="ddns-summary-bar" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span><span></span></div>
+                        <div class="ddns-summary-text"><span id="summaryText"></span> <button type="button" id="summaryOpen" class="ddns-summary-link hidden"></button></div>
+                    </div>
                     <div id="folderProblem" class="jpk-error hidden"></div>
                     <div id="everyoneLocal" class="jpk-warn hidden"></div>
                     <div id="countryNote" class="jpk-info hidden"></div>
@@ -417,6 +425,17 @@
     <link rel="stylesheet" href="configurationpage?name=ddns_common.css">
     <style>
         #DynamicDnsConfigurationPage #summary { font-size: 1.05em; }
+        #DynamicDnsConfigurationPage .ddns-summary { margin: 1em 0 var(--jpk-field-gap); padding: 1em 1.1em; background: var(--jpk-surface); border: 1px solid var(--jpk-border); border-radius: 8px; }
+        #DynamicDnsConfigurationPage .ddns-summary-head { display: flex; align-items: center; justify-content: space-between; gap: 0.75em; flex-wrap: wrap; }
+        #DynamicDnsConfigurationPage .ddns-summary-title { font-size: 1.15em; font-weight: 500; }
+        #DynamicDnsConfigurationPage .ddns-summary-bar { display: flex; gap: 4px; margin: 0.8em 0; }
+        #DynamicDnsConfigurationPage .ddns-summary-bar > span { flex: 1 1 0; height: 6px; border-radius: 3px; background: var(--jpk-gray-bg); }
+        #DynamicDnsConfigurationPage .ddns-summary-bar > span[data-state="green"] { background: var(--jpk-green-fg); }
+        #DynamicDnsConfigurationPage .ddns-summary-bar > span[data-state="amber"] { background: var(--jpk-orange-fg); }
+        #DynamicDnsConfigurationPage .ddns-summary-bar > span[data-state="red"] { background: var(--jpk-red-fg); }
+        #DynamicDnsConfigurationPage .ddns-summary-text { line-height: 1.5; opacity: 0.9; }
+        #DynamicDnsConfigurationPage .ddns-summary-link { background: none; border: 0; padding: 0; font: inherit; color: var(--jpk-accent); cursor: pointer; }
+        #DynamicDnsConfigurationPage .ddns-summary-link:hover { text-decoration: underline; }
         #DynamicDnsConfigurationPage .ddns-steps { margin-top: 1em; }
         /* The step header carries its state as a badge before the fold arrow, and its number takes the state's colour. */
         #DynamicDnsConfigurationPage .ddns-step .jpk-collapsible-header .jpk-badge { margin-right: 0.8em; }

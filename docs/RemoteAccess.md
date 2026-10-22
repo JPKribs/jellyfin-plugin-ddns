@@ -25,7 +25,7 @@ You need:
 ## Setup
 
 Everything is on the **Configuration** tab, as six numbered steps. Each step shows its state, and the summary at
-the top names the first step that needs attention.
+the top counts the steps done and explains the first one that needs attention.
 
 1. **Proxy on**: tick **Enabled** and select **Save** at the bottom of the page.
 2. **Address**: under **Proxy Address**, tick the names people will use. Names your DDNS records keep pointed at
@@ -41,7 +41,7 @@ the top names the first step that needs attention.
    **Undo** puts its settings back.
 6. **Reachable from outside**: select **Test from Outside**. See [Test from Outside](#test-from-outside).
 
-When every step is done, the summary says the server is fully accessible from outside your network. Then open your
+When every step is done, the summary says **Ready to share**. Then open your
 address on a phone with Wi-Fi turned off.
 
 ![Configuration tab](screenshots/Configuration.png)

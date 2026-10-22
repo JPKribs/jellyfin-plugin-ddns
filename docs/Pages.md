@@ -23,8 +23,8 @@ See [Dashboard](Dashboard.md) for every part of it.
 
 Everything needed to reach Jellyfin from outside, as six numbered steps. Each step shows its state on the right,
 such as **Ready** or **Forward by hand**, and opens to show its settings. Steps that are not done yet open on their
-own. The summary at the top names the first step that needs attention, or says the server is fully accessible from
-outside your network.
+own. The summary at the top counts the steps that are done, with a bar for each step in its colour. It explains
+the first step that needs attention, with **Open step** to jump to it, or says **Ready to share** once all six are done.
 
 ![Configuration tab](screenshots/Configuration.png)
 
