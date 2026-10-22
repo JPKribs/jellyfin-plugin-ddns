@@ -8,11 +8,13 @@ It is the page the **Remote Access** entry in the dashboard's side menu opens on
 ## Share your server
 
 Once Remote Access has an address, the **Share Your Server** card at the top shows it with a QR code. It is the
-first public name under **Proxy Address** in step 2 of the **Configuration** tab. A **Public** badge means
+proxy's first public name, the DDNS record's hostname in step 2 of the **Configuration** tab. A **Public** badge means
 anyone can open it, and **Home only** means only your home network can.
 
 * Scan the code with a phone camera to open the address.
-* **Copy** puts the address on the clipboard. **Share** opens the device's share sheet, on browsers that have one.
+* **Copy URL** puts the address on the clipboard, and **Copy Image** the QR code, ready to paste into a message.
+  A browser that cannot copy images, such as one on a plain `http://` page, saves the code as a file instead.
+* **Share** opens the device's share sheet, on browsers that have one.
 * Family add the address as a server in their Jellyfin app.
 * When the only address is one your home network alone knows, such as `nas.lan`, the card shows **Home only** and a note,
   since phones outside cannot open it. Choose a public address in step 2 to share it outside.

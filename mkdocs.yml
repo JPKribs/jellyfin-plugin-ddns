@@ -48,7 +48,7 @@ nav:
   - Getting Started:
       - Installation: Installation.md
       - The Plugin's Pages: Pages.md
-      - Adding Records: Records.md
+      - The DDNS Record: Records.md
   - Features:
       - Remote Access: RemoteAccess.md
       - Dashboard: Dashboard.md

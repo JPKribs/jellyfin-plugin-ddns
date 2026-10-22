@@ -1,14 +1,16 @@
 # Monitoring
 
-## Record health
+## Record status
 
-The cards above the records, in step 2, **Address**, of the **Configuration** tab, count your records:
+The status card in step 2, **Address**, of the **Configuration** tab shows how the DDNS record is doing:
 
-* **Healthy**: the last check succeeded, and happened within the last 24 hours.
-* **Unhealthy**: the last check failed, or none happened within the last 24 hours.
-* **Unpublished**: it has not run yet.
+* **Public IP**: the address the server was last seen at.
+* **Last update**: when the record was last checked.
+* **Result**: what the last check did, in green when it worked and red when it failed, or **Paused** when updates
+  are off under **Advanced → Dynamic DNS**.
 
-![Record health summary](screenshots/Record%20Health.png)
+When the proxy is off, the step's badge says **Up to date** once the last check worked within the last 24 hours,
+**Failing** when it did not, and **Not updated yet** before the first one.
 
 ## Activity log
 
@@ -38,7 +40,7 @@ record is already current writes nothing.
 * **Update works again**: a record that was failing updated.
 * **Updates paused**: a record was paused after repeated failures, once per streak.
 * **Detection unhealthy**: no public IP was found for about an hour, with an entry when it is found again.
-* **Configuration changes**: a record was added, changed or removed, or the settings under **Advanced → Dynamic DNS** changed.
+* **Configuration changes**: the record was added, changed or removed, or the settings under **Advanced → Dynamic DNS** changed.
 * **Plaintext credentials**: credentials cannot be encrypted on this server, once per outage.
 * **Remote Access cannot use its own files**: Jellyfin runs as an account that cannot open the plugin's folders.
   It is an error, and names the command that fixes it. See [Recovery](RemoteAccess.md#recovery).

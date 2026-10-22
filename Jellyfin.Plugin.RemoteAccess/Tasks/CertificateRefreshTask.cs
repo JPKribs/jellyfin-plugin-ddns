@@ -15,7 +15,7 @@ namespace Jellyfin.Plugin.DynamicDns.Tasks;
 /// addresses, or is within 30 days of expiry, reloads certificate files, replaces a self-signed one before it
 /// expires, and warns in the activity log when a certificate is about to run out or cannot be loaded. The proxy
 /// also notices file changes on its own; this is the scheduled safety net. Forcing a new certificate is the
-/// Configuration tab's button, not a task.
+/// Advanced tab's button, not a task.
 /// </summary>
 public sealed class CertificateRefreshTask : PluginScheduledTask
 {

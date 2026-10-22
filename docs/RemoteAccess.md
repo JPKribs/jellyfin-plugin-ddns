@@ -28,13 +28,13 @@ Everything is on the **Configuration** tab, as six numbered steps. Each step sho
 the top counts the steps done and explains the first one that needs attention.
 
 1. **Proxy on**: tick **Enabled** and select **Save** at the bottom of the page.
-2. **Address**: under **Proxy Address**, tick the names people will use. Names your DDNS records keep pointed at
-   this server are listed for you. Add any others under **Other addresses**. The step then checks that the name
-   points at this server. See [Name check](#name-check).
+2. **Address**: set up the DDNS record. Its hostname is the name people will use, and the proxy answers on it.
+   More names go under **Other addresses** in **Advanced → Addresses**. The step then checks that the name points
+   at this server. See [Name check](#name-check).
 3. **Certificate**: leave **Let's Encrypt** selected, tick **I accept the Let's Encrypt terms**, and save. See
    [Certificates](#certificates).
-4. **Router**: with **Automatic port forwarding** on, the plugin asks the router to forward the ports. If the
-   router does not, forward TCP ports **80** and **443** by hand to the address this step shows. See
+4. **Router**: the plugin asks the router to forward the ports. If the router does not, forward TCP ports **80**
+   and **443** by hand to the address this step shows. See
    [Automatic port forwarding](#automatic-port-forwarding).
 5. **Trust the Proxy**: select **Trust the Proxy**. Until then, internet visitors are turned away. Jellyfin
    restarts once so it can see each visitor's real address through the proxy. Its own ports stay the same.
@@ -61,22 +61,22 @@ the Configuration tab warns when it finds one. To close that gap from the plugin
 
 ## Name check
 
-Step 2 looks up the first public name under **Proxy Address** and compares it with this server's public IP.
+Step 2 looks up the proxy's first public name, the record's hostname, and compares it with this server's public IP.
 
 * **Ready**: the name points to this server.
 * **Not pointed here**: the name does not point anywhere yet, or points somewhere else. A new record can take a few
-  minutes to appear. Otherwise check its DDNS record. The step lists where the name points and this server's
+  minutes to appear. Otherwise check the record. The step lists where the name points and this server's
   public IP.
 * **Not found**: the name could not be looked up.
 * **Home only**: every name ends in a home network ending, such as `.local`, `.lan` or `.home.arpa`, so it only
-  works at home. Choose a public name.
+  works at home. Use a public name.
 
 A name behind Cloudflare's orange cloud points at Cloudflare, so it shows as **Not pointed here**.
 
 ## Automatic port forwarding
 
-**Automatic port forwarding**, in step 4 of the Configuration tab, asks your router to forward the ports for you.
-It is on by default, and is saved as soon as you change it.
+**Automatic port forwarding**, under **Advanced → Addresses**, asks your router to forward the ports for you. It is
+on by default. Step 4 of the Configuration tab shows how it went.
 
 * The plugin asks the router through NAT-PMP first, then UPnP. Most home routers support one of them, though some
   ship with it turned off.
@@ -88,7 +88,7 @@ It is on by default, and is saved as soon as you change it.
 * A port the router already forwards to another device is left alone. Step 4 says which port is taken. Remove that
   rule on the router, or forward by hand.
 * It only covers IPv4. For visitors over IPv6, allow ports 80 and 443 to this server in the router's firewall.
-* **Try Again** asks the router once more straight away.
+* **Try Again** in step 4 asks the router once more straight away.
 * Each change is written to the activity log. See [Monitoring](Monitoring.md#remote-access-entries).
 
 When the router does not open the ports, or the setting is off, step 4 shows **Forward by hand** with the rule to
@@ -121,11 +121,12 @@ Step 6, **Reachable from outside**, checks your address the way a visitor would.
 [check-host.net](https://check-host.net) to connect to your public name on port 443 from up to three places around
 the world. It can take 20 seconds.
 
-* **Reachable**: at least one place connected. Each place is listed with its result.
+* **Reachable**: at least one place connected. The **Outside check** card lists each place as **Reached** or
+  **Failed**, with the time of the test.
 * **Not reachable**: no place could connect. Check step 4, and ask your provider whether it blocks port 443.
 * **Test failed**: check-host.net could not be reached or was busy. Try again in a minute.
 
-The test needs a public name under **Proxy Address**. A connection counts even when the country rule closes it at
+The test needs a public name for the proxy. A connection counts even when the country rule closes it at
 once, since the test is about the port.
 
 !!! note "What is sent"
@@ -150,7 +151,7 @@ Let's Encrypt is only contacted once **I accept the Let's Encrypt terms** is tic
 Let's Encrypt only issues a certificate after checking that the address really points at you. The plugin picks the
 check, and the Certificate step says which is in use:
 
-* **Through DNS**, when every address is covered by a **Cloudflare** or **Duck DNS** DDNS record.
+* **Through DNS**, when every address is covered by the DDNS record and its provider is **Cloudflare** or **Duck DNS**.
   The plugin publishes a short-lived TXT record with that provider. Port 80 is not needed, and wildcard addresses
   such as `*.example.com` work. A Cloudflare token needs the **Edit zone DNS** permission.
 * **Through port 80** otherwise. Let's Encrypt fetches a file from `http://your-address/`, so port 80 must be
@@ -165,8 +166,8 @@ within 30 days of expiry. A new certificate is used straight away.
 If Let's Encrypt refuses, the reason shows in step 3, **Certificate**, and in the activity log. The next try waits an hour,
 doubling up to a day, to stay within Let's Encrypt's limits. Changing the address tries again at once.
 
-To replace a certificate now, for example if its key may have leaked, select **Request a New Certificate** in the
-Certificate step. Let's Encrypt allows five copies of the same certificate a week.
+To replace a certificate now, for example if its key may have leaked, select **Request a New Certificate** under
+**Advanced → Security**. Let's Encrypt allows five copies of the same certificate a week.
 
 !!! tip "Testing first"
     Set the environment variable `DDNS_ACME_DIRECTORY` to
@@ -201,7 +202,8 @@ that happens, and every device then needs the new root.
 These are on by default, and each can be changed under **Advanced**.
 
 * **Your own network is never blocked.** Bans, the block list and country rules only apply to the internet.
-* **Country rule**: only visitors from the country this server is in can connect. Add countries in the
+* **Country rule**: only visitors from the country this server is in can connect. The **Configuration** tab lists
+  the countries that can connect, in green, or says in yellow that the server's country is not known yet. Add countries in the
   **Countries** picker under **Advanced → Blocking**, or set **Country rule** to **Off**. Unblocking a country from
   the Dashboard adds it. The rule blocks you abroad too, so see
   [Travelling abroad](BeginnersGuide.md#after-setup) before a trip.

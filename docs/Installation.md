@@ -25,4 +25,4 @@ without Remote Access.
 After the restart, the plugin has a **Remote Access** entry in the dashboard's side menu. It opens on the
 **Dashboard** tab. The other tabs are **Configuration** and **Advanced**.
 
-Next: [Adding Records](Records.md).
+Next: [The DDNS Record](Records.md).

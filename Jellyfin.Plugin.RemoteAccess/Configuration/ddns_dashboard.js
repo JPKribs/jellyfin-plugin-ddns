@@ -369,10 +369,59 @@ export default function (view) {
         Shared.getEl('btnCopyShare').addEventListener('click', function () {
             Shared.copyWithFeedback(this, Shared.getEl('shareUrl').href, { copiedText: 'Copied' });
         });
+        Shared.getEl('btnCopyQr').addEventListener('click', function () { copyQr(this); });
         Shared.getEl('btnShare').addEventListener('click', function () {
             var url = Shared.getEl('shareUrl').href;
             navigator.share({ title: 'Jellyfin', url: url }).catch(function () { /* closed without sharing */ });
         });
+    }
+
+    // The QR code as a PNG, drawn from the server's SVG at a size that prints and scans well.
+    function qrPng() {
+        var shown = Shared.getEl('shareQr').querySelector('svg');
+        if (!shown) return Promise.reject(new Error('No code'));
+        // A copy with a fixed size, since the shown code only has a viewBox and would draw at the browser's default.
+        var svg = shown.cloneNode(true);
+        svg.setAttribute('width', '600');
+        svg.setAttribute('height', '600');
+        var url = URL.createObjectURL(new Blob([new XMLSerializer().serializeToString(svg)], { type: 'image/svg+xml' }));
+        return new Promise(function (resolve, reject) {
+            var img = new Image();
+            img.onload = function () {
+                var canvas = document.createElement('canvas');
+                canvas.width = canvas.height = 600;
+                var ctx = canvas.getContext('2d');
+                ctx.fillStyle = '#fff';
+                ctx.fillRect(0, 0, 600, 600);
+                ctx.drawImage(img, 0, 0, 600, 600);
+                URL.revokeObjectURL(url);
+                canvas.toBlob(function (blob) { return blob ? resolve(blob) : reject(new Error('No image')); }, 'image/png');
+            };
+            img.onerror = function () { URL.revokeObjectURL(url); reject(new Error('No image')); };
+            img.src = url;
+        });
+    }
+
+    // Copies the code as an image. Browsers that cannot put images on the clipboard, as on a plain http:// page,
+    // save it as a file instead.
+    function copyQr(button) {
+        var label = button.querySelector('span:last-child');
+        var original = label.textContent;
+        function done(text) {
+            label.textContent = text;
+            setTimeout(function () { label.textContent = original; }, 1500);
+        }
+        qrPng().then(function (blob) {
+            if (navigator.clipboard && window.ClipboardItem && window.isSecureContext) {
+                return navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]).then(function () { done('Copied'); });
+            }
+            var link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = 'jellyfin-qr.png';
+            link.click();
+            setTimeout(function () { URL.revokeObjectURL(link.href); }, 1000);
+            done('Saved');
+        }).catch(function () { done('Copy failed'); });
     }
 
     // The address people use from the internet, with its QR code. Hidden until Remote Access has a public name.

@@ -6,6 +6,6 @@ In step 2, **Address**, of the **Configuration** tab, set **Provider** to **INWX
 - **Password**: your INWX password.
 - **Server override**: leave blank to use INWX's own server.
 
-INWX works out which record to update from the account. There is no hostname field, so the record saves without one. Give it a **Name** to tell it apart from your other records. With no name to look up, the plugin compares against the last address it sent. Step 2, **Address**, cannot offer the record under **Proxy Address**, so for [Remote Access](../RemoteAccess.md) add your name under **Other addresses** instead.
+INWX works out which record to update from the account. There is no hostname field, so the record saves without one. With no name to look up, the plugin compares against the last address it sent. The proxy cannot take its address from the record, so for [Remote Access](../RemoteAccess.md) add your name under **Other addresses** in **Advanced → Addresses**.
 
 _Ported from ddclient's `nic_inwx_update`._

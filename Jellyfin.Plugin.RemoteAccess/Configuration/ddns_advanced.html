@@ -78,6 +78,100 @@
                                 <input is="emby-input" type="number" id="requestTimeout" min="1" max="300" step="1" autocomplete="off" />
                                 <div class="fieldDescription">How long each request to a detection service or provider may take, in seconds.</div>
                             </div>
+
+                            <h3>Record</h3>
+                            <div id="recordIntro" class="fieldDescription"></div>
+                            <div id="recordEmpty" class="jpk-info hidden">No record yet. Add one in step 2, Address, on <a href="#/configurationpage?name=ddns_configuration" class="button-link">Configuration</a>.</div>
+                            <div id="extraRecords" class="jpk-warn hidden"></div>
+                            <div id="recordFields" class="hidden">
+                                <div class="checkboxContainer checkboxContainer-withDescription">
+                                    <label class="emby-checkbox-label">
+                                        <input type="checkbox" is="emby-checkbox" id="recEnabled" />
+                                        <span class="checkboxLabel">Enabled</span>
+                                    </label>
+                                    <div class="fieldDescription checkboxFieldDescription">Turn off to pause updates. The record and its name stay as they are.</div>
+                                </div>
+                                <div class="checkboxContainer">
+                                    <label class="emby-checkbox-label">
+                                        <input type="checkbox" is="emby-checkbox" id="recUpdateIPv4" />
+                                        <span class="checkboxLabel">Update IPv4</span>
+                                    </label>
+                                </div>
+                                <div class="checkboxContainer">
+                                    <label class="emby-checkbox-label">
+                                        <input type="checkbox" is="emby-checkbox" id="recUpdateIPv6" />
+                                        <span class="checkboxLabel">Update IPv6</span>
+                                    </label>
+                                </div>
+                                <div class="fieldDescription">IPv4 updates the A record and IPv6 the AAAA record.</div>
+                                <div class="inputContainer">
+                                    <label for="recServer">Server override</label>
+                                    <input is="emby-input" type="text" id="recServer" autocomplete="off" />
+                                    <div class="fieldDescription">Leave blank to use the provider's own server.</div>
+                                </div>
+                                <div class="inputContainer">
+                                    <label for="recTtl">TTL</label>
+                                    <input is="emby-input" type="number" id="recTtl" min="1" step="1" />
+                                    <div class="fieldDescription">How long others may cache the address, in seconds, with 1 for the provider's default.</div>
+                                </div>
+                                <div class="checkboxContainer checkboxContainer-withDescription">
+                                    <label class="emby-checkbox-label">
+                                        <input type="checkbox" is="emby-checkbox" id="recProxied" />
+                                        <span class="checkboxLabel">Treat as proxied address</span>
+                                    </label>
+                                    <div class="fieldDescription checkboxFieldDescription">For a record behind a proxy or CDN, used with Force update above.</div>
+                                </div>
+                                <div class="checkboxContainer">
+                                    <label class="emby-checkbox-label">
+                                        <input type="checkbox" is="emby-checkbox" id="recWildcard" />
+                                        <span class="checkboxLabel">Wildcard for the dyndns family</span>
+                                    </label>
+                                </div>
+                                <div class="checkboxContainer">
+                                    <label class="emby-checkbox-label">
+                                        <input type="checkbox" is="emby-checkbox" id="recStatic" />
+                                        <span class="checkboxLabel">Static DNS service for dyndns1 and dslreports</span>
+                                    </label>
+                                </div>
+                                <div class="inputContainer">
+                                    <label for="recMx">MX host for the dyndns family</label>
+                                    <input is="emby-input" type="text" id="recMx" autocomplete="off" />
+                                </div>
+                                <div class="checkboxContainer">
+                                    <label class="emby-checkbox-label">
+                                        <input type="checkbox" is="emby-checkbox" id="recBackupMx" />
+                                        <span class="checkboxLabel">Backup MX</span>
+                                    </label>
+                                </div>
+                                <div class="ddns-button-row">
+                                    <button is="emby-button" type="button" id="btnRemoveRecord" class="raised jpk-button-destructive jpk-button-small">
+                                        <span>Remove Record</span>
+                                    </button>
+                                </div>
+                                <span id="recordStatus" class="jpk-status-text" aria-live="polite"></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="jpk-collapsible-section">
+                        <button type="button" class="jpk-collapsible-header collapsed" aria-expanded="false" aria-controls="advAddresses" data-target="advAddresses">
+                            <span class="jpk-collapsible-title">Addresses</span>
+                            <span class="jpk-collapsible-icon" aria-hidden="true">&#9660;</span>
+                        </button>
+                        <div id="advAddresses" class="jpk-collapsible-content collapsed">
+                            <div class="inputContainer">
+                                <label for="hostnames">Other addresses</label>
+                                <textarea id="hostnames" class="emby-input" autocomplete="off" rows="3" placeholder="media.example.com"></textarea>
+                                <div id="hostnamesDescription" class="fieldDescription">More names the proxy answers on, one per line, besides the DDNS record's name.</div>
+                            </div>
+                            <div class="selectContainer">
+                                <label class="selectLabel" for="advAutoPortForwarding">Automatic port forwarding</label>
+                                <select id="advAutoPortForwarding" class="jpk-selector-dropdown" data-adv="AutoPortForwarding" data-kind="bool">
+                                    <option value="true">On</option>
+                                    <option value="false">Off</option>
+                                </select>
+                                <div class="fieldDescription">Asks the router to forward ports 80 and 443 to this server through UPnP or NAT-PMP. <span data-default="AutoPortForwarding" data-unit="onoff"></span></div>
+                            </div>
                         </div>
                     </div>
 
@@ -121,6 +215,13 @@
                                 <textarea id="advTrustedNetworks" class="emby-input" autocomplete="off" rows="3" data-adv="TrustedNetworks" data-kind="lines" placeholder="100.64.0.0/10"></textarea>
                                 <div class="fieldDescription">Addresses or ranges treated like your own network, such as a VPN, one per line.</div>
                             </div>
+                            <div id="certRequestDescription" class="fieldDescription">Renewal is automatic, so use this only to replace a Let's Encrypt certificate now, such as after its key leaked. It works while the proxy runs with Let's Encrypt as the source.</div>
+                            <div class="ddns-button-row">
+                                <button is="emby-button" type="button" id="btnRequestCert" class="raised jpk-secondary jpk-button-small">
+                                    <span>Request a New Certificate</span>
+                                </button>
+                            </div>
+                            <span id="certRequestStatus" class="jpk-status-text" aria-live="polite"></span>
                         </div>
                     </div>
 

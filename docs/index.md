@@ -26,7 +26,7 @@ You can use Dynamic DNS on its own, or both together. There is no separate rever
 * **New to all of this?** Follow a Beginner's Guide. Each goes from nothing to watching from your phone, in one
   pass. The [free guide](BeginnersGuideFree.md) uses a free Duck DNS name. The
   [recommended guide](BeginnersGuide.md) uses a domain of your own from Cloudflare, about $10 a year.
-* **Already have a domain?** [Install the plugin](Installation.md), [add a record](Records.md), then set up
+* **Already have a domain?** [Install the plugin](Installation.md), [set up the record](Records.md), then set up
   [Remote Access](RemoteAccess.md).
 * **Want a tour first?** [The Plugin's Pages](Pages.md) shows every tab.
 

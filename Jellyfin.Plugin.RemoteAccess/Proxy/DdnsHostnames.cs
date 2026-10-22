@@ -7,8 +7,8 @@ using Jellyfin.Plugin.DynamicDns.Utilities;
 namespace Jellyfin.Plugin.DynamicDns.Proxy;
 
 /// <summary>
-/// Lists the hostnames the DDNS records keep pointed at this server, so the proxy's hostname fields can
-/// offer them instead of having them typed again.
+/// Lists the hostnames the DDNS records keep pointed at this server, which the proxy answers on along with any
+/// other addresses.
 /// </summary>
 public static class DdnsHostnames
 {
@@ -32,11 +32,11 @@ public static class DdnsHostnames
             }
 
             var label = string.IsNullOrWhiteSpace(record.Name) ? name : record.Name.Trim();
-            result.Add(new DdnsHostname(name, label, record.Enabled));
+            result.Add(new DdnsHostname(name, label, record.Enabled, record.Id ?? string.Empty));
             var wildcard = HostnameMatcher.Normalize("*." + name);
             if (record.Wildcard && wildcard.Length > 0)
             {
-                result.Add(new DdnsHostname(wildcard, label, record.Enabled));
+                result.Add(new DdnsHostname(wildcard, label, record.Enabled, record.Id ?? string.Empty));
             }
         }
 

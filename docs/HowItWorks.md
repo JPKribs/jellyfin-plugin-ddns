@@ -4,12 +4,11 @@ A scheduled task named **Update DDNS** runs when Jellyfin starts and every 15 mi
 often under **Dashboard → Scheduled Tasks**. Each run:
 
 1. Finds your public IP.
-2. Looks up what each record's name points at right now.
-3. Sends the new address to the provider only for records that point somewhere else, or whose name no longer
-   resolves at all.
+2. Looks up what the DDNS record's name points at right now.
+3. Sends the new address to the provider only when the name points somewhere else, or no longer resolves at all.
 
 So a run where nothing changed sends nothing. When a name does not resolve, such as after its record was deleted
-at the provider, the update is sent anyway, so a provider that creates records on update puts it back. The status card at the bottom of each record shows what its last run
+at the provider, the update is sent anyway, so a provider that creates records on update puts it back. The status card in step 2 of the **Configuration** tab shows what the last run
 did and when.
 
 ![Last update status](screenshots/Last%20Update.png)
@@ -44,7 +43,7 @@ provider, name, zone, server or credentials also starts it over.
 
 Some home networks answer a name with a local address, through the router, an ad-blocking DNS server or a hosts
 file. The plugin then cannot see your public record. It notices and compares against the last address it sent
-instead, so an unchanged address is not sent every run. **Treat as proxied address** on a record makes it always
+instead, so an unchanged address is not sent every run. **Treat as proxied address**, under **Advanced → Dynamic DNS**, makes it always
 work that way.
 
 Next: [Monitoring](Monitoring.md).

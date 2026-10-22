@@ -6,7 +6,7 @@ using Xunit;
 namespace Jellyfin.Plugin.DynamicDns.Tests;
 
 /// <summary>
-/// The DDNS hostnames offered to the proxy's hostname pickers.
+/// The DDNS hostnames the pages save as the proxy's addresses.
 /// </summary>
 public class DdnsHostnamesTests
 {
@@ -42,5 +42,15 @@ public class DdnsHostnamesTests
 
         // The plain name comes before its wildcard.
         Assert.Equal(new[] { "example.com", "*.example.com" }, names.Select(n => n.Hostname));
+    }
+
+    [Fact]
+    public void From_NamesTheRecordEachNameComesFrom()
+    {
+        var record = new DNSRecord { Id = "abc", Provider = DNSProviderKind.Cloudflare, Hostname = "example.com", Wildcard = true, Enabled = true };
+
+        var names = DdnsHostnames.From(new[] { record });
+
+        Assert.All(names, n => Assert.Equal("abc", n.RecordId));
     }
 }

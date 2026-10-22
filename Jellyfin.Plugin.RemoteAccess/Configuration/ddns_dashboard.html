@@ -23,7 +23,8 @@
                             <div id="shareNote" class="fieldDescription">Scan the code with a phone, or send the address to family for their Jellyfin app.</div>
                             <div id="shareHomeOnly" class="jpk-warn hidden">This address only works on your home network. Pick a public one in step 2 of <a href="#/configurationpage?name=ddns_configuration">Configuration</a> to share it outside.</div>
                             <div class="ddns-share-actions">
-                                <button is="emby-button" type="button" id="btnCopyShare" class="raised jpk-icon-btn jpk-secondary"><span class="material-icons" aria-hidden="true">content_copy</span><span>Copy</span></button>
+                                <button is="emby-button" type="button" id="btnCopyShare" class="raised jpk-icon-btn jpk-secondary"><span class="material-icons" aria-hidden="true">link</span><span>Copy URL</span></button>
+                                <button is="emby-button" type="button" id="btnCopyQr" class="raised jpk-icon-btn jpk-secondary"><span class="material-icons" aria-hidden="true">qr_code</span><span>Copy Image</span></button>
                                 <button is="emby-button" type="button" id="btnShare" class="raised jpk-icon-btn jpk-secondary hidden"><span class="material-icons" aria-hidden="true">share</span><span>Share</span></button>
                             </div>
                         </div>
@@ -97,6 +98,7 @@
             #DynamicDnsDashboardPage .ddns-share-qr { align-self: center; width: 10em; height: 10em; }
         }
         /* The view toggles always split one line, however narrow. */
+        #DynamicDnsDashboardPage .ddns-map-switch { margin-bottom: 1.5em; }
         #DynamicDnsDashboardPage .ddns-map-switch > button { flex: 1 1 0; min-width: 0; }
         #DynamicDnsDashboardPage .ddns-empty { padding: 1.2em 1em; text-align: center; opacity: 0.7; background: var(--jpk-surface, rgba(255, 255, 255, 0.04)); }
         /* Count headings shrink to icons on a narrow screen so the country and time columns keep their room. */

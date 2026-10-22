@@ -95,21 +95,20 @@ The plugin now has a **Remote Access** entry in the dashboard's side menu.
 
 ## 5. Add the record to the plugin
 
-1. Open the **Remote Access** entry in the dashboard's side menu, then the **Configuration** tab. In step 2,
-   **Address**, select **New**.
+1. Open the **Remote Access** entry in the dashboard's side menu, then the **Configuration** tab, and open step 2,
+   **Address**.
 2. Fill it in:
-    * **Name**: anything, such as `Home`
     * **Provider**: **Cloudflare**
     * **Record name**: `media.example.com`, the full name
-    * **Update IPv4**: on
-    * **Update IPv6**: it starts on. Turn it off unless you made the `AAAA` record in step 2
     * **Auth email or token**: the word `token`
     * **API token or key**: the token from step 3
     * **Zone name**: `example.com`
-3. Select **Save Record**.
-4. Select **Update Now** above the records.
+3. Select **Save** at the bottom of the page.
+4. Select **Update Now** under the record's status card.
+5. **Update IPv6** starts on. Unless you made the `AAAA` record in step 2, turn it off under
+   **Advanced → Dynamic DNS**, in the **Record** group, and save.
 
-The record's status card should say **Updated**, and Cloudflare's record should now show your real address
+The status card's **Result** should say the record was updated, and Cloudflare's record should now show your real address
 instead of `192.0.2.1`. From now on the plugin checks every 15 minutes and updates the
 record whenever your address changes.
 
@@ -121,8 +120,7 @@ and 443, and no certificate arrives.
 On the **Configuration** tab:
 
 1. In step 1, **Proxy on**, tick **Enabled**.
-2. In step 2, **Address**, under **Proxy Address**, tick `media.example.com`. It is listed because of the record
-   from step 5.
+2. Step 2, **Address**, already uses `media.example.com` from step 5 as the proxy's address. Nothing to do here.
 3. In step 3, **Certificate**, leave **Source** on **Let's Encrypt** and tick **I accept the Let's Encrypt terms**.
 4. Select **Save** at the bottom of the page.
 
@@ -132,8 +130,8 @@ Encrypt through DNS, so this works even before your router is set up.
 
 ## 7. Forward ports on your router
 
-Look at step 4, **Router**, of the **Configuration** tab. **Automatic port forwarding** is on, so the plugin has
-already asked your router to forward ports 80 and 443 through UPnP or NAT-PMP.
+Look at step 4, **Router**, of the **Configuration** tab. **Automatic port forwarding** is on by default, so the
+plugin has already asked your router to forward ports 80 and 443 through UPnP or NAT-PMP.
 
 * **Forwarded**: the router did it. Go on to step 8.
 * **Shared address**: your provider shares your public IP. See step 0.
@@ -183,8 +181,8 @@ inside your home.
 
 | What you see | What to do |
 |---|---|
-| The record's status says `no 'A' record at Cloudflare` | The record from step 2 is missing, or its name differs from **Record name**. Create it, or fix the name. |
-| `no 'AAAA' record at Cloudflare` | Turn off **Update IPv6**, or add an `AAAA` record as in step 2. |
+| The record's result says `no 'A' record at Cloudflare` | The record from step 2 is missing, or its name differs from **Record name**. Create it, or fix the name. |
+| `no 'AAAA' record at Cloudflare` | Turn off **Update IPv6** under **Advanced → Dynamic DNS**, or add an `AAAA` record as in step 2. |
 | `zone lookup failed`, or another authentication or permission error | The token is wrong. Make a new one as in step 3, and check **Auth email or token** is `token`. |
 | `no zone ID found for zone ...` | **Zone name** must be the domain alone, such as `example.com`, not `media.example.com`. It can also mean the token is limited to a different zone. |
 | Configuration step 2 warns that the address is internal | The server has no public IP of its own. See step 0. |

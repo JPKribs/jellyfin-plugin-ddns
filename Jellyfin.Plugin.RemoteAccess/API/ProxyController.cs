@@ -225,7 +225,7 @@ public class ProxyController : ControllerBase
         => Ok(await _proxy.CheckReachabilityAsync(HttpContext?.RequestAborted ?? CancellationToken.None).ConfigureAwait(false));
 
     /// <summary>
-    /// Returns the hostnames the DDNS records keep pointed at this server, for the hostname pickers.
+    /// Returns the hostnames the DDNS records keep pointed at this server, which the pages save as the proxy's addresses.
     /// </summary>
     /// <returns>The hostnames with the record each comes from.</returns>
     [HttpGet("DdnsHostnames")]

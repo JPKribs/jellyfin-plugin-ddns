@@ -60,18 +60,16 @@ The plugin is now the **Remote Access** entry in the dashboard's side menu.
 
 ## 3. Add the name to the plugin
 
-1. Open **Remote Access**, then the **Configuration** tab. In step 2, **Address**, select **New**.
+1. Open **Remote Access**, then the **Configuration** tab, and open step 2, **Address**.
 2. Fill it in:
-    * **Name**: anything, such as `Home`
     * **Provider**: **Duck DNS**
-    * **Labels**: `mymedia`, the name alone, without `.duckdns.org`. Use one name per record.
-    * **Update IPv4**: on
-    * **Update IPv6**: turn it off, unless you know your home has IPv6
+    * **Labels**: `mymedia`, the name alone, without `.duckdns.org`. Use one name.
     * **Token**: the token from step 1
-3. Select **Save Record**.
-4. Select **Update Now** above the records.
+3. Select **Save** at the bottom of the page.
+4. Select **Update Now** under the record's status card.
 
-The record's status card should say **Updated**. From now on the plugin checks every
+The status card's **Result** should say the record was updated. Unless you know your home has IPv6, turn off
+**Update IPv6** under **Advanced → Dynamic DNS**, in the **Record** group, and save. From now on the plugin checks every
 15 minutes and updates Duck DNS whenever your address changes.
 
 ## 4. Turn on Remote Access
@@ -79,8 +77,7 @@ The record's status card should say **Updated**. From now on the plugin checks e
 On the **Configuration** tab:
 
 1. In step 1, **Proxy on**, tick **Enabled**.
-2. In step 2, **Address**, under **Proxy Address**, tick `mymedia.duckdns.org`. It is listed because of the record
-   from step 3.
+2. Step 2, **Address**, already uses `mymedia.duckdns.org` from step 3 as the proxy's address. Nothing to do here.
 3. In step 3, **Certificate**, leave **Source** on **Let's Encrypt** and tick **I accept the Let's Encrypt terms**.
 4. Select **Save** at the bottom of the page.
 
@@ -90,8 +87,8 @@ name to Let's Encrypt through Duck DNS, so this works even before your router is
 
 ## 5. Forward ports on your router
 
-Look at step 4, **Router**, of the **Configuration** tab. **Automatic port forwarding** is on, so the plugin has
-already asked your router to forward ports 80 and 443 through UPnP or NAT-PMP.
+Look at step 4, **Router**, of the **Configuration** tab. **Automatic port forwarding** is on by default, so the
+plugin has already asked your router to forward ports 80 and 443 through UPnP or NAT-PMP.
 
 * **Forwarded**: the router did it. Go on to step 6.
 * **Shared address**: your provider shares your public IP. See step 0.
@@ -130,7 +127,7 @@ under **Advanced → Blocking → Countries**.
 
 | What you see | What to do |
 |---|---|
-| The record's status says `server said: KO` | Duck DNS refused the name or token. Check **Labels** is the name alone, without `.duckdns.org`, and paste the token again. |
+| The record's result says `server said: KO` | Duck DNS refused the name or token. Check **Labels** is the name alone, without `.duckdns.org`, and paste the token again. |
 | Configuration step 2 warns that the address is internal | The server has no public IP of its own. See step 0. |
 | Configuration step 3 shows no certificate | It shows Let's Encrypt's reason. Jellyfin's activity log has it too. |
 | Configuration step 4 shows **Shared address** | Your provider shares your public IP. See step 0. |

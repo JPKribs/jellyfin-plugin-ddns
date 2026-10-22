@@ -328,7 +328,7 @@ public class Plugin : PluginBase<Plugin, PluginConfiguration>
         };
 
         // Tabs 2 and 3: Configuration, the numbered steps holding every setting needed to reach Jellyfin from
-        // outside, from the DDNS records to the proxy, and Advanced, the fine-tuning.
+        // outside, from the DDNS record to the proxy, and Advanced, the fine-tuning.
         foreach (var name in new[] { "ddns_configuration", "ddns_advanced" })
         {
             yield return new PluginPageInfo
@@ -344,8 +344,8 @@ public class Plugin : PluginBase<Plugin, PluginConfiguration>
             };
         }
 
-        // Modules the pages import: the tab bar, the hostname picker, the world map and the shared page styles.
-        foreach (var module in new[] { "ddns_tabs.js", "ddns_hostnames.js", "ddns_worldmap.js", "ddns_common.css" })
+        // Modules the pages import: the shared page helpers, the world map and the shared page styles.
+        foreach (var module in new[] { "ddns_tabs.js", "ddns_worldmap.js", "ddns_common.css" })
         {
             yield return new PluginPageInfo
             {

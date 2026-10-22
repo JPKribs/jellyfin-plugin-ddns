@@ -1,5 +1,5 @@
 import { createConfigPage, confirmDialog, createChipSelect } from './configurationpage?name=ddns_jpkribs_shared.js';
-import { PLUGIN_ID, TABS, errorText, showText } from './configurationpage?name=ddns_tabs.js';
+import { PLUGIN_ID, TABS, errorText, showText, loadProviders, primaryRecord, recordNames, otherAddresses, addressLines, saveProxyHostnames } from './configurationpage?name=ddns_tabs.js';
 import { COUNTRY_CODES, WORLD } from './configurationpage?name=ddns_worldmap.js';
 
 export default function (view) {
@@ -20,10 +20,30 @@ export default function (view) {
     var restartNote = '';
     var countries = null;
     var serverCountry = '';
+    // The proxy settings as last loaded or saved, for the certificate request.
+    var proxySettings = null;
     // The Dynamic DNS fine-tuning, saved through the DDNS configuration rather than the proxy settings. The form
     // as last loaded or saved, to tell whether it changed. Null until loaded.
     var ddnsBaseline = null;
     var DDNS_IDS = ['ipv4Url', 'ipv6Url', 'forceUpdateHours', 'skipInternal', 'backoffAfterFailures', 'backoffHours', 'requestTimeout'];
+
+    // The one DDNS record's finer settings, edited here and saved into the same record Configuration shows.
+    // The record as last loaded or saved, or null when there is none.
+    var record = null;
+    // Records an older setup saved beyond the one shown. They are dropped on the next save.
+    var extraCount = 0;
+    var providers = null;
+    var recordBaseline = null;
+    var RECORD_FIELDS = [
+        ['recEnabled', 'Enabled', 'on'], ['recUpdateIPv4', 'UpdateIPv4', 'on'], ['recUpdateIPv6', 'UpdateIPv6', 'check'],
+        ['recServer', 'Server', 'text'], ['recTtl', 'Ttl', 'ttl'], ['recProxied', 'Proxied', 'check'],
+        ['recWildcard', 'Wildcard', 'check'], ['recStatic', 'Static', 'check'], ['recMx', 'Mx', 'text'],
+        ['recBackupMx', 'BackupMx', 'check']
+    ];
+
+    // The proxy's other addresses, its stored names that are not the record's, as last loaded or saved. Null until
+    // loaded.
+    var hostnamesBaseline = null;
 
     var MODE_NOTES = {
         ServerCountry: 'Only this server\'s country and any below can connect.',
@@ -57,17 +77,21 @@ export default function (view) {
     function showCountryMode() {
         var mode = Shared.getEl('advCountryMode').value;
         var effective = mode || (defaults && defaults.CountryMode) || 'ServerCountry';
-        var text = MODE_NOTES[effective] || '';
+        var html = Shared.escapeHtml(MODE_NOTES[effective] || '');
+        // The server's country stands out in green, or the sentence turns yellow while it is still unknown.
         if (effective === 'ServerCountry') {
-            text += serverCountry ? ' This server is in ' + serverCountry + '.' : ' Until this server\'s country is known, everyone can connect.';
+            html += serverCountry
+                ? ' This server is in <strong class="ddns-country-known">' + Shared.escapeHtml(serverCountry) + '</strong>.'
+                : ' <strong class="ddns-country-unknown">Until this server\'s country is known, everyone can connect.</strong>';
         }
-        Shared.getEl('countryModeDescription').textContent = text;
+        Shared.getEl('countryModeDescription').innerHTML = html;
         Shared.setVisible('countryPickerField', effective !== 'Off');
     }
 
     function refreshCountryStatus() {
         return Shared.apiRequest('Proxy/Status', 'GET').then(function (st) {
             if (!st) return;
+            showCertRequest(st, proxySettings);
             serverCountry = st.ServerCountry || '';
             showCountryMode();
             var refused = st.CountryRefused || {};
@@ -237,8 +261,13 @@ export default function (view) {
     // they are on save.
     function loadDdns() {
         ddnsBaseline = null;
-        return Shared.apiRequest('Configuration', 'GET').then(function (cfg) {
+        recordBaseline = null;
+        var providersLoaded = providers ? Promise.resolve(providers)
+            : loadProviders(Shared).then(function (p) { providers = p; return p; }).catch(function () { return null; });
+        return Promise.all([Shared.apiRequest('Configuration', 'GET'), providersLoaded]).then(function (results) {
+            var cfg = results[0];
             if (!cfg) { throw new Error('settings unavailable'); }
+            fillRecord(primaryRecord(cfg.Records), (cfg.Records || []).length);
             Shared.getEl('ipv4Url').value = cfg.IPv4DetectionUrl || '';
             Shared.getEl('ipv6Url').value = cfg.IPv6DetectionUrl || '';
             // Select the matching preset, falling back to Off when the stored value is not one of them.
@@ -260,11 +289,166 @@ export default function (view) {
         });
     }
 
-    // Saves the Dynamic DNS fields onto the freshest DDNS configuration, only when they changed. Resolves to an
-    // error message, or empty when it worked or there was nothing to save.
+    // ===== The DDNS record =====
+
+    function recordContainer(id) {
+        var el = Shared.getEl(id);
+        return el.closest('.inputContainer') || el.closest('.checkboxContainer');
+    }
+
+    // Hides what the record's provider does not use.
+    function applyRecordFields() {
+        if (!record || !providers) return;
+        var spec = providers.specFor(providers.normalize(record.Provider));
+        var adv = spec.a || [];
+        var visible = {
+            recUpdateIPv6: spec.v6 !== false, recServer: !!spec.s, recTtl: !!spec.t,
+            recWildcard: adv.indexOf('wildcard') >= 0, recStatic: adv.indexOf('static') >= 0,
+            recMx: adv.indexOf('mx') >= 0, recBackupMx: adv.indexOf('backupmx') >= 0
+        };
+        Object.keys(visible).forEach(function (id) {
+            var box = recordContainer(id);
+            if (box) box.classList.toggle('hidden', !visible[id]);
+        });
+    }
+
+    function recordState() {
+        return JSON.stringify(RECORD_FIELDS.map(function (f) {
+            var el = Shared.getEl(f[0]);
+            return el.type === 'checkbox' ? el.checked : el.value.trim();
+        }));
+    }
+
+    function recordDirty() {
+        return recordBaseline !== null && !!record && recordState() !== recordBaseline;
+    }
+
+    function fillRecord(r, total) {
+        record = r || null;
+        extraCount = Math.max(0, (total || 0) - (r ? 1 : 0));
+        Shared.setVisible('recordFields', !!r);
+        Shared.setVisible('recordEmpty', !r);
+        var name = r ? (r.Hostname || r.Name || '') : '';
+        Shared.getEl('recordIntro').textContent = r
+            ? 'The finer settings of the DDNS record' + (name ? ' for ' + name : '') + '. Its provider, hostname and credentials are in step 2 on Configuration.'
+            : '';
+        showText(Shared, 'extraRecords', !extraCount ? ''
+            : extraCount === 1 ? 'This server has 1 more DDNS record saved. It is removed on the next save, and only the record shown here is kept.'
+                : 'This server has ' + extraCount + ' more DDNS records saved. They are removed on the next save, and only the record shown here is kept.');
+        if (r) {
+            RECORD_FIELDS.forEach(function (f) {
+                var el = Shared.getEl(f[0]);
+                var v = r[f[1]];
+                if (f[2] === 'on') el.checked = v !== false;
+                else if (f[2] === 'check') el.checked = !!v;
+                else if (f[2] === 'ttl') el.value = v || 1;
+                else el.value = v || '';
+            });
+            applyRecordFields();
+        }
+        recordBaseline = recordState();
+    }
+
+    // Copies this page's record settings onto the server's copy of the record.
+    function mergeRecord(base) {
+        var r = JSON.parse(JSON.stringify(base));
+        RECORD_FIELDS.forEach(function (f) {
+            var el = Shared.getEl(f[0]);
+            if (f[2] === 'on' || f[2] === 'check') r[f[1]] = el.checked;
+            else if (f[2] === 'ttl') r[f[1]] = Math.max(1, parseInt(el.value, 10) || 1);
+            else r[f[1]] = el.value.trim();
+        });
+        return r;
+    }
+
+    // The names the record covers now, which a save replaces in the proxy's addresses.
+    function namesNow() {
+        return record ? recordNames(Shared, record.Id).catch(function () { return []; }) : Promise.resolve([]);
+    }
+
+    function hostnamesDirty() {
+        return hostnamesBaseline !== null && JSON.stringify(addressLines(Shared.getEl('hostnames').value)) !== hostnamesBaseline;
+    }
+
+    function fillHostnames(hostnames, names) {
+        Shared.getEl('hostnames').value = otherAddresses(hostnames, names || []).join('\n');
+        hostnamesBaseline = JSON.stringify(addressLines(Shared.getEl('hostnames').value));
+    }
+
+    // Removes the record, and its names from the proxy's addresses. The other addresses stay.
+    function removeRecord() {
+        var button = Shared.getEl('btnRemoveRecord');
+        if (button.disabled || !record) return;
+        var label = record.Hostname || record.Name || 'the DDNS record';
+        confirmDialog('Remove ' + label + '? This server stops keeping it pointed here, and the proxy stops answering on it. Other addresses stay. This cannot be undone.', { title: 'Remove Record', confirmText: 'Remove', destructive: true }).then(function (ok) {
+            if (!ok) return;
+            button.disabled = true;
+            Shared.setStatus('recordStatus', 'Removing...', false, { timeout: 0 });
+            var before = [];
+            var removed = false;
+            namesNow().then(function (names) {
+                before = names;
+                return Shared.apiRequest('Configuration', 'GET');
+            }).then(function (fresh) {
+                if (!fresh) { throw new Error('settings unavailable'); }
+                fresh.Records = [];
+                return Shared.apiRequest('Configuration', 'POST', fresh);
+            }).then(function (result) {
+                if (!result) { throw new Error('no reply'); }
+                removed = true;
+                fillRecord(null, 0);
+                return saveProxyHostnames(Shared, before);
+            }).then(function (result) {
+                if (result && result.Settings) {
+                    proxySettings = result.Settings;
+                    fillHostnames(result.Settings.Hostnames, []);
+                }
+                Shared.setStatus('recordStatus', 'Removed.', false);
+            }).catch(function (err) {
+                return errorText(err, removed ? 'The proxy\'s addresses were not updated.' : 'Remove failed.').then(function (text) {
+                    Shared.setStatus('recordStatus', removed ? 'The record was removed, but the proxy\'s addresses were not updated. ' + text : text, true, { timeout: 0 });
+                });
+            }).then(function () {
+                button.disabled = false;
+            });
+        });
+    }
+
+    // ===== Request a New Certificate =====
+
+    // Offered while the proxy runs with Let's Encrypt as the saved source and its terms accepted.
+    var certRequestable = false;
+
+    function showCertRequest(st, settings) {
+        var cert = (st && st.Certificate) || {};
+        certRequestable = cert.Mode === 'Automatic' && !!(settings && (settings.Certificate || {}).AcceptTerms) && !!(st && st.Running);
+        Shared.getEl('btnRequestCert').disabled = !certRequestable;
+    }
+
+    function requestCertificate() {
+        var button = Shared.getEl('btnRequestCert');
+        if (button.disabled || !certRequestable) return;
+        confirmDialog('Let\'s Encrypt is asked for a new certificate now, even if the current one is fine. The current one keeps working until the new one is ready.', { title: 'Request a New Certificate', confirmText: 'Request' }).then(function (ok) {
+            if (!ok) return;
+            button.disabled = true;
+            Shared.setStatus('certRequestStatus', 'Requesting...', false, { timeout: 0 });
+            Shared.apiRequest('Proxy/Certificate/Request', 'POST').then(function (result) {
+                Shared.setStatus('certRequestStatus', (result && result.Message) || 'Done.', !(result && result.Ok), { timeout: 0 });
+            }).catch(function () {
+                Shared.setStatus('certRequestStatus', 'The request failed.', true, { timeout: 0 });
+            }).then(function () {
+                button.disabled = !certRequestable;
+            });
+        });
+    }
+
+    // Saves the Dynamic DNS fields and the record onto the freshest DDNS configuration, only when something
+    // changed or extra records are left to drop. The record is kept as the only one. Resolves to an error
+    // message, or empty when it worked or there was nothing to save.
     function saveDdns() {
-        if (!ddnsDirty()) return Promise.resolve('');
+        if (!ddnsDirty() && !recordDirty() && !extraCount) return Promise.resolve('');
         var posted = ddnsState();
+        var id = record ? record.Id : null;
         return Shared.apiRequest('Configuration', 'GET').then(function (fresh) {
             if (!fresh) { throw new Error('settings unavailable'); }
             fresh.IPv4DetectionUrl = Shared.getEl('ipv4Url').value.trim();
@@ -274,10 +458,15 @@ export default function (view) {
             fresh.BackoffAfterFailures = Math.max(0, parseInt(Shared.getEl('backoffAfterFailures').value, 10) || 0);
             fresh.BackoffHours = Math.max(1, parseInt(Shared.getEl('backoffHours').value, 10) || 24);
             fresh.RequestTimeoutSeconds = Math.max(1, parseInt(Shared.getEl('requestTimeout').value, 10) || 15);
+            var list = fresh.Records || [];
+            var base = id ? list.find(function (x) { return x.Id === id; }) : null;
+            var keep = base ? mergeRecord(base) : primaryRecord(list);
+            fresh.Records = keep ? [keep] : [];
             return Shared.apiRequest('Configuration', 'POST', fresh);
         }).then(function (result) {
             if (!result) { throw new Error('no reply'); }
             ddnsBaseline = posted;
+            fillRecord(primaryRecord(result.Records), (result.Records || []).length);
             return '';
         }).catch(function (err) {
             return errorText(err, 'Save failed.');
@@ -288,14 +477,15 @@ export default function (view) {
     function isDirty() {
         return (settingsLoaded && JSON.stringify(read()) !== JSON.stringify(loaded))
             || (historyLoaded && JSON.stringify(readHistory()) !== historyBaseline)
-            || ddnsDirty();
+            || ddnsDirty() || recordDirty() || hostnamesDirty();
     }
 
     function load() {
         settingsLoaded = false;
         historyLoaded = false;
         loadHistory();
-        loadDdns();
+        hostnamesBaseline = null;
+        var ddnsDone = loadDdns();
         var defaultsLoaded = defaultSets ? Promise.resolve(defaultSets) : Shared.apiRequest('Proxy/Defaults', 'GET');
         Promise.all([defaultsLoaded, Shared.apiRequest('Proxy/Settings', 'GET')]).then(function (results) {
             defaultSets = results[0] || {};
@@ -304,7 +494,12 @@ export default function (view) {
             fill(results[1] && results[1].Advanced);
             loaded = read();
             settingsLoaded = true;
+            proxySettings = results[1];
             refreshCountryStatus();
+            // The other addresses are the stored ones that are not the record's, so the record has to be known.
+            return ddnsDone.then(namesNow).then(function (names) {
+                fillHostnames((results[1] && results[1].Hostnames) || [], names);
+            });
         }).catch(function () {
             Shared.setStatus('advancedStatus', 'Could not load settings.', true);
         });
@@ -335,45 +530,18 @@ export default function (view) {
         if (button.disabled) return;
         button.disabled = true;
         Shared.setStatus('advancedStatus', 'Saving...', false);
-        // The two saves go to different endpoints, so one failing never stops the other, and both are reported.
-        var proxySaved = Shared.apiRequest('Proxy/Settings', 'GET').then(function (fresh) {
-            // Settings this page does not show, such as the ports, are kept as they are.
-            // Only fields changed here are written. The block list and countries can also change from the
-            // Dashboard while this page is open, and those changes must survive a save made here.
-            var current = read();
-            fresh.Advanced = fresh.Advanced || {};
-            Object.keys(current).forEach(function (key) {
-                if (JSON.stringify(current[key]) === JSON.stringify(loaded[key])) return;
-                // A value set back to the default is stored as unset, so it follows the default if that changes.
-                // An Auto setting keeps a typed value, since the default it matches may not apply later.
-                var isDefault = !Array.isArray(current[key]) && !isAuto(key) && defaults && current[key] === defaults[key];
-                fresh.Advanced[key] = isDefault ? null : current[key];
-            });
-            return Shared.apiRequest('Proxy/Settings', 'POST', fresh);
-        }).then(function (result) {
-            if (result && result.Settings) {
-                fill(result.Settings.Advanced);
-                loaded = read();
-            }
-            restartNote = (result && result.Restart) || '';
-            return historyLoaded ? Shared.apiRequest('People/Settings', 'POST', readHistory()) : null;
-        }).then(function (history) {
-            if (history) fillHistory(history);
-            // History settings that never loaded were not sent, so the page does not claim to have saved them.
-            var skipped = !historyLoaded;
-            loadHistory();
-            var text = 'Saved.' + (skipped ? ' The history settings did not load, so they were not saved.' : '') + (restartNote ? ' ' + restartNote : '');
-            return { ok: true, bad: skipped, keep: skipped || !!restartNote, text: text };
-        }).catch(function (err) {
-            return errorText(err, 'Save failed.').then(function (text) {
-                return { ok: false, bad: true, keep: true, text: text };
-            });
-        });
-
-        var ddnsChanged = ddnsDirty();
-        Promise.all([proxySaved, saveDdns()]).then(function (results) {
-            var proxy = results[0];
-            var ddnsError = results[1];
+        var ddnsChanged = ddnsDirty() || recordDirty() || extraCount > 0;
+        var before = [];
+        var ddnsError = '';
+        // The DDNS settings and the record save first, so the proxy's addresses follow the record's names as now
+        // saved. Each save goes to its own endpoint, so one failing never stops the other, and both are reported.
+        namesNow().then(function (names) {
+            before = names;
+            return saveDdns();
+        }).then(function (error) {
+            ddnsError = error;
+            return saveProxy(before);
+        }).then(function (proxy) {
             if (!ddnsError) {
                 var done = proxy.ok || !ddnsChanged ? proxy.text
                     : 'The proxy settings were not saved. ' + proxy.text + ' The Dynamic DNS settings were saved.';
@@ -388,11 +556,54 @@ export default function (view) {
         });
     }
 
+    // Saves the proxy settings onto the freshest ones, then the history settings. The proxy answers on the
+    // record's names and the other addresses. Resolves to how it went.
+    function saveProxy(before) {
+        var others = hostnamesDirty() ? addressLines(Shared.getEl('hostnames').value) : null;
+        return saveProxyHostnames(Shared, before, others, function (fresh) {
+            // Settings this page does not show, such as the ports, are kept as they are.
+            // Only fields changed here are written. The block list and countries can also change from the
+            // Dashboard while this page is open, and those changes must survive a save made here.
+            var current = read();
+            fresh.Advanced = fresh.Advanced || {};
+            Object.keys(current).forEach(function (key) {
+                if (JSON.stringify(current[key]) === JSON.stringify(loaded[key])) return;
+                // A value set back to the default is stored as unset, so it follows the default if that changes.
+                // An Auto setting keeps a typed value, since the default it matches may not apply later.
+                var isDefault = !Array.isArray(current[key]) && !isAuto(key) && defaults && current[key] === defaults[key];
+                fresh.Advanced[key] = isDefault ? null : current[key];
+            });
+            return fresh;
+        }).then(function (result) {
+            if (result && result.Settings) {
+                proxySettings = result.Settings;
+                fill(result.Settings.Advanced);
+                loaded = read();
+            }
+            restartNote = (result && result.Restart) || '';
+            return namesNow().then(function (names) {
+                if (result && result.Settings) fillHostnames(result.Settings.Hostnames, names);
+                return historyLoaded ? Shared.apiRequest('People/Settings', 'POST', readHistory()) : null;
+            });
+        }).then(function (history) {
+            if (history) fillHistory(history);
+            // History settings that never loaded were not sent, so the page does not claim to have saved them.
+            var skipped = !historyLoaded;
+            loadHistory();
+            var text = 'Saved.' + (skipped ? ' The history settings did not load, so they were not saved.' : '') + (restartNote ? ' ' + restartNote : '');
+            return { ok: true, bad: skipped, keep: skipped || !!restartNote, text: text };
+        }).catch(function (err) {
+            return errorText(err, 'Save failed.').then(function (text) {
+                return { ok: false, bad: true, keep: true, text: text };
+            });
+        });
+    }
+
     // Lists you built up yourself are not tuning, so a reset keeps them.
     var KEPT_ON_RESET = ['TrustedNetworks', 'BlockedAddresses', 'CountryMode', 'Countries'];
 
     function reset() {
-        confirmDialog('Every limit and security setting goes back to its default, keeping trusted networks, the block list, country rules, history and Dynamic DNS. Nothing changes until you save.', { title: 'Reset to Defaults', confirmText: 'Reset' }).then(function (ok) {
+        confirmDialog('Every limit and security setting goes back to its default, keeping trusted networks, the block list, country rules, other addresses, history and Dynamic DNS. Nothing changes until you save.', { title: 'Reset to Defaults', confirmText: 'Reset' }).then(function (ok) {
             if (!ok) return;
             var current = read();
             var kept = {};
@@ -421,6 +632,8 @@ export default function (view) {
         Shared.getEl('locationDetail').addEventListener('change', showLocationNote);
         Shared.getEl('btnUpdateLocation').addEventListener('click', updateLocation);
         Shared.getEl('btnDeleteAll').addEventListener('click', clearHistory);
+        Shared.getEl('btnRemoveRecord').addEventListener('click', removeRecord);
+        Shared.getEl('btnRequestCert').addEventListener('click', requestCertificate);
         Shared.initCollapsibles();
     }
 

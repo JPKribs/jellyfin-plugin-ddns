@@ -1,47 +1,58 @@
-# Adding Records
+# The DDNS Record
 
-A **record** is one DNS name the plugin keeps pointed at your server, such as `media.example.com`. Records are in
-step 2, **Address**, of the **Configuration** tab, under **DDNS Records**.
+The **record** is the DNS name the plugin keeps pointed at your server, such as `media.example.com`. It is in
+step 2, **Address**, of the **Configuration** tab. A server keeps one record, and its name is also the address the
+proxy answers on.
 
-## Add a record
+## Set up the record
 
-1. In step 2, **Address**, of the **Configuration** tab, select **New**.
-2. Give it a **Name**, for your own reference.
-3. Pick your DNS company in **Provider**. The note under it says what each field means for that provider, and only
-   the fields it uses are shown. [Providers](providers/README.md) has a page for each one.
-4. Fill in the fields and choose **Update IPv4**, **Update IPv6** or both. IPv4 keeps the A record current, IPv6
-   the AAAA record.
-5. Select **Save Record**.
+1. In step 2, **Address**, of the **Configuration** tab, pick your DNS company in **Provider**. The note under it
+   says what each field means for that provider, and only the fields it uses are shown.
+   [Providers](providers/README.md) has a page for each one.
+2. Enter the **Hostname** and the credentials the provider asks for.
+3. Select **Save** at the bottom of the page.
 
 ![Record editor](screenshots/Record%20Editor.png)
 
-The first update runs within 15 minutes. To run it now, select **Update Now** above the records. The status
-card at the bottom of the record then shows how it went.
+The first update runs within 15 minutes. To run it now, select **Update Now** under the status card. The card
+shows the public IP, when the record was last updated, and how it went.
 
 ![Provider picker](screenshots/Provider%20Picker.png)
 
+A server that kept several records from an older version shows the first enabled record. The others are removed
+the next time you save, and the page says how many.
+
 ## Credentials
 
-Credentials are encrypted when saved, and never sent back to the browser. A saved one shows as dots. Leaving the
-field blank keeps it, and **Clear saved value** under the field removes it. Use the most limited token your
-provider offers. See [Security](Security.md).
+Credentials are encrypted when saved, and never sent back to the browser. A saved one shows as **Saved, leave
+blank to keep**. Leaving the field blank keeps it, and **Clear saved value** under the field removes it. Use the
+most limited token your provider offers. See [Security](Security.md).
 
-Changing a record's **Provider** or **Server override** clears its saved credentials, so a saved password is
+Changing the record's **Provider** or **Server override** clears its saved credentials, so a saved password is
 never sent somewhere new. Enter them again before you save.
 
-## Advanced options
+## Finer settings
 
-Providers in the DynDNS family add an **Advanced options** section, for a wildcard record, a static DNS service
-and mail settings.
+**Advanced → Dynamic DNS**, under **Record**, holds the rest of the record:
+
+* **Enabled**: turn it off to pause updates without removing the record.
+* **Update IPv4** and **Update IPv6**: IPv4 keeps the A record current, IPv6 the AAAA record.
+* **Server override** and **TTL**, for providers that take them.
+* **Treat as proxied address**, described below.
+* For the DynDNS family, a wildcard record, a static DNS service and mail settings.
+* **Remove Record** deletes the record and takes its name off the proxy's addresses.
+
+**Other addresses** under **Advanced → Addresses** lists more names the proxy answers on, one per line, for names
+whose DNS you keep some other way.
 
 ![Advanced options for DynDNS v2](screenshots/Advanced%20Options.png)
 
 ## Records behind a CDN or proxy
 
 If DNS for a name returns someone else's address, such as Cloudflare's when its orange cloud is on, the plugin
-cannot tell whether your record is current. Turn on **Treat as proxied address** on that record. The plugin then
-compares against the last address it sent instead of looking the name up. Pair it with **Force update** under
-**Advanced → Dynamic DNS**, so the record is sent again now and then in case it was changed elsewhere.
+cannot tell whether your record is current. Turn on **Treat as proxied address** under **Advanced → Dynamic DNS**.
+The plugin then compares against the last address it sent instead of looking the name up. Pair it with **Force
+update** in the same section, so the record is sent again now and then in case it was changed elsewhere.
 
 ## How your public IP is found
 
