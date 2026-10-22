@@ -455,9 +455,7 @@ public class AuditDdnsTests
         }
 
         // The providers hold no resources, so the container can go once they are read.
-        var built = services.BuildServiceProvider();
-        var providers = built.GetServices<IDNSProvider>().ToList();
-        built.Dispose();
-        return providers;
+        using var built = services.BuildServiceProvider();
+        return built.GetServices<IDNSProvider>().ToList();
     }
 }

@@ -687,7 +687,7 @@ public sealed class JellyfinNetworkOrchestrator : IDisposable
                 await Task.Delay(RestartDelay).ConfigureAwait(false);
                 _system.Restart();
             }
-            catch (Exception ex)
+            catch (Exception ex) when (ex is not OutOfMemoryException)
             {
                 // A restart that did not happen must not stop the next one from being asked for.
                 Interlocked.Exchange(ref _restartScheduled, 0);

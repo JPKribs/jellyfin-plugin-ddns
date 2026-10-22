@@ -255,15 +255,9 @@ public sealed class ReachabilityChecker
     private async Task<ReachabilityResult> RunAsync(string hostname)
     {
         var started = DateTime.UtcNow;
-        ReachabilityResult result;
-        if (string.IsNullOrEmpty(hostname) || !HostnameMatcher.IsPublicName(hostname) || hostname.StartsWith('*'))
-        {
-            result = new ReachabilityResult { CheckedUtc = started, Error = "Add a public address people use from the internet first." };
-        }
-        else
-        {
-            result = await RunCheckAsync(hostname, started).ConfigureAwait(false);
-        }
+        var result = string.IsNullOrEmpty(hostname) || !HostnameMatcher.IsPublicName(hostname) || hostname.StartsWith('*')
+            ? new ReachabilityResult { CheckedUtc = started, Error = "Add a public address people use from the internet first." }
+            : await RunCheckAsync(hostname, started).ConfigureAwait(false);
 
         lock (_lock)
         {

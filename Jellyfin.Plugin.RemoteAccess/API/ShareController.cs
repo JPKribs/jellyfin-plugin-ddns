@@ -50,7 +50,8 @@ public class ShareController : ControllerBase
         using var generator = new QRCodeGenerator();
         using var data = generator.CreateQrCode(url, QRCodeGenerator.ECCLevel.M);
         // Sized by its view box, so the page can scale it to any size without blurring.
-        var svg = new SvgQRCode(data).GetGraphic(8, "#000000", "#ffffff", true, SvgQRCode.SizingMode.ViewBoxAttribute);
+        using var code = new SvgQRCode(data);
+        var svg = code.GetGraphic(8, "#000000", "#ffffff", true, SvgQRCode.SizingMode.ViewBoxAttribute);
         return new ShareInfo { Url = url, QrSvg = svg };
     }
 

@@ -356,14 +356,12 @@ public sealed class ConnectionGate : IDisposable
         void Heaviest(ConcurrentDictionary<IPAddress, int> counts, IPAddress? own, int level)
         {
             var mine = own is not null && counts.TryGetValue(own, out var held) ? held : 1;
-            foreach (var pair in counts)
+            // The filter runs as the loop goes, so it compares against the heaviest found so far.
+            foreach (var pair in counts.Where(p => p.Value > mine && p.Value > most && !p.Key.Equals(own)))
             {
-                if (pair.Value > mine && pair.Value > most && !pair.Key.Equals(own))
-                {
-                    block = pair.Key;
-                    tier = level;
-                    most = pair.Value;
-                }
+                block = pair.Key;
+                tier = level;
+                most = pair.Value;
             }
         }
 
@@ -377,13 +375,10 @@ public sealed class ConnectionGate : IDisposable
 
         ConnectionContext? oldest = null;
         var first = long.MaxValue;
-        foreach (var pair in _live)
+        foreach (var pair in _live.Where(p => p.Value.Keys is { } held && p.Value.Sequence < first && block.Equals(held.Tier(tier))))
         {
-            if (pair.Value.Keys is { } held && pair.Value.Sequence < first && block.Equals(held.Tier(tier)))
-            {
-                oldest = pair.Key;
-                first = pair.Value.Sequence;
-            }
+            oldest = pair.Key;
+            first = pair.Value.Sequence;
         }
 
         // Only the call that removes a connection aborts it, as in Recheck.

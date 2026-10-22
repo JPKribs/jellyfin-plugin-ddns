@@ -285,7 +285,8 @@ public sealed class AuditCertificateTests : IDisposable
     public async Task WaitForTxt_ALookupThatHangs_TimesOutAndTheWaitGoesOn()
     {
         var calls = 0;
-        using var service = Service(new HttpClient(new Hang(() => Interlocked.Increment(ref calls))));
+        using var http = new HttpClient(new Hang(() => Interlocked.Increment(ref calls)));
+        using var service = Service(http);
         service.TxtPolls = 3;
         service.TxtPollDelay = TimeSpan.FromMilliseconds(1);
         service.TxtLookupTimeout = TimeSpan.FromMilliseconds(50);
@@ -297,7 +298,8 @@ public sealed class AuditCertificateTests : IDisposable
     [Fact]
     public async Task WaitForTxt_TheClientsOwnTimeout_IsAFailedLookupNotACancelledRun()
     {
-        using var service = Service(new HttpClient(new Hang(() => { })) { Timeout = TimeSpan.FromMilliseconds(30) });
+        using var http = new HttpClient(new Hang(() => { })) { Timeout = TimeSpan.FromMilliseconds(30) };
+        using var service = Service(http);
         service.TxtPolls = 2;
         service.TxtPollDelay = TimeSpan.FromMilliseconds(1);
         service.TxtLookupTimeout = TimeSpan.FromSeconds(30);
@@ -308,7 +310,8 @@ public sealed class AuditCertificateTests : IDisposable
     [Fact]
     public async Task WaitForTxt_TheCallersCancellation_StillStopsIt()
     {
-        using var service = Service(new HttpClient(new Hang(() => { })));
+        using var http = new HttpClient(new Hang(() => { }));
+        using var service = Service(http);
         service.TxtPolls = 100;
         service.TxtPollDelay = TimeSpan.FromMilliseconds(1);
         service.TxtLookupTimeout = TimeSpan.FromSeconds(30);
@@ -397,7 +400,8 @@ public sealed class AuditCertificateTests : IDisposable
         Environment.SetEnvironmentVariable("DDNS_ACME_DIRECTORY", "http://127.0.0.1:1/directory");
         try
         {
-            using var service = Service(new HttpClient { Timeout = TimeSpan.FromSeconds(5) });
+            using var http = new HttpClient { Timeout = TimeSpan.FromSeconds(5) };
+            using var service = Service(http);
             Assert.False(await service.EnsureAsync(_names, Array.Empty<Models.DNSRecord>(), new CertificateStatus(), CancellationToken.None, force: true));
 
             // No attempt was made: the record is the one from before.
@@ -419,7 +423,8 @@ public sealed class AuditCertificateTests : IDisposable
     {
         var paths = new ProxyPaths(_dir);
         Directory.CreateDirectory(paths.AcmeDirectory);
-        using var service = Service(new HttpClient());
+        using var http = new HttpClient();
+        using var service = Service(http);
 
         var created = service.LoadOrCreateAccountKey().ToPem();
         Assert.Equal(created, service.LoadOrCreateAccountKey().ToPem());
@@ -441,7 +446,8 @@ public sealed class AuditCertificateTests : IDisposable
 
         var paths = new ProxyPaths(_dir);
         Directory.CreateDirectory(paths.AcmeDirectory);
-        using var service = Service(new HttpClient());
+        using var http = new HttpClient();
+        using var service = Service(http);
         var created = service.LoadOrCreateAccountKey().ToPem();
 
         File.SetUnixFileMode(paths.AcmeAccountKeyFile, UnixFileMode.None);

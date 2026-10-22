@@ -180,7 +180,7 @@ public sealed class CertificateStore : IDisposable
 
             RaiseIfFlipped(before);
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OutOfMemoryException)
         {
             _logger.LogError(ex, "Checking the proxy certificate files failed");
         }

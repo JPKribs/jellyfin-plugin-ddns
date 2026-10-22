@@ -240,13 +240,10 @@ public class DynamicDNSController : ControllerBase
     internal static bool MissingHostname(IEnumerable<DNSRecord> records, IEnumerable<IDNSProvider> providers)
     {
         var missing = false;
-        foreach (var record in records)
+        foreach (var record in records.Where(r => string.IsNullOrWhiteSpace(r.Hostname)))
         {
-            if (string.IsNullOrWhiteSpace(record.Hostname))
-            {
-                record.Hostname = string.Empty;
-                missing |= NeedsHostname(providers, record.Provider);
-            }
+            record.Hostname = string.Empty;
+            missing |= NeedsHostname(providers, record.Provider);
         }
 
         return missing;

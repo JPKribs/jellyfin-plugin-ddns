@@ -232,31 +232,15 @@ public sealed class AuditProxyTests : IAsyncLifetime
         var start = new DateTime(2026, 10, 21, 12, 0, 0, DateTimeKind.Utc);
         var dockerProxy = IPAddress.Parse("172.17.0.1");
         var watch = new LocalTrafficWatch();
-        for (var i = 0; i < 80; i++)
-        {
-            watch.Observe(false, true, IPAddress.Parse("203.0.113." + (i % 50)), start.AddSeconds(i));
-        }
-
-        for (var i = 0; i < 150; i++)
-        {
-            watch.Observe(true, true, dockerProxy, start.AddMinutes(2).AddSeconds(i));
-        }
-
+        Observe(watch, false, 80, i => IPAddress.Parse("203.0.113." + (i % 50)), start);
+        Observe(watch, true, 150, _ => dockerProxy, start.AddMinutes(2));
         Assert.True(watch.Suspected);
         Assert.True(watch.Partial);
 
         // Busy LAN clients alongside a busier internet are normal.
         var normal = new LocalTrafficWatch();
-        for (var i = 0; i < 300; i++)
-        {
-            normal.Observe(false, true, IPAddress.Parse("203.0.113.9"), start.AddSeconds(i));
-        }
-
-        for (var i = 0; i < 150; i++)
-        {
-            normal.Observe(true, true, IPAddress.Parse("192.168.1.40"), start.AddMinutes(10).AddSeconds(i));
-        }
-
+        Observe(normal, false, 300, _ => IPAddress.Parse("203.0.113.9"), start);
+        Observe(normal, true, 150, _ => IPAddress.Parse("192.168.1.40"), start.AddMinutes(10));
         Assert.False(normal.Suspected);
     }
 
@@ -397,6 +381,15 @@ public sealed class AuditProxyTests : IAsyncLifetime
 
         var unclaimed = recorder.TakeUnclaimed(TimeSpan.Zero);
         Assert.Equal(new[] { "203.0.113.40", "203.0.113.41" }, unclaimed.Select(f => f.Ip).OrderBy(i => i, StringComparer.Ordinal));
+    }
+
+    // One request a second from the given addresses, all to the public name.
+    private static void Observe(LocalTrafficWatch watch, bool local, int count, Func<int, IPAddress> address, DateTime from)
+    {
+        for (var i = 0; i < count; i++)
+        {
+            watch.Observe(local, true, address(i), from.AddSeconds(i));
+        }
     }
 
     private static DefaultConnectionContext Context(string ip)

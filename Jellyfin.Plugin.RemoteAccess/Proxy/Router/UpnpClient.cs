@@ -198,9 +198,8 @@ public sealed class UpnpClient : IRouterClient, IDisposable
         var replies = new List<(IPAddress, string)>();
         using var udp = new UdpClient(new IPEndPoint(lanAddress, 0));
         var targets = UpnpProtocol.ServiceTypes.Append("urn:schemas-upnp-org:device:InternetGatewayDevice:1");
-        foreach (var target in targets)
+        foreach (var message in targets.Select(UpnpProtocol.SearchRequest))
         {
-            var message = UpnpProtocol.SearchRequest(target);
             await udp.SendAsync(message, UpnpProtocol.SsdpEndpoint, cancellationToken).ConfigureAwait(false);
         }
 

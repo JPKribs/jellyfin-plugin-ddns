@@ -69,7 +69,7 @@ public sealed class RouterPortMapper : IAsyncDisposable
     public RouterPortMapper(ILogger<RouterPortMapper> logger, ActivityLogger activity)
         : this(new IRouterClient[] { new NatPmpClient(), new UpnpClient() }, logger, activity)
     {
-        Volatile.Write(ref _current, this);
+        Track(this);
     }
 
     /// <summary>
@@ -159,6 +159,12 @@ public sealed class RouterPortMapper : IAsyncDisposable
         }
     }
 
+    // The uninstall hook is static and reaches the running mapper through these. Only the real mapper is
+    // tracked, never one a test builds.
+    private static void Track(RouterPortMapper mapper) => Volatile.Write(ref _current, mapper);
+
+    private static void Untrack(RouterPortMapper mapper) => Interlocked.CompareExchange(ref _current, null, mapper);
+
     /// <inheritdoc />
     public async ValueTask DisposeAsync()
     {
@@ -169,7 +175,7 @@ public sealed class RouterPortMapper : IAsyncDisposable
 
         await _disposed.CancelAsync().ConfigureAwait(false);
         await _renew.DisposeAsync().ConfigureAwait(false);
-        Interlocked.CompareExchange(ref _current, null, this);
+        Untrack(this);
         foreach (var client in _clients.OfType<IDisposable>())
         {
             client.Dispose();
@@ -239,8 +245,9 @@ public sealed class RouterPortMapper : IAsyncDisposable
         {
             _logger.LogDebug("Router port forwarding stopped during shutdown");
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
+            // Cancellation is handled above, so this logs every other failure.
             _logger.LogWarning(ex, "Router port forwarding failed");
         }
     }
