@@ -15,12 +15,16 @@
                     <div id="shareCard" class="ddns-share hidden">
                         <div id="shareQr" class="ddns-share-qr" role="img" aria-label="QR code for your server's address"></div>
                         <div class="ddns-share-body">
-                            <div class="ddns-share-label">Your server's address</div>
+                            <div class="ddns-share-head">
+                                <h2 class="ddns-share-title">Share Your Server</h2>
+                                <span id="shareBadge" class="jpk-badge green">Public</span>
+                            </div>
                             <a id="shareUrl" class="ddns-share-url" target="_blank" rel="noopener noreferrer"></a>
-                            <div id="shareNote" class="fieldDescription">Scan the code with a phone to open it, or send the address to family to add in their Jellyfin app.</div>
-                            <div class="ddns-button-row">
-                                <button is="emby-button" type="button" id="btnCopyShare" class="raised jpk-secondary"><span>Copy</span></button>
-                                <button is="emby-button" type="button" id="btnShare" class="raised jpk-secondary hidden"><span>Share</span></button>
+                            <div id="shareNote" class="fieldDescription">Scan the code with a phone, or send the address to family for their Jellyfin app.</div>
+                            <div id="shareHomeOnly" class="jpk-warn hidden">This address only works on your home network. Pick a public one in step 2 of <a href="#/configurationpage?name=ddns_configuration">Configuration</a> to share it outside.</div>
+                            <div class="ddns-share-actions">
+                                <button is="emby-button" type="button" id="btnCopyShare" class="raised jpk-icon-btn jpk-secondary"><span class="material-icons" aria-hidden="true">content_copy</span><span>Copy</span></button>
+                                <button is="emby-button" type="button" id="btnShare" class="raised jpk-icon-btn jpk-secondary hidden"><span class="material-icons" aria-hidden="true">share</span><span>Share</span></button>
                             </div>
                         </div>
                     </div>
@@ -75,17 +79,22 @@
     <style>
         /* The share card: the QR code beside the address, stacked on a phone. The code stays black on white in
            every theme, the form cameras read best. */
-        #DynamicDnsDashboardPage .ddns-share { display: flex; gap: 1.2em; align-items: center; padding: 1em; margin-bottom: 1.5em; border: 1px solid var(--jpk-border, rgba(255, 255, 255, 0.12)); border-radius: 8px; }
+        #DynamicDnsDashboardPage .ddns-share { display: flex; gap: 1.5em; align-items: center; padding: 1.25em; margin-bottom: 2em; background: var(--jpk-surface); border: 1px solid var(--jpk-border); border-radius: 8px; }
         #DynamicDnsDashboardPage .ddns-share.hidden { display: none; }
-        #DynamicDnsDashboardPage .ddns-share-qr { flex: 0 0 auto; width: 9em; height: 9em; background: #fff; border-radius: 6px; }
+        #DynamicDnsDashboardPage .ddns-share-qr { flex: 0 0 auto; width: 8em; height: 8em; padding: 0.4em; background: #fff; border-radius: 8px; }
         #DynamicDnsDashboardPage .ddns-share-qr svg { display: block; width: 100%; height: 100%; }
         #DynamicDnsDashboardPage .ddns-share-body { flex: 1 1 auto; min-width: 0; }
-        #DynamicDnsDashboardPage .ddns-share-label { opacity: 0.7; font-size: 0.9em; }
-        #DynamicDnsDashboardPage .ddns-share-url { display: block; font-size: 1.3em; font-weight: 600; margin: 0.2em 0 0.4em; overflow-wrap: anywhere; color: var(--jpk-accent, #00a4dc); text-decoration: none; }
+        #DynamicDnsDashboardPage .ddns-share-head { display: flex; align-items: center; gap: 0.75em; flex-wrap: wrap; }
+        #DynamicDnsDashboardPage .ddns-share-title { margin: 0; font-size: 1.1em; font-weight: 500; }
+        #DynamicDnsDashboardPage .ddns-share-url { display: block; font-family: var(--jpk-mono); font-size: 1.35em; margin: 0.45em 0 0.35em; overflow-wrap: anywhere; color: var(--jpk-accent); text-decoration: none; }
         #DynamicDnsDashboardPage .ddns-share-url:hover { text-decoration: underline; }
-        #DynamicDnsDashboardPage .ddns-share .ddns-button-row > button { flex: 0 0 auto; }
+        #DynamicDnsDashboardPage .ddns-share .jpk-warn { margin: 0.6em 0 0 !important; }
+        #DynamicDnsDashboardPage .ddns-share .jpk-warn a { color: inherit; font-weight: 600; }
+        #DynamicDnsDashboardPage .ddns-share-actions { display: flex; flex-wrap: wrap; gap: 0.6em; margin-top: 1em; }
+        #DynamicDnsDashboardPage .ddns-share-actions > button { margin: 0; }
         @media (max-width: 600px) {
-            #DynamicDnsDashboardPage .ddns-share { flex-direction: column; align-items: flex-start; }
+            #DynamicDnsDashboardPage .ddns-share { flex-direction: column; align-items: stretch; text-align: left; }
+            #DynamicDnsDashboardPage .ddns-share-qr { align-self: center; width: 10em; height: 10em; }
         }
         /* The view toggles always split one line, however narrow. */
         #DynamicDnsDashboardPage .ddns-map-switch > button { flex: 1 1 0; min-width: 0; }

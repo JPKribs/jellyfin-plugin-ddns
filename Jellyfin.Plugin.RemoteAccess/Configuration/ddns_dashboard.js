@@ -386,9 +386,11 @@ export default function (view) {
             link.textContent = url.replace(/^https:\/\//, '');
             // Markup made by the server's own QR encoder from the address alone.
             Shared.getEl('shareQr').innerHTML = s.QrSvg || '';
-            Shared.getEl('shareNote').textContent = s.HomeOnly
-                ? 'This address only works on your home network. Choose a public address in step 2, Address, of the Configuration tab to share it outside.'
-                : 'Scan the code with a phone to open it, or send the address to family to add in their Jellyfin app.';
+            var badge = Shared.getEl('shareBadge');
+            badge.className = 'jpk-badge ' + (s.HomeOnly ? 'orange' : 'green');
+            badge.textContent = s.HomeOnly ? 'Home only' : 'Public';
+            Shared.setVisible('shareNote', !s.HomeOnly);
+            Shared.setVisible('shareHomeOnly', !!s.HomeOnly);
             Shared.setVisible('btnShare', typeof navigator.share === 'function');
         }).catch(function () {
             Shared.setVisible('shareCard', false);

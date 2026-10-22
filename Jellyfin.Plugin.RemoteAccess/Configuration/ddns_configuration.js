@@ -891,7 +891,7 @@ export default function (view) {
         { key: 'Reach', title: 'Reachable from outside' }
     ];
 
-    var ICONS = { green: '✓', amber: '!', red: '✕', gray: '○' };
+    var BADGES = { green: 'green', amber: 'orange', red: 'red', gray: 'gray' };
 
     // The last test from outside run from this page, kept until the status carries a newer one.
     var lastReach = null;
@@ -1032,15 +1032,12 @@ export default function (view) {
         return step('amber', 'Test failed', 'The test could not run. ' + reach.Error);
     }
 
+    // Steps fold with the shared collapsible sections. This opens or folds one from code.
     function setStepOpen(key, open) {
-        var li = Shared.getEl('step' + key);
-        li.classList.toggle('ddns-step-collapsed', !open);
-        li.querySelector('.ddns-step-head').setAttribute('aria-expanded', open ? 'true' : 'false');
-    }
-
-    function toggleStep(e) {
-        var key = e.currentTarget.getAttribute('data-step');
-        setStepOpen(key, Shared.getEl('step' + key).classList.contains('ddns-step-collapsed'));
+        var head = Shared.getEl('step' + key).querySelector('.jpk-collapsible-header');
+        head.classList.toggle('collapsed', !open);
+        head.setAttribute('aria-expanded', open ? 'true' : 'false');
+        Shared.getEl('body' + key).classList.toggle('collapsed', !open);
     }
 
     // On the first render of a visit, open every step that is not done and fold the rest away.
@@ -1050,12 +1047,12 @@ export default function (view) {
         STEPS.forEach(function (s, i) { setStepOpen(s.key, results[i].state !== 'green' && !results[i].idle); });
     }
 
-    function renderStep(key, result, later) {
+    function renderStep(key, result) {
         var li = Shared.getEl('step' + key);
         li.setAttribute('data-state', result.state);
-        li.classList.toggle('ddns-step-later', later);
-        Shared.getEl('icon' + key).textContent = ICONS[result.state];
-        Shared.getEl('state' + key).textContent = result.word;
+        var badge = Shared.getEl('state' + key);
+        badge.className = 'jpk-badge ' + BADGES[result.state];
+        badge.textContent = result.word;
         Shared.getEl('text' + key).textContent = result.text;
     }
 
@@ -1151,8 +1148,8 @@ export default function (view) {
         if (!st || !settings) return;
         lastStatus = st;
         var results = [assessPower(st), assessAddress(st), assessCertificate(st), assessRouter(st), assessTrust(st), assessReach(st)];
-        var first = renderSummary(st, results);
-        STEPS.forEach(function (s, i) { renderStep(s.key, results[i], first >= 0 && i > first); });
+        renderSummary(st, results);
+        STEPS.forEach(function (s, i) { renderStep(s.key, results[i]); });
         arrange(results);
 
         show('folderProblem', st.FolderProblem);
@@ -1219,9 +1216,6 @@ export default function (view) {
 
     function bind() {
         hostnames = createHostnamePicker(Shared, 'hostnamePicker', 'hostnames');
-        Array.prototype.forEach.call(view.querySelectorAll('.ddns-step-head'), function (head) {
-            head.addEventListener('click', toggleStep);
-        });
 
         // Step 2: records and the public IP.
         Shared.getEl('selectRecord').addEventListener('change', function () {

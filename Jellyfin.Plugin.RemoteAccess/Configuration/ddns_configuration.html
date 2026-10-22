@@ -18,19 +18,16 @@
                     <div id="everyoneLocal" class="jpk-warn hidden"></div>
                     <div id="countryNote" class="jpk-info hidden"></div>
 
-                    <ol class="ddns-steps">
+                    <div class="ddns-steps">
 
                         <!-- Step 1: the proxy itself -->
-                        <li class="ddns-step" id="stepPower" data-state="gray">
-                            <h2 class="ddns-step-heading">
-                                <button type="button" class="ddns-step-head" data-step="Power" aria-expanded="true" aria-controls="bodyPower">
-                                    <span class="ddns-step-icon" id="iconPower" aria-hidden="true"></span>
-                                    <span class="ddns-step-title"><span class="ddns-step-num">1.</span> Proxy on</span>
-                                    <span class="ddns-step-state" id="statePower"></span>
-                                    <span class="ddns-step-chevron" aria-hidden="true">&#9660;</span>
-                                </button>
-                            </h2>
-                            <div class="ddns-step-body" id="bodyPower">
+                        <div class="jpk-collapsible-section ddns-step" id="stepPower" data-state="gray">
+                            <button type="button" class="jpk-collapsible-header" data-target="bodyPower" aria-expanded="true" aria-controls="bodyPower">
+                                <span class="jpk-collapsible-title jpk-step-title"><span class="jpk-step-number" id="iconPower" aria-hidden="true">1</span>Proxy on</span>
+                                <span class="jpk-badge gray" id="statePower"></span>
+                                <span class="jpk-collapsible-icon" aria-hidden="true">&#9660;</span>
+                            </button>
+                            <div class="jpk-collapsible-content" id="bodyPower">
                                 <div class="ddns-step-text" id="textPower" aria-live="polite"></div>
                                 <div class="checkboxContainer checkboxContainer-withDescription">
                                     <label class="emby-checkbox-label">
@@ -40,19 +37,16 @@
                                     <div class="fieldDescription checkboxFieldDescription">Starts the proxy once saved, and Jellyfin is untouched until you select Trust the Proxy in step 5.</div>
                                 </div>
                             </div>
-                        </li>
+                        </div>
 
                         <!-- Step 2: the address, with the DDNS records that keep it current -->
-                        <li class="ddns-step" id="stepAddress" data-state="gray">
-                            <h2 class="ddns-step-heading">
-                                <button type="button" class="ddns-step-head" data-step="Address" aria-expanded="true" aria-controls="bodyAddress">
-                                    <span class="ddns-step-icon" id="iconAddress" aria-hidden="true"></span>
-                                    <span class="ddns-step-title"><span class="ddns-step-num">2.</span> Address</span>
-                                    <span class="ddns-step-state" id="stateAddress"></span>
-                                    <span class="ddns-step-chevron" aria-hidden="true">&#9660;</span>
-                                </button>
-                            </h2>
-                            <div class="ddns-step-body" id="bodyAddress">
+                        <div class="jpk-collapsible-section ddns-step" id="stepAddress" data-state="gray">
+                            <button type="button" class="jpk-collapsible-header" data-target="bodyAddress" aria-expanded="true" aria-controls="bodyAddress">
+                                <span class="jpk-collapsible-title jpk-step-title"><span class="jpk-step-number" id="iconAddress" aria-hidden="true">2</span>Address</span>
+                                <span class="jpk-badge gray" id="stateAddress"></span>
+                                <span class="jpk-collapsible-icon" aria-hidden="true">&#9660;</span>
+                            </button>
+                            <div class="jpk-collapsible-content" id="bodyAddress">
                                 <div class="ddns-step-text" id="textAddress" aria-live="polite"></div>
                                 <div id="nameDetails" class="jpk-record-card hidden">
                                     <div class="jpk-record-row"><span class="jpk-record-label">Name</span><span id="nameHostname" class="jpk-mono"></span></div>
@@ -253,19 +247,16 @@
                                     <div class="fieldDescription">Names without a DDNS record above, one per line.</div>
                                 </div>
                             </div>
-                        </li>
+                        </div>
 
                         <!-- Step 3: the certificate -->
-                        <li class="ddns-step" id="stepCertificate" data-state="gray">
-                            <h2 class="ddns-step-heading">
-                                <button type="button" class="ddns-step-head" data-step="Certificate" aria-expanded="true" aria-controls="bodyCertificate">
-                                    <span class="ddns-step-icon" id="iconCertificate" aria-hidden="true"></span>
-                                    <span class="ddns-step-title"><span class="ddns-step-num">3.</span> Certificate</span>
-                                    <span class="ddns-step-state" id="stateCertificate"></span>
-                                    <span class="ddns-step-chevron" aria-hidden="true">&#9660;</span>
-                                </button>
-                            </h2>
-                            <div class="ddns-step-body" id="bodyCertificate">
+                        <div class="jpk-collapsible-section ddns-step" id="stepCertificate" data-state="gray">
+                            <button type="button" class="jpk-collapsible-header" data-target="bodyCertificate" aria-expanded="true" aria-controls="bodyCertificate">
+                                <span class="jpk-collapsible-title jpk-step-title"><span class="jpk-step-number" id="iconCertificate" aria-hidden="true">3</span>Certificate</span>
+                                <span class="jpk-badge gray" id="stateCertificate"></span>
+                                <span class="jpk-collapsible-icon" aria-hidden="true">&#9660;</span>
+                            </button>
+                            <div class="jpk-collapsible-content" id="bodyCertificate">
                                 <div class="ddns-step-text" id="textCertificate" aria-live="polite"></div>
                                 <div class="selectContainer">
                                     <label class="selectLabel" for="certMode">Source</label>
@@ -329,19 +320,16 @@
                                     <span id="certRequestStatus" class="jpk-status-text" aria-live="polite"></span>
                                 </div>
                             </div>
-                        </li>
+                        </div>
 
                         <!-- Step 4: the router -->
-                        <li class="ddns-step" id="stepRouter" data-state="gray">
-                            <h2 class="ddns-step-heading">
-                                <button type="button" class="ddns-step-head" data-step="Router" aria-expanded="true" aria-controls="bodyRouter">
-                                    <span class="ddns-step-icon" id="iconRouter" aria-hidden="true"></span>
-                                    <span class="ddns-step-title"><span class="ddns-step-num">4.</span> Router</span>
-                                    <span class="ddns-step-state" id="stateRouter"></span>
-                                    <span class="ddns-step-chevron" aria-hidden="true">&#9660;</span>
-                                </button>
-                            </h2>
-                            <div class="ddns-step-body" id="bodyRouter">
+                        <div class="jpk-collapsible-section ddns-step" id="stepRouter" data-state="gray">
+                            <button type="button" class="jpk-collapsible-header" data-target="bodyRouter" aria-expanded="true" aria-controls="bodyRouter">
+                                <span class="jpk-collapsible-title jpk-step-title"><span class="jpk-step-number" id="iconRouter" aria-hidden="true">4</span>Router</span>
+                                <span class="jpk-badge gray" id="stateRouter"></span>
+                                <span class="jpk-collapsible-icon" aria-hidden="true">&#9660;</span>
+                            </button>
+                            <div class="jpk-collapsible-content" id="bodyRouter">
                                 <div class="ddns-step-text" id="textRouter" aria-live="polite"></div>
                                 <div id="routerError" class="jpk-error hidden"></div>
                                 <div id="routerManual" class="hidden">
@@ -363,19 +351,16 @@
                                 </div>
                                 <span id="routerStatus" class="jpk-status-text" aria-live="polite"></span>
                             </div>
-                        </li>
+                        </div>
 
                         <!-- Step 5: Jellyfin trusts the proxy -->
-                        <li class="ddns-step" id="stepTrust" data-state="gray">
-                            <h2 class="ddns-step-heading">
-                                <button type="button" class="ddns-step-head" data-step="Trust" aria-expanded="true" aria-controls="bodyTrust">
-                                    <span class="ddns-step-icon" id="iconTrust" aria-hidden="true"></span>
-                                    <span class="ddns-step-title"><span class="ddns-step-num">5.</span> Trust the Proxy</span>
-                                    <span class="ddns-step-state" id="stateTrust"></span>
-                                    <span class="ddns-step-chevron" aria-hidden="true">&#9660;</span>
-                                </button>
-                            </h2>
-                            <div class="ddns-step-body" id="bodyTrust">
+                        <div class="jpk-collapsible-section ddns-step" id="stepTrust" data-state="gray">
+                            <button type="button" class="jpk-collapsible-header" data-target="bodyTrust" aria-expanded="true" aria-controls="bodyTrust">
+                                <span class="jpk-collapsible-title jpk-step-title"><span class="jpk-step-number" id="iconTrust" aria-hidden="true">5</span>Trust the Proxy</span>
+                                <span class="jpk-badge gray" id="stateTrust"></span>
+                                <span class="jpk-collapsible-icon" aria-hidden="true">&#9660;</span>
+                            </button>
+                            <div class="jpk-collapsible-content" id="bodyTrust">
                                 <div class="ddns-step-text" id="textTrust" aria-live="polite"></div>
                                 <div class="fieldDescription">Lets Jellyfin see each visitor's real address while keeping its own ports, and restarts Jellyfin once.</div>
                                 <div id="trustError" class="jpk-error hidden"></div>
@@ -390,19 +375,16 @@
                                 </div>
                                 <span id="trustStatus" class="jpk-status-text" aria-live="polite"></span>
                             </div>
-                        </li>
+                        </div>
 
                         <!-- Step 6: a test from outside -->
-                        <li class="ddns-step" id="stepReach" data-state="gray">
-                            <h2 class="ddns-step-heading">
-                                <button type="button" class="ddns-step-head" data-step="Reach" aria-expanded="true" aria-controls="bodyReach">
-                                    <span class="ddns-step-icon" id="iconReach" aria-hidden="true"></span>
-                                    <span class="ddns-step-title"><span class="ddns-step-num">6.</span> Reachable from outside</span>
-                                    <span class="ddns-step-state" id="stateReach"></span>
-                                    <span class="ddns-step-chevron" aria-hidden="true">&#9660;</span>
-                                </button>
-                            </h2>
-                            <div class="ddns-step-body" id="bodyReach">
+                        <div class="jpk-collapsible-section ddns-step" id="stepReach" data-state="gray">
+                            <button type="button" class="jpk-collapsible-header" data-target="bodyReach" aria-expanded="true" aria-controls="bodyReach">
+                                <span class="jpk-collapsible-title jpk-step-title"><span class="jpk-step-number" id="iconReach" aria-hidden="true">6</span>Reachable from outside</span>
+                                <span class="jpk-badge gray" id="stateReach"></span>
+                                <span class="jpk-collapsible-icon" aria-hidden="true">&#9660;</span>
+                            </button>
+                            <div class="jpk-collapsible-content" id="bodyReach">
                                 <div class="ddns-step-text" id="textReach" aria-live="polite"></div>
                                 <div id="reachNodes" class="jpk-record-card hidden"></div>
                                 <div class="ddns-button-row">
@@ -413,9 +395,9 @@
                                 <div class="fieldDescription">This asks check-host.net to connect to your address from other countries, so your address is sent to that service.</div>
                                 <span id="reachStatus" class="jpk-status-text" aria-live="polite"></span>
                             </div>
-                        </li>
+                        </div>
 
-                    </ol>
+                    </div>
 
                     <!-- Saves the proxy settings in steps 1 to 3. Records save with Save Record. -->
                     <div class="inputContainer">
@@ -435,20 +417,13 @@
     <link rel="stylesheet" href="configurationpage?name=ddns_common.css">
     <style>
         #DynamicDnsConfigurationPage #summary { font-size: 1.05em; }
-        #DynamicDnsConfigurationPage .ddns-steps { list-style: none; margin: 1em 0 0; padding: 0; }
-        #DynamicDnsConfigurationPage .ddns-step { border: 1px solid var(--jpk-border); border-radius: 8px; padding: 0; margin: 0 0 1em 0; background: rgba(255, 255, 255, 0.03); transition: opacity 0.2s; }
-        #DynamicDnsConfigurationPage .ddns-step-heading { margin: 0; font-size: 1em; font-weight: inherit; }
-        /* The whole header is one button that folds its step. */
-        #DynamicDnsConfigurationPage .ddns-step-head { display: flex; align-items: center; gap: 0.75em; width: 100%; padding: 1em 1.1em; margin: 0; background: none; border: 0; color: inherit; font: inherit; text-align: left; cursor: pointer; border-radius: 8px; }
-        #DynamicDnsConfigurationPage .ddns-step-head:focus-visible { outline: 2px solid var(--jpk-accent, #00a4dc); outline-offset: -2px; }
-        #DynamicDnsConfigurationPage .ddns-step-title { margin: 0; font-size: 1.15em; font-weight: 600; flex: 1 1 auto; min-width: 0; }
-        #DynamicDnsConfigurationPage .ddns-step-num { opacity: 0.7; margin-right: 0.15em; }
-        #DynamicDnsConfigurationPage .ddns-step-icon { flex: 0 0 1.8em; width: 1.8em; height: 1.8em; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; border: 2px solid currentColor; }
-        #DynamicDnsConfigurationPage .ddns-step-state { flex: 0 0 auto; font-size: 0.85em; font-weight: 600; padding: 0.2em 0.6em; border-radius: 4px; white-space: nowrap; }
-        #DynamicDnsConfigurationPage .ddns-step-chevron { flex: 0 0 auto; font-size: 0.8em; opacity: 0.7; transition: transform 0.2s; }
-        #DynamicDnsConfigurationPage .ddns-step.ddns-step-collapsed .ddns-step-chevron { transform: rotate(-90deg); }
-        #DynamicDnsConfigurationPage .ddns-step.ddns-step-collapsed .ddns-step-body { display: none; }
-        #DynamicDnsConfigurationPage .ddns-step-body { margin-left: 2.55em; padding: 0 1.1em 1em 1.1em; }
+        #DynamicDnsConfigurationPage .ddns-steps { margin-top: 1em; }
+        /* The step header carries its state as a badge before the fold arrow, and its number takes the state's colour. */
+        #DynamicDnsConfigurationPage .ddns-step .jpk-collapsible-header .jpk-badge { margin-right: 0.8em; }
+        #DynamicDnsConfigurationPage .ddns-step .jpk-step-number { flex: 0 0 auto; }
+        #DynamicDnsConfigurationPage .ddns-step[data-state="green"] .jpk-step-number { color: var(--jpk-green-fg); background: var(--jpk-green-bg); }
+        #DynamicDnsConfigurationPage .ddns-step[data-state="amber"] .jpk-step-number { color: var(--jpk-orange-fg); background: var(--jpk-orange-bg); }
+        #DynamicDnsConfigurationPage .ddns-step[data-state="red"] .jpk-step-number { color: var(--jpk-red-fg); background: var(--jpk-red-bg); }
         #DynamicDnsConfigurationPage .ddns-step-text { margin: 0 0 1em; line-height: 1.5; }
         #DynamicDnsConfigurationPage .ddns-step-subtitle { margin: 1.4em 0 0.4em; font-size: 1.05em; }
         #DynamicDnsConfigurationPage .ddns-step-intro { margin-bottom: 1em; }
@@ -459,23 +434,5 @@
         #DynamicDnsConfigurationPage .ddns-step .jpk-cards { margin: 1em 0; }
         #DynamicDnsConfigurationPage .ddns-save-note { margin-bottom: 0.6em; }
         #DynamicDnsConfigurationPage #routerInstruction { line-height: 1.6; }
-        #DynamicDnsConfigurationPage .ddns-step[data-state="green"] .ddns-step-icon,
-        #DynamicDnsConfigurationPage .ddns-step[data-state="green"] .ddns-step-state { color: var(--jpk-green-fg); background: var(--jpk-green-bg); }
-        #DynamicDnsConfigurationPage .ddns-step[data-state="amber"] .ddns-step-icon,
-        #DynamicDnsConfigurationPage .ddns-step[data-state="amber"] .ddns-step-state { color: var(--jpk-orange-fg); background: var(--jpk-orange-bg); }
-        #DynamicDnsConfigurationPage .ddns-step[data-state="red"] .ddns-step-icon,
-        #DynamicDnsConfigurationPage .ddns-step[data-state="red"] .ddns-step-state { color: var(--jpk-red-fg); background: var(--jpk-red-bg); }
-        #DynamicDnsConfigurationPage .ddns-step[data-state="gray"] .ddns-step-icon,
-        #DynamicDnsConfigurationPage .ddns-step[data-state="gray"] .ddns-step-state { color: var(--jpk-gray-fg); background: var(--jpk-gray-bg); }
-        #DynamicDnsConfigurationPage .ddns-step[data-state="green"] { border-color: var(--jpk-green-fg); }
-        #DynamicDnsConfigurationPage .ddns-step[data-state="red"] { border-color: var(--jpk-red-fg); }
-        /* Steps after the first unfinished one still show their state, but step back until it is done. */
-        #DynamicDnsConfigurationPage .ddns-step.ddns-step-later { opacity: 0.6; }
-        #DynamicDnsConfigurationPage .ddns-step.ddns-step-later:focus-within { opacity: 1; }
-        @media (max-width: 600px) {
-            #DynamicDnsConfigurationPage .ddns-step-head { padding: 0.9em 0.8em; gap: 0.5em; }
-            #DynamicDnsConfigurationPage .ddns-step-body { margin-left: 0; padding: 0 0.8em 0.9em 0.8em; }
-            #DynamicDnsConfigurationPage .ddns-step-title { font-size: 1.05em; }
-        }
     </style>
 </div>
