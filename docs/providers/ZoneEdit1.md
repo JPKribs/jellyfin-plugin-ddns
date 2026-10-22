@@ -1,6 +1,6 @@
 # ZoneEdit
 
-On the **Domains** tab, set **Provider** to **ZoneEdit**, then fill in:
+In step 2, **Address**, of the **Configuration** tab, set **Provider** to **ZoneEdit**, then fill in:
 
 - **Hostname**: the host to update.
 - **Username**: your ZoneEdit username.

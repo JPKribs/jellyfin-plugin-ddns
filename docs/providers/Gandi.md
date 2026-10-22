@@ -1,6 +1,6 @@
 # Gandi LiveDNS
 
-On the **Domains** tab, set **Provider** to **Gandi LiveDNS**, then fill in:
+In step 2, **Address**, of the **Configuration** tab, set **Provider** to **Gandi LiveDNS**, then fill in:
 
 - **Record name**: the record name, relative to the zone.
 - **Auth keyword**: the word `token` to use a Personal Access Token. Any other value uses an API key.

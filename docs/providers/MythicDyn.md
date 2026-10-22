@@ -1,6 +1,6 @@
 # Mythic Beasts
 
-On the **Domains** tab, set **Provider** to **Mythic Beasts**, then fill in:
+In step 2, **Address**, of the **Configuration** tab, set **Provider** to **Mythic Beasts**, then fill in:
 
 - **Hostname**: the record name. The service sets it to the address the request comes from.
 - **Username**: your Mythic Beasts dynamic DNS API key.

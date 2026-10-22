@@ -1,6 +1,6 @@
 # Simply.com
 
-On the **Domains** tab, set **Provider** to **Simply.com**, then fill in:
+In step 2, **Address**, of the **Configuration** tab, set **Provider** to **Simply.com**, then fill in:
 
 - **Hostname**: the record.
 - **Account name**: your Simply.com account name, which is your account number.

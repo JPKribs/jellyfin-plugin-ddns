@@ -1,6 +1,6 @@
 # ChangeIP
 
-On the **Domains** tab, set **Provider** to **ChangeIP**, then fill in:
+In step 2, **Address**, of the **Configuration** tab, set **Provider** to **ChangeIP**, then fill in:
 
 - **Hostname**: the host to update, such as yourname.changeip.com.
 - **Username**: your ChangeIP account username.

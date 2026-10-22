@@ -1,6 +1,6 @@
 # eNom
 
-On the **Domains** tab, set **Provider** to **eNom**, then fill in:
+In step 2, **Address**, of the **Configuration** tab, set **Provider** to **eNom**, then fill in:
 
 - **Host**: the host, relative to the base domain.
 - **Base domain**: your base domain, such as example.com.

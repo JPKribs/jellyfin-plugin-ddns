@@ -1,6 +1,6 @@
 # Spaceship
 
-On the **Domains** tab, set **Provider** to **Spaceship**, then fill in:
+In step 2, **Address**, of the **Configuration** tab, set **Provider** to **Spaceship**, then fill in:
 
 - **Hostname**: the record. The subdomain is worked out from it, with @ for the apex.
 - **API key**: your Spaceship API key.

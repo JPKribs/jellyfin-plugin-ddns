@@ -1,6 +1,6 @@
 # IONOS
 
-On the **Domains** tab, set **Provider** to **IONOS**, then fill in:
+In step 2, **Address**, of the **Configuration** tab, set **Provider** to **IONOS**, then fill in:
 
 - **Hostname**: the record name.
 - **API key**: your IONOS API key, in the form prefix.secret. Create it in the IONOS Developer DNS API.

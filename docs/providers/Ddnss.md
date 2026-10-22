@@ -1,6 +1,6 @@
 # DDNSS.de
 
-On the **Domains** tab, set **Provider** to **DDNSS.de**, then fill in:
+In step 2, **Address**, of the **Configuration** tab, set **Provider** to **DDNSS.de**, then fill in:
 
 - **Host**: your DDNSS.de host.
 - **Key**: the update key from your DDNSS.de account, under My Hosts.

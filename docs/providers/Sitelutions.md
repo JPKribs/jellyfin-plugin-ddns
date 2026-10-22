@@ -1,6 +1,6 @@
 # Sitelutions
 
-On the **Domains** tab, set **Provider** to **Sitelutions**, then fill in:
+In step 2, **Address**, of the **Configuration** tab, set **Provider** to **Sitelutions**, then fill in:
 
 - **Record ID**: the numeric record ID from your Sitelutions Recordbook. It is a number, not a host name.
 - **Account email**: your Sitelutions account email.

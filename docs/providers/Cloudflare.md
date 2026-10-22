@@ -1,6 +1,6 @@
 # Cloudflare
 
-On the **Domains** tab, set **Provider** to **Cloudflare**, then fill in:
+In step 2, **Address**, of the **Configuration** tab, set **Provider** to **Cloudflare**, then fill in:
 
 - **Record name**: the full DNS record name to keep updated, such as home.example.com.
 - **Auth email or token**: the word `token`, in lowercase, when you use a scoped API token, or your account email when you use the Global API Key. An empty field is treated as `token`.

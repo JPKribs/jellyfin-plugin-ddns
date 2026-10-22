@@ -1,6 +1,6 @@
 # DonDominio
 
-On the **Domains** tab, set **Provider** to **DonDominio**, then fill in:
+In step 2, **Address**, of the **Configuration** tab, set **Provider** to **DonDominio**, then fill in:
 
 - **Host**: the host.
 - **User**: your DonDominio API user.

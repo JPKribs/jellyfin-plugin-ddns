@@ -1,6 +1,6 @@
 # Provider setup
 
-Each page below lists the fields a provider shows on the **Domains** tab and where to find each value.
+Each page below lists the fields a provider shows on step 2, **Address**, of the **Configuration** tab and where to find each value.
 Set **Provider** to your DNS provider, then fill in the fields from its page.
 
 * [1984 Hosting](Hosting1984.md)

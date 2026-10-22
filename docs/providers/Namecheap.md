@@ -1,6 +1,6 @@
 # Namecheap
 
-On the **Domains** tab, set **Provider** to **Namecheap**, then fill in:
+In step 2, **Address**, of the **Configuration** tab, set **Provider** to **Namecheap**, then fill in:
 
 - **Host and domain**: the full host, such as home.example.com. The domain is removed to form the host label.
 - **Domain**: your domain, such as example.com.

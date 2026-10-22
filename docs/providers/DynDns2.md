@@ -1,6 +1,6 @@
 # DynDNS v2
 
-On the **Domains** tab, set **Provider** to **DynDNS v2**, then fill in:
+In step 2, **Address**, of the **Configuration** tab, set **Provider** to **DynDNS v2**, then fill in:
 
 - **Hostname**: the fully qualified host.
 - **Username**: your account username, or the update token, at the DynDNS v2 compatible service.

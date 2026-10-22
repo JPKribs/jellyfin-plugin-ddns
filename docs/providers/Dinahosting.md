@@ -1,6 +1,6 @@
 # Dinahosting
 
-On the **Domains** tab, set **Provider** to **Dinahosting**, then fill in:
+In step 2, **Address**, of the **Configuration** tab, set **Provider** to **Dinahosting**, then fill in:
 
 - **Host and domain**: the full DNS record name to keep updated, such as home.example.com.
 - **Username**: your Dinahosting username.

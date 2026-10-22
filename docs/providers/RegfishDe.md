@@ -1,6 +1,6 @@
 # regfish.de
 
-On the **Domains** tab, set **Provider** to **regfish.de**, then fill in:
+In step 2, **Address**, of the **Configuration** tab, set **Provider** to **regfish.de**, then fill in:
 
 - **Hostname**: the fully qualified host.
 - **Update token**: the regfish DDNS token for the record.

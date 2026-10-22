@@ -1,6 +1,6 @@
 # Domeneshop
 
-On the **Domains** tab, set **Provider** to **Domeneshop**, then fill in:
+In step 2, **Address**, of the **Configuration** tab, set **Provider** to **Domeneshop**, then fill in:
 
 - **Host**: the host, such as home.example.com.
 - **API token**: your Domeneshop API token.

@@ -6,7 +6,7 @@
     name, so updates are expected to fail. The provider is kept so existing records still load. Move the
     domain's DNS to another supported provider for new setups.
 
-On the **Domains** tab, set **Provider** to **Yandex PDD**, then fill in:
+In step 2, **Address**, of the **Configuration** tab, set **Provider** to **Yandex PDD**, then fill in:
 
 - **FQDN**: the fully qualified host to match.
 - **Domain**: your Yandex domain. It is used to list the domain's records.

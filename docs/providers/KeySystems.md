@@ -1,6 +1,6 @@
 # Key-Systems
 
-On the **Domains** tab, set **Provider** to **Key-Systems**, then fill in:
+In step 2, **Address**, of the **Configuration** tab, set **Provider** to **Key-Systems**, then fill in:
 
 - **Host**: the host.
 - **Password**: the dynamic DNS password for the record, from the Key-Systems or domaindiscount24 panel.

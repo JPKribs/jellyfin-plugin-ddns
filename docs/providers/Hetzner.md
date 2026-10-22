@@ -1,6 +1,6 @@
 # Hetzner DNS
 
-On the **Domains** tab, set **Provider** to **Hetzner DNS**, then fill in:
+In step 2, **Address**, of the **Configuration** tab, set **Provider** to **Hetzner DNS**, then fill in:
 
 - **Record name**: the record name.
 - **API token**: a Hetzner DNS API token. Create one in the DNS Console under API Tokens, then New token.

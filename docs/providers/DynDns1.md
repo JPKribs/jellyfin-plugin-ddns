@@ -1,6 +1,6 @@
 # DynDNS v1
 
-On the **Domains** tab, set **Provider** to **DynDNS v1**, then fill in:
+In step 2, **Address**, of the **Configuration** tab, set **Provider** to **DynDNS v1**, then fill in:
 
 - **Hostname**: the host to update.
 - **Username**: your account username at the DynDNS v1 compatible service.

@@ -1,6 +1,6 @@
 # Dynu
 
-On the **Domains** tab, set **Provider** to **Dynu**, then fill in:
+In step 2, **Address**, of the **Configuration** tab, set **Provider** to **Dynu**, then fill in:
 
 - **Hostname**: the fully qualified host.
 - **Username**: your Dynu username.

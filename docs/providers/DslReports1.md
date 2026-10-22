@@ -1,6 +1,6 @@
 # DSLReports
 
-On the **Domains** tab, set **Provider** to **DSLReports**, then fill in:
+In step 2, **Address**, of the **Configuration** tab, set **Provider** to **DSLReports**, then fill in:
 
 - **Host**: your DSLReports host ID.
 - **Username**: your DSLReports username.

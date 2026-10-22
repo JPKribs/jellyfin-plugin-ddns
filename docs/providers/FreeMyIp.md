@@ -1,6 +1,6 @@
 # freemyip.com
 
-On the **Domains** tab, set **Provider** to **freemyip.com**, then fill in:
+In step 2, **Address**, of the **Configuration** tab, set **Provider** to **freemyip.com**, then fill in:
 
 - **Domain**: your freemyip domain.
 - **Token**: the token from the link shown when you claim the domain at freemyip.com.

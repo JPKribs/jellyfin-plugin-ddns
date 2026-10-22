@@ -1,6 +1,6 @@
 # DNS Made Easy
 
-On the **Domains** tab, set **Provider** to **DNS Made Easy**, then fill in:
+In step 2, **Address**, of the **Configuration** tab, set **Provider** to **DNS Made Easy**, then fill in:
 
 - **Record ID**: the numeric ID of the Dynamic DNS record, shown on that record in the DNS Made Easy panel. It is a number, not a host name.
 - **Account email**: your account email address.

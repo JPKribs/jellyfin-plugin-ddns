@@ -1,6 +1,6 @@
 # Dynadot
 
-On the **Domains** tab, set **Provider** to **Dynadot**, then fill in:
+In step 2, **Address**, of the **Configuration** tab, set **Provider** to **Dynadot**, then fill in:
 
 - **Hostname**: the host.
 - **DDNS password**: your Dynadot DDNS password, from the domain's Dynamic DNS settings in your Dynadot account.

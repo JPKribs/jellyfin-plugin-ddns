@@ -1,6 +1,6 @@
 # Hurricane Electric
 
-On the **Domains** tab, set **Provider** to **Hurricane Electric**, then fill in:
+In step 2, **Address**, of the **Configuration** tab, set **Provider** to **Hurricane Electric**, then fill in:
 
 - **Record**: the record name. It is also used as the sign-in user.
 - **DDNS key**: the DDNS key generated for that record. In the dns.he.net panel, turn on dynamic DNS for the A or AAAA record and copy the generated key.

@@ -1,6 +1,6 @@
 # OVH
 
-On the **Domains** tab, set **Provider** to **OVH**, then fill in:
+In step 2, **Address**, of the **Configuration** tab, set **Provider** to **OVH**, then fill in:
 
 - **Hostname**: the record to update.
 - **Username**: your OVH DynHost username. Create a DynHost user in the OVH control panel.

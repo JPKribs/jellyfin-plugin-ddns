@@ -1,6 +1,6 @@
 # Njalla
 
-On the **Domains** tab, set **Provider** to **Njalla**, then fill in:
+In step 2, **Address**, of the **Configuration** tab, set **Provider** to **Njalla**, then fill in:
 
 - **Host**: the record.
 - **DDNS key**: the dynamic DNS key Njalla shows for that record.

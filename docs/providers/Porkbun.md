@@ -1,6 +1,6 @@
 # Porkbun
 
-On the **Domains** tab, set **Provider** to **Porkbun**, then fill in:
+In step 2, **Address**, of the **Configuration** tab, set **Provider** to **Porkbun**, then fill in:
 
 - **Hostname**: the record.
 - **API key**: your Porkbun API key, starting with pk1_.

@@ -1,6 +1,6 @@
 # DNSExit
 
-On the **Domains** tab, set **Provider** to **DNSExit**, then fill in:
+In step 2, **Address**, of the **Configuration** tab, set **Provider** to **DNSExit**, then fill in:
 
 - **Record name**: the record name.
 - **API key**: your DNSExit API key, from the Dynamic DNS or API settings.

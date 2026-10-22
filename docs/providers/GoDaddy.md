@@ -1,6 +1,6 @@
 # GoDaddy
 
-On the **Domains** tab, set **Provider** to **GoDaddy**, then fill in:
+In step 2, **Address**, of the **Configuration** tab, set **Provider** to **GoDaddy**, then fill in:
 
 - **Record name**: the host. The domain is removed to form the record name.
 - **API key**: your GoDaddy API key.

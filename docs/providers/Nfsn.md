@@ -1,6 +1,6 @@
 # NearlyFreeSpeech.NET
 
-On the **Domains** tab, set **Provider** to **NearlyFreeSpeech.NET**, then fill in:
+In step 2, **Address**, of the **Configuration** tab, set **Provider** to **NearlyFreeSpeech.NET**, then fill in:
 
 - **Hostname**: the host.
 - **Member login**: your NFSN member login.

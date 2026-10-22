@@ -1,6 +1,6 @@
 # FreeDNS
 
-On the **Domains** tab, set **Provider** to **FreeDNS**, then fill in:
+In step 2, **Address**, of the **Configuration** tab, set **Provider** to **FreeDNS**, then fill in:
 
 - **Hostname**: the record to update.
 - **Username**: your afraid.org username.
