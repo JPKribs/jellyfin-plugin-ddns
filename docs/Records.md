@@ -26,6 +26,9 @@ Credentials are encrypted when saved, and never sent back to the browser. A save
 field blank keeps it, and **Clear saved value** under the field removes it. Use the most limited token your
 provider offers. See [Security](Security.md).
 
+Changing a record's **Provider** or **Server override** clears its saved credentials, so a saved password is
+never sent somewhere new. Enter them again before you save.
+
 ## Advanced options
 
 Providers in the DynDNS family add an **Advanced options** section, for a wildcard record, a static DNS service
@@ -47,10 +50,10 @@ The **Address** tab shows the public IP the server was last seen at, and how it 
 * **IPv4 Detection URLs** and **IPv6 Detection URLs** list services that reply with your address, one per line.
   Leave them empty to use the built-in list. Only `https` addresses are used, since a tampered reply could point
   your DNS somewhere else.
-* Two services must agree on the address before it is used. If only one answers, its answer is used.
+* Two services must agree on the address before it is used. If only one answers, its answer is used. If services
+  answer with different addresses and no two agree, nothing is published that run.
 * If the only address found is a private one, the server most likely has no public IP of its own. The tab warns
-  and nothing is published. Turn off **Skip update if internal** to
-  publish such an address anyway.
+  and nothing is published. Turn off **Skip update if internal** to publish such an address anyway.
 
 ![Address tab](screenshots/Address.png)
 

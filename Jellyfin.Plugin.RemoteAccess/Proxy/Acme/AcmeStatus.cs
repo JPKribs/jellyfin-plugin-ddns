@@ -20,6 +20,12 @@ public sealed class AcmeStatus
     /// <summary>Gets or sets the earliest next attempt after a failure (UTC).</summary>
     public DateTime? NextAttemptUtc { get; set; }
 
+    /// <summary>
+    /// Gets or sets a value indicating whether the last failure was Let's Encrypt's rate limit, which even a
+    /// requested certificate waits out until <see cref="NextAttemptUtc"/>.
+    /// </summary>
+    public bool RateLimited { get; set; }
+
     /// <summary>Gets or sets the names Let's Encrypt is asked for.</summary>
     public List<string> Names { get; set; } = new();
 

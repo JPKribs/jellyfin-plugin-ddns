@@ -22,7 +22,7 @@ public class RouteOverrides
     /// </summary>
     public int? MinResponseBytesPerSecond { get; set; }
 
-    /// <summary>Gets or sets a value indicating whether text responses are compressed. Null means on.</summary>
+    /// <summary>Gets or sets a value indicating whether text responses are compressed. Null means off, the safe default against BREACH.</summary>
     public bool? Compress { get; set; }
 
     /// <summary>Gets or sets a value indicating whether HSTS is sent. Null inherits.</summary>

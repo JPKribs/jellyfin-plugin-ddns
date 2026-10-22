@@ -165,4 +165,19 @@ public class NfsnProviderTests
 
         Assert.False(result.Success);
     }
+
+    [Fact]
+    public async Task ExistingRecordAlreadyCurrent_MakesNoWrites()
+    {
+        var calls = new List<(string Path, string Body)>();
+        var provider = new NfsnProvider(
+            Routed("[{\"name\":\"home\",\"type\":\"A\",\"data\":\"1.2.3.4\",\"ttl\":300}]", calls),
+            NullLogger<NfsnProvider>.Instance);
+
+        var result = await provider.UpdateAsync(Record(), V4, CancellationToken.None);
+
+        Assert.True(result.Success);
+        Assert.Single(calls);
+        Assert.EndsWith("/listRRs", calls[0].Path, StringComparison.Ordinal);
+    }
 }

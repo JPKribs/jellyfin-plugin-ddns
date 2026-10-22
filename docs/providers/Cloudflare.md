@@ -3,7 +3,7 @@
 On the **Domains** tab, set **Provider** to **Cloudflare**, then fill in:
 
 - **Record name**: the full DNS record name to keep updated, such as home.example.com.
-- **Auth email or token**: the word `token` when you use a scoped API token, or your account email when you use the Global API Key.
+- **Auth email or token**: the word `token`, in lowercase, when you use a scoped API token, or your account email when you use the Global API Key. An empty field is treated as `token`.
 - **API token or key**: the API token, or the Global API Key. To make a token, go to My Profile, then API Tokens, then Create Token, and use the Edit zone DNS template.
 - **Zone name**: the zone name, such as example.com.
 - **Server override**: leave blank to use Cloudflare's own server.

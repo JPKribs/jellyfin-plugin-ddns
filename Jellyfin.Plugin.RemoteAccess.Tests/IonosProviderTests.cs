@@ -168,4 +168,34 @@ public class IonosProviderTests
 
         Assert.Equal("prefix.secret", apiKey);
     }
+
+    [Fact]
+    public async Task LongestMatchingZone_IsChosen()
+    {
+        // Both zones cover the host. The delegated sub zone is the one that holds the record.
+        string? recordsPath = null;
+        var factory = StubHttp.Factory(req =>
+        {
+            var path = req.RequestUri!.AbsolutePath;
+            if (req.Method == HttpMethod.Get && path == "/dns/v1/zones")
+            {
+                return (HttpStatusCode.OK, "[{\"name\":\"example.com\",\"id\":\"zone1\"},{\"name\":\"sub.example.com\",\"id\":\"zone2\"}]");
+            }
+
+            if (req.Method == HttpMethod.Get)
+            {
+                recordsPath = path;
+                return (HttpStatusCode.OK, "{\"records\":[]}");
+            }
+
+            return (HttpStatusCode.OK, "[]");
+        });
+        var provider = new IonosProvider(factory, NullLogger<IonosProvider>.Instance);
+        var record = Record();
+        record.Hostname = "home.sub.example.com";
+
+        await provider.UpdateAsync(record, new DetectedIP { IPv4 = "1.2.3.4" }, CancellationToken.None);
+
+        Assert.Equal("/dns/v1/zones/zone2", recordsPath);
+    }
 }

@@ -41,13 +41,22 @@ public class LocalTrafficTests
     }
 
     [Fact]
-    public void Watch_OneInternetVisitor_ClearsIt()
+    public void Watch_InternetVisitorsCarryingMost_ClearIt()
     {
         var watch = new LocalTrafficWatch();
         Feed(watch, 150, _router, _start);
         Assert.True(watch.Suspected);
 
+        // One internet visitor no longer clears it, since the local address may hide only some visitors.
         watch.Observe(false, true, IPAddress.Parse("203.0.113.9"), _start.AddMinutes(10));
+        Assert.True(watch.Suspected);
+
+        // Once the internet carries most of the hour, the local address is one client among many.
+        for (var i = 0; i < 200; i++)
+        {
+            watch.Observe(false, true, IPAddress.Parse("203.0.113.9"), _start.AddMinutes(11));
+        }
+
         Assert.False(watch.Suspected);
     }
 

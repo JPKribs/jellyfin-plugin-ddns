@@ -14,17 +14,31 @@ public sealed class DNSResolution
 {
     private readonly IReadOnlyList<IPAddress> _addresses;
 
-    private DNSResolution(bool succeeded, IReadOnlyList<IPAddress> addresses)
+    private DNSResolution(bool succeeded, IReadOnlyList<IPAddress> addresses, bool checkedLive = true)
     {
         Succeeded = succeeded;
         _addresses = addresses;
+        Checked = checkedLive;
     }
 
     /// <summary>Gets a value indicating whether the lookup completed and returned an answer.</summary>
     public bool Succeeded { get; }
 
+    /// <summary>
+    /// Gets a value indicating whether live DNS was consulted at all. A record with no name to resolve (a
+    /// record id, several DuckDNS labels, a proxied record) is never looked up, so it is compared against
+    /// the last address pushed instead.
+    /// </summary>
+    public bool Checked { get; }
+
+    /// <summary>Gets a value indicating whether the lookup returned at least one address.</summary>
+    public bool Answered => Succeeded && _addresses.Count > 0;
+
     /// <summary>Gets a failed or unresolved lookup, which serves no address and so forces an update.</summary>
     public static DNSResolution Failed { get; } = new(false, new List<IPAddress>());
+
+    /// <summary>Gets the resolution for a record whose name is not looked up by design.</summary>
+    public static DNSResolution NotChecked { get; } = new(false, new List<IPAddress>(), checkedLive: false);
 
     /// <summary>
     /// Builds a successful resolution from the addresses a hostname resolved to.
@@ -64,4 +78,15 @@ public sealed class DNSResolution
 
         return _addresses.Any(address => address.AddressFamily == family && IPAddressClassifier.IsPublic(address));
     }
+
+    /// <summary>Returns whether the lookup returned any address of the given family, public or private.</summary>
+    /// <param name="family">The address family to check.</param>
+    /// <returns>True when at least one resolved address has that family.</returns>
+    public bool HasFamily(AddressFamily family)
+        => Succeeded && _addresses.Any(address => address.AddressFamily == family);
+
+    /// <summary>Returns whether the lookup returned any public address of any family.</summary>
+    /// <returns>True when at least one resolved address is public.</returns>
+    public bool ServesAnyPublic()
+        => Succeeded && _addresses.Any(IPAddressClassifier.IsPublic);
 }

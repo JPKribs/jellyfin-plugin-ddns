@@ -33,6 +33,7 @@ public static class PathRules
     /// <returns>The path relative to the base URL.</returns>
     public static PathString StripBase(PathString path, string baseUrl)
     {
+        path = Collapse(path);
         if (string.IsNullOrEmpty(baseUrl))
         {
             return path;
@@ -44,13 +45,13 @@ public static class PathRules
     /// <summary>Whether a path is the setup wizard.</summary>
     /// <param name="path">The base-relative path.</param>
     /// <returns>True for the setup wizard.</returns>
-    public static bool IsStartup(PathString path) => StartsWithAny(path, _startup);
+    public static bool IsStartup(PathString path) => StartsWithAny(Collapse(path), _startup);
 
     /// <summary>Whether a path is Quick Connect sign-in, which answers a wrong secret with 404.</summary>
     /// <param name="path">The base-relative path.</param>
     /// <returns>True for Quick Connect sign-in.</returns>
     public static bool IsQuickConnectSignIn(PathString path)
-        => Trim(path).Equals("/Users/AuthenticateWithQuickConnect", StringComparison.OrdinalIgnoreCase);
+        => Trim(Collapse(path)).Equals("/Users/AuthenticateWithQuickConnect", StringComparison.OrdinalIgnoreCase);
 
     /// <summary>Whether a path is one of Jellyfin's sign-in endpoints.</summary>
     /// <param name="path">The base-relative path.</param>
@@ -58,7 +59,7 @@ public static class PathRules
     public static bool IsSignIn(PathString path)
     {
         // Jellyfin's routing ignores a trailing slash, so the rules must too.
-        var trimmed = Trim(path);
+        var trimmed = Trim(Collapse(path));
         if (trimmed.Equals("/Users/AuthenticateByName", StringComparison.OrdinalIgnoreCase)
             || trimmed.Equals("/Users/AuthenticateWithQuickConnect", StringComparison.OrdinalIgnoreCase))
         {
@@ -80,6 +81,7 @@ public static class PathRules
     /// <returns>True for media streams.</returns>
     public static bool IsMedia(PathString path)
     {
+        path = Collapse(path);
         if (!StartsWithAny(path, _media))
         {
             return false;
@@ -94,6 +96,36 @@ public static class PathRules
         return segments.Length >= 3
             && (segments[2].Equals("Download", StringComparison.OrdinalIgnoreCase)
                 || segments[2].Equals("File", StringComparison.OrdinalIgnoreCase));
+    }
+
+    /// <summary>
+    /// Folds repeated slashes into one, so <c>//Startup/User</c> is classified like <c>/Startup/User</c>. A
+    /// backend or a proxy behind this one may treat the two alike, so the rules must too. A path without a
+    /// doubled slash is returned as is, without allocating.
+    /// </summary>
+    /// <param name="path">The request path.</param>
+    /// <returns>The path with each run of slashes made one.</returns>
+    public static PathString Collapse(PathString path)
+    {
+        var value = path.Value;
+        if (value is null || !value.Contains("//", StringComparison.Ordinal))
+        {
+            return path;
+        }
+
+        var builder = new System.Text.StringBuilder(value.Length);
+        var previous = '\0';
+        foreach (var c in value)
+        {
+            if (c != '/' || previous != '/')
+            {
+                builder.Append(c);
+            }
+
+            previous = c;
+        }
+
+        return new PathString(builder.ToString());
     }
 
     private static PathString Trim(PathString path)

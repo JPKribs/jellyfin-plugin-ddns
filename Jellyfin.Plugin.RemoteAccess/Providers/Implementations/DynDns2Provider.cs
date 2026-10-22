@@ -21,7 +21,7 @@ public sealed class DynDns2Provider : DNSProviderBase
 
     private static readonly Dictionary<string, string> Errors = new(StringComparer.Ordinal)
     {
-        ["badauth"] = "Bad authorization (username or password)",
+        ["badauth"] = "Bad authorization. Check the username and password",
         ["badsys"] = "The system parameter given was not valid",
         ["notfqdn"] = "A fully-qualified domain name was not provided",
         ["nohost"] = "The hostname does not exist in the database",
@@ -31,7 +31,7 @@ public sealed class DynDns2Provider : DNSProviderBase
         ["abuse"] = "The hostname is blocked for abuse",
         ["numhost"] = "Too many or too few hosts found",
         ["dnserr"] = "System DNS error encountered",
-        ["nochg"] = "No update required (current address already set)"
+        ["nochg"] = "No update required. The current address is already set"
     };
 
     /// <summary>Initializes a new instance of the <see cref="DynDns2Provider"/> class.</summary>
@@ -49,7 +49,7 @@ public sealed class DynDns2Provider : DNSProviderBase
     public override string Label => "DynDNS v2";
 
     /// <inheritdoc />
-    public override string Hint => "Username and Password are your account credentials. Server override defaults to members.dyndns.org. Change it for a compatible service.";
+    public override string Hint => "Username and Password are your account credentials. Server override defaults to members.dyndns.org and can point at a compatible service.";
 
     /// <inheritdoc />
     public override ProviderFields Fields => new()
@@ -113,7 +113,7 @@ public sealed class DynDns2Provider : DNSProviderBase
             return DNSUpdateResult.Fail("HTTP " + result.Status + ": " + FirstLine(result.Body));
         }
 
-        return Interpret(result.Body);
+        return WithFamilies(Interpret(result.Body), record.UpdateIPv4 && ip.IPv4 is not null, record.UpdateIPv6 && ip.IPv6 is not null);
     }
 
     /// <summary>Maps a dyndns2 response body to a result (first token is the status code).</summary>

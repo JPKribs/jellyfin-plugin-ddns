@@ -22,6 +22,8 @@ export default function (view) {
     // The self-signed root, fetched once while it is shown.
     var rootLoaded = false;
     var rootPem = '';
+    // The form as last loaded or saved, to tell whether leaving would lose changes. Null until loaded.
+    var baseline = null;
 
     var CERT_NOTES = {
         Automatic: 'Issued and renewed for you.',
@@ -169,7 +171,7 @@ export default function (view) {
         show('powerError', st.Enabled && !st.Running ? st.Error : '');
         show('folderProblem', st.FolderProblem);
         show('everyoneLocal', st.Enabled && st.EveryoneLooksLocal
-            ? 'Every visitor in the last hour came from one local address, so something in front of the proxy, such as rootless Docker or a tunnel, may be hiding their real addresses. Bans, the block list and country rules cannot work until those addresses reach the proxy.'
+            ? 'Most visitors in the last hour came from one local address, so something in front of the proxy, such as rootless Docker or a tunnel, may be hiding their real addresses. Bans, the block list and country rules cannot work until those addresses reach the proxy.'
             : '');
         show('countryNote', st.Enabled && st.CountryRule ? st.CountryRule + ' Change it under Advanced → Blocking.' : '');
 
@@ -255,11 +257,31 @@ export default function (view) {
         showCertActions();
     }
 
-    function fill(s) {
+    // Whether these settings look like they were never saved: the proxy off, no address, no services and
+    // no certificate choice made. An empty address list saved on purpose has at least one of those set.
+    function neverSaved(s) {
+        var cert = s.Certificate || {};
+        return !s.Enabled && !(s.Hostnames || []).length && !(s.Routes || []).length
+            && !cert.AcceptTerms && !cert.Path && !cert.KeyPath && !cert.Password;
+    }
+
+    // The form's current values, to tell whether leaving would lose changes.
+    function formState() {
+        var s = collect({});
+        s.Hostnames = s.Hostnames.slice().sort();
+        return JSON.stringify(s);
+    }
+
+    function isDirty() {
+        return baseline !== null && formState() !== baseline;
+    }
+
+    function fill(s, suggest) {
         settings = s;
         Shared.getEl('enabled').checked = !!s.Enabled;
-        // Nothing chosen yet: start from the names the DDNS records already keep pointed here.
-        hostnames.setValue((s.Hostnames || []).length ? s.Hostnames : hostnames.suggested());
+        // Nothing ever chosen: start from the names the DDNS records already keep pointed here. Suggested
+        // names are only a starting point, so they do not count as an unsaved change.
+        hostnames.setValue(suggest && neverSaved(s) ? hostnames.suggested() : s.Hostnames);
         var cert = s.Certificate || {};
         Shared.getEl('certMode').value = cert.Mode || 'Automatic';
         Shared.getEl('certPath').value = cert.Path || '';
@@ -267,6 +289,7 @@ export default function (view) {
         Shared.getEl('certTerms').checked = !!cert.AcceptTerms;
         Shared.bindSecretField('certPassword', !!cert.Password);
         showCertFields();
+        baseline = formState();
     }
 
     function collect(s) {
@@ -286,9 +309,10 @@ export default function (view) {
     }
 
     function load() {
+        baseline = null;
         Promise.all([getSettings(), getStatus(), hostnames.load()]).then(function (results) {
             // The DDNS names are loaded with the rest, so the suggested addresses are known before filling.
-            if (results[0]) fill(results[0]);
+            if (results[0]) fill(results[0], true);
             renderStatus(results[1]);
         }).catch(function () {
             Shared.setStatus('saveStatus', 'Could not load settings.', true);
@@ -303,11 +327,14 @@ export default function (view) {
             return Promise.resolve(false);
         }
 
+        var button = Shared.getEl('btnSave');
+        if (button.disabled) return Promise.resolve(false);
+        button.disabled = true;
         Shared.setStatus('saveStatus', 'Saving...', false);
         return getSettings().then(function (fresh) {
             return Shared.apiRequest('Proxy/Settings', 'POST', collect(fresh || settings));
         }).then(function (result) {
-            if (result && result.Settings) fill(result.Settings);
+            if (result && result.Settings) fill(result.Settings, false);
             if (result && result.Status) renderStatus(result.Status);
             Shared.setStatus('saveStatus', 'Saved.', false);
             return true;
@@ -316,6 +343,9 @@ export default function (view) {
                 Shared.setStatus('saveStatus', text, true, { timeout: 0 });
                 return false;
             });
+        }).then(function (ok) {
+            button.disabled = false;
+            return ok;
         });
     }
 
@@ -412,6 +442,7 @@ export default function (view) {
         tabIndex: 3,
         tabs: TABS,
         bind: bind,
+        isDirty: isDirty,
         load: function (shared, page) {
             load();
             page.createPoller(refreshStatus, 10000).start(false);

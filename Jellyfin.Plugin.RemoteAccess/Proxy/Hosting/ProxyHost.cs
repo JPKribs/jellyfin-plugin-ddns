@@ -34,6 +34,9 @@ namespace Jellyfin.Plugin.DynamicDns.Proxy.Hosting;
 /// </summary>
 public sealed class ProxyHost : IAsyncDisposable
 {
+    /// <summary>How many HTTP/2 requests one connection may have in flight at once.</summary>
+    public const int MaxStreamsPerConnection = 32;
+
     private static readonly string[] _extraCompressedTypes = { "image/svg+xml", "application/manifest+json" };
 
     private readonly WebApplication _app;
@@ -173,6 +176,46 @@ public sealed class ProxyHost : IAsyncDisposable
         "X-Cluster-Client-IP", "True-Client-IP", "CF-Connecting-IP", "Fastly-Client-IP", "X-ProxyUser-Ip"
     };
 
+    // Identity headers that forward-auth setups (Authelia, Authentik, oauth2-proxy, Grafana's auth proxy and the
+    // like) put on requests once a user has signed in. An app behind such a setup trusts its proxy to set them,
+    // so a copy sent by an internet client would sign it in as anyone. This proxy never sets them, so none is
+    // passed on to a Service.
+    private static readonly string[] _identityClaims =
+    {
+        "Remote-User", "Remote-Email", "Remote-Groups", "Remote-Name", "X-Remote-User", "X-Forwarded-User",
+        "X-Forwarded-Email", "X-Forwarded-Groups", "X-Forwarded-Preferred-Username", "X-WEBAUTH-USER"
+    };
+
+    // Whole families of identity headers, matched by prefix.
+    private static readonly string[] _identityPrefixes = { "X-Auth-Request-", "X-Authentik-" };
+
+    /// <summary>
+    /// Whether a request header claims a signed-in identity, which only a forward-auth proxy may set.
+    /// </summary>
+    /// <param name="name">The header name.</param>
+    /// <returns>True for an identity header.</returns>
+    public static bool IsIdentityClaim(string name)
+    {
+        ArgumentNullException.ThrowIfNull(name);
+        foreach (var header in _identityClaims)
+        {
+            if (string.Equals(header, name, StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+        }
+
+        foreach (var prefix in _identityPrefixes)
+        {
+            if (name.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     private static void ConfigureTransforms(Yarp.ReverseProxy.Transforms.Builder.TransformBuilderContext context)
     {
         // Our own forwarding headers replace anything the client sent, so a client cannot claim a LAN address.
@@ -195,6 +238,25 @@ public sealed class ProxyHost : IAsyncDisposable
         {
             context.AddRequestTransform(t =>
             {
+                // The prefixed families have no fixed names, so the client's headers are searched. Most requests
+                // carry none, and then nothing more is allocated.
+                List<string>? found = null;
+                foreach (var header in t.HttpContext.Request.Headers)
+                {
+                    if (IsIdentityClaim(header.Key))
+                    {
+                        (found ??= new List<string>()).Add(header.Key);
+                    }
+                }
+
+                if (found is not null)
+                {
+                    foreach (var name in found)
+                    {
+                        t.ProxyRequest.Headers.Remove(name);
+                    }
+                }
+
                 var incoming = t.HttpContext.Request.Headers[ProxyPolicyMiddleware.HopHeader].ToString();
                 t.ProxyRequest.Headers.Remove(ProxyPolicyMiddleware.HopHeader);
                 t.ProxyRequest.Headers.TryAddWithoutValidation(ProxyPolicyMiddleware.HopHeader, ProxyPolicyMiddleware.NextHop(incoming));
@@ -245,6 +307,11 @@ public sealed class ProxyHost : IAsyncDisposable
         // it up and lock out the local network.
         limits.MaxConcurrentConnections = null;
         limits.MaxConcurrentUpgradedConnections = null;
+
+        // Each HTTP/2 stream is a request in flight and a connection to the backend, so the default of 100 per
+        // connection let one address multiply its connection cap a hundredfold. 32 is plenty for a page load or
+        // a player, and the policy middleware also caps requests in flight per address group.
+        limits.Http2.MaxStreamsPerConnection = MaxStreamsPerConnection;
 
         // Both are set per request by the policy middleware: body size by LAN or internet, response rate off for media.
         limits.MaxRequestBodySize = null;

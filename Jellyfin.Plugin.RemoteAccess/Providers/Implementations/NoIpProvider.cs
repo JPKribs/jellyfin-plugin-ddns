@@ -27,7 +27,7 @@ public sealed class NoIpProvider : DNSProviderBase
         ["abuse"] = "The hostname is blocked for abuse",
         ["numhost"] = "Too many or too few hosts found",
         ["dnserr"] = "System DNS error encountered",
-        ["nochg"] = "No update required (current address already set)"
+        ["nochg"] = "No update required. The current address is already set"
     };
 
     /// <summary>Initializes a new instance of the <see cref="NoIpProvider"/> class.</summary>
@@ -101,7 +101,7 @@ public sealed class NoIpProvider : DNSProviderBase
         var status = FirstToken(result.Body).ToLowerInvariant();
         if (status is "good" or "nochg")
         {
-            return DNSUpdateResult.Ok(status);
+            return WithFamilies(DNSUpdateResult.Ok(status), record.UpdateIPv4 && ip.IPv4 is not null, record.UpdateIPv6 && ip.IPv6 is not null);
         }
 
         if (Errors.TryGetValue(status, out var msg))

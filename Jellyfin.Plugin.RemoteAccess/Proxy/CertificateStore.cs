@@ -159,22 +159,49 @@ public sealed class CertificateStore : IDisposable
         RaiseIfFlipped(before);
     }
 
+    // Runs on a timer thread, where an exception nothing catches ends the whole server, so every one is logged
+    // here instead and the next tick tries again.
     private void Poll()
     {
-        bool before;
-        lock (_lock)
+        try
         {
-            // A tick already running when the store was disposed must not load a certificate nothing disposes.
-            if (_disposed)
+            bool before;
+            lock (_lock)
             {
-                return;
+                // A tick already running when the store was disposed must not load a certificate nothing disposes.
+                if (_disposed)
+                {
+                    return;
+                }
+
+                before = HasCertificate;
+                Reload(force: false, settingsChanged: false);
             }
 
-            before = HasCertificate;
-            Reload(force: false, settingsChanged: false);
+            RaiseIfFlipped(before);
         }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Checking the proxy certificate files failed");
+        }
+    }
 
-        RaiseIfFlipped(before);
+    /// <summary>
+    /// Whether a PEM file holding a chain and its key loads the way the proxy loads it.
+    /// </summary>
+    /// <param name="path">The file.</param>
+    /// <returns>Null when it loads, otherwise why not.</returns>
+    internal static string? PemLoadError(string path)
+    {
+        try
+        {
+            LoadPem(path, path, string.Empty, string.Empty).Dispose();
+            return null;
+        }
+        catch (Exception ex) when (ex is IOException or CryptographicException or UnauthorizedAccessException or ArgumentException)
+        {
+            return ex.Message;
+        }
     }
 
     // Raised outside the lock: the handler applies settings, which configures this store again.

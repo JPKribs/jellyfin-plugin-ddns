@@ -22,7 +22,9 @@
 
 ## Network
 
-* **Dynamic DNS only connects out**, over HTTPS, to your DNS provider and the IP detection services.
+* **Dynamic DNS only connects out**, to your DNS provider and the IP detection services. It uses HTTPS unless
+  you set a **Server override** that starts with `http://`. Record names are looked up with the server's own DNS
+  settings.
 * **Ports open only with Remote Access**: nothing listens until the proxy is turned on. Then it refuses names you
   did not add before encrypting anything, keeps the setup wizard off the internet, and never blocks your own
   network. See [Protection](RemoteAccess.md#protection).

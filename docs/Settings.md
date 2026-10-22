@@ -12,7 +12,7 @@ One record per DNS name. The fields shown, and their labels, depend on the **Pro
 |---|---|---|
 | **Name** | A label for your own reference. | Empty |
 | **Provider** | The DNS company, out of 45. | Cloudflare |
-| **Enabled** | Whether the record is updated. Paused records keep their settings. | On |
+| **Enabled** | Whether the record is updated. Disabled records keep their settings. | On |
 | **Update IPv4** | Keeps the A record current. | On |
 | **Update IPv6** | Keeps the AAAA record current. Hidden for providers that only take IPv4. | On |
 | Name, login, password and zone fields | What the provider needs. Their labels change per provider. | Empty |
@@ -45,7 +45,7 @@ How often updates run is set on the **Update DDNS** scheduled task, every 15 min
 | **Source** | Where the certificate comes from: Let's Encrypt, PEM files, a PKCS#12 file, self-signed, or none. | Let's Encrypt |
 | **I accept the Let's Encrypt terms** | Nothing is requested from Let's Encrypt until this is ticked. | Off |
 | **Certificate file**, **Private key file**, **Password** | The files for PEM or PKCS#12. The password is stored encrypted. | Empty |
-| **Trust the Proxy** | Lets Jellyfin see each visitor's real address. Jellyfin restarts once. **Undo** reverses it. | Not set |
+| **Trust the Proxy** | Lets Jellyfin see each visitor's real address. Until it is done, internet visitors are turned away. Jellyfin restarts once. **Undo** reverses it. | Not set |
 
 See [Remote Access](RemoteAccess.md).
 
@@ -54,35 +54,35 @@ See [Remote Access](RemoteAccess.md).
 Each Service is another app behind the proxy. The settings marked **Default** follow the Advanced tab unless set,
 and the page says what that currently is.
 
-| Setting | What it does | Default |
-|---|---|---|
-| **Name** | A label for your own reference. | Empty |
-| **Enabled** | Whether the proxy serves it. | On |
-| **Addresses**, **Other addresses** | The names people use for this app. Each name belongs to one app only. | None |
-| **Target** | Where the app listens on your network, such as `http://192.168.1.20:5055`. | Empty |
-| **Reachable from** | **Anywhere**, or **Your network only**. | Anywhere |
-| **Largest upload from the internet** | In MB, with 0 for unlimited. | Default, 100 MB |
-| **Largest upload from your network** | In MB, with 0 for unlimited. | Default, unlimited |
-| **App timeout** | How long the app may go silent before a request is dropped, in seconds. | Default, 300 |
-| **Minimum read rate** | The slowest a visitor may read the app's pages, in bytes per second. | Off |
-| **Always use HTTPS** | Browsers that have visited once refuse plain HTTP. | Default, on |
-| **HSTS duration** | How long browsers keep using HTTPS, in days, from 1 to 730. | Default, 180 |
-| **Framing** | **Same site only**, or **Any site** may embed the app. | Default, same site only |
-| **Compression** | Shrinks pages and scripts. Off unless the app signs in with headers rather than cookies, since compressed pages can leak secrets. | Off |
-| **Send the original address to the app** | Passes the name the visitor asked for, for apps that need it. | Off |
-| **App certificate** | For an `https://` target: **Verify normally**, **Accept one pinned certificate** by its SHA-256 thumbprint, or **Accept any certificate**. | Verify normally |
+| Setting | What it does | Default | Range |
+|---|---|---|---|
+| **Name** | A label for your own reference. | Empty | |
+| **Enabled** | Whether the proxy serves it. | On | |
+| **Addresses**, **Other addresses** | The names people use for this app. Each name belongs to one app only. | None | |
+| **Target** | Where the app listens on your network, such as `http://192.168.1.20:5055`. | Empty | |
+| **Reachable from** | **Anywhere**, or **Your network only**. | Anywhere | |
+| **Largest upload from the internet** | In MB, with 0 for unlimited. | Default, 100 MB | 0 or more |
+| **Largest upload from your network** | In MB, with 0 for unlimited. | Default, unlimited | 0 or more |
+| **App timeout** | How long the app may go silent before a request is dropped, in seconds. | Default, 300 | 61 to 86400 |
+| **Minimum read rate** | The slowest a visitor may read the app's pages, in bytes per second. | Off | 0 or more |
+| **Always use HTTPS** | Browsers that have visited once refuse plain HTTP. | Default, on | |
+| **HSTS duration** | How long browsers keep using HTTPS, in days. The same as **HTTPS memory** on the Advanced tab. | Default, 180 | 1 to 730 |
+| **Framing** | **Same site only**, or **Any site** may embed the app. The same as **Block embedding** on the Advanced tab. | Default, same site only | |
+| **Compression** | Shrinks pages and scripts. Turn it on only for apps that sign in with headers rather than cookies, since compressed pages can leak secrets. | Off | |
+| **Send the original address to the app** | Passes the name the visitor asked for, for apps that need it. | Off | |
+| **App certificate** | For an `https://` target: **Verify normally**, **Accept one pinned certificate** by its SHA-256 thumbprint, or **Accept any certificate**. | Verify normally | |
 
 ## Advanced
 
 ### Security
 
-| Setting | What it does | Default |
-|---|---|---|
-| **Only through the proxy** | Jellyfin only listens on this server while it trusts the proxy. See [Only through the proxy](RemoteAccess.md#only-through-the-proxy). | Off |
-| **Always use HTTPS** | Browsers that have visited once refuse plain HTTP, known as HSTS. | On |
-| **HTTPS memory** | How long browsers keep using HTTPS after a visit, in days. | 180 |
-| **Block embedding** | Other websites cannot frame Jellyfin's pages. | On |
-| **Trusted networks** | Addresses or ranges treated like your own network, such as a VPN, one per line. | None |
+| Setting | What it does | Default | Range |
+|---|---|---|---|
+| **Only through the proxy** | Jellyfin only listens on this server while it trusts the proxy. See [Only through the proxy](RemoteAccess.md#only-through-the-proxy). | Off | |
+| **Always use HTTPS** | Browsers that have visited once refuse plain HTTP, known as HSTS. | On | |
+| **HTTPS memory** | How long browsers keep using HTTPS after a visit, in days. | 180 | 1 to 730 |
+| **Block embedding** | Other websites cannot frame Jellyfin's pages. | On | |
+| **Trusted networks** | Addresses or ranges treated like your own network, such as a VPN, one per line. | None | |
 
 ### Blocking
 
@@ -92,7 +92,7 @@ These only ever apply to the internet, never to your own or trusted networks.
 |---|---|---|---|
 | **Blocked addresses** | Addresses or ranges always refused, one per line. | None | |
 | **Failed sign-ins before a ban** | Failures within the window that ban an address. 0 turns bans off. | 5 | 0 to 1000 |
-| **Ban window** | The minutes failures are counted over. | 10 | 0 to 1440 |
+| **Ban window** | The minutes failures are counted over. | 10 | 1 to 1440 |
 | **Ban length** | How long a ban lasts in minutes. 0 bans until you lift it. | 60 | 0 to 525600 |
 | **Country rule** | **Server country only**, **Block these countries**, **Allow only these countries**, or **Off**. | Server country only | |
 | **Countries** | The countries the rule names. | None | |
@@ -115,30 +115,31 @@ recorded. The **Refresh Locations** scheduled task also does this weekly.
 
 ### Performance
 
-| Setting | What it does | Default |
-|---|---|---|
-| **HTTP/2** | Lets browsers load pages faster over one connection. | On |
-| **Largest upload from the internet** | In MB, with 0 for unlimited. | 100 |
-| **Largest upload from your network** | In MB, with 0 for unlimited. | Unlimited |
-| **Connections per internet address** | Connections one internet address may hold open. | Auto: 64, or 32 on low memory |
-| **Total connections** | Connections the proxy holds open in all. | Auto: 2000, or 500 on low memory |
+| Setting | What it does | Default | Range |
+|---|---|---|---|
+| **HTTP/2** | Lets browsers load pages faster over one connection. | On | |
+| **Largest upload from the internet** | In MB, with 0 for unlimited. | 100 | 0 or more |
+| **Largest upload from your network** | In MB, with 0 for unlimited. | Unlimited | 0 or more |
+| **Connections per internet address** | Connections one internet address may hold open, with 0 for unlimited. | Auto: 64, or 32 on low memory | 0 or more |
+| **Total connections** | Connections the proxy holds open in all, with 0 for unlimited. | Auto: 2000, or 500 on low memory | 0 or more |
 
 Jellyfin compresses its own pages, through the proxy too, so the proxy leaves them as they are. Compression for
 other apps is set on each Service.
 
 ### Timeouts
 
-| Setting | What it does | Default |
-|---|---|---|
-| **Idle connections** | How long an unused connection stays open, in seconds. | Auto: 130, or 60 on low memory |
-| **Request headers** | How long a visitor may take to send a request's headers, in seconds. | 15 |
-| **Header size** | The largest set of request headers accepted, in KB. | 32 |
-| **Minimum read rate** | The slowest a visitor may read Jellyfin's pages, in bytes per second. Media is exempt. 0 is off. | 240 |
-| **Jellyfin response** | How long Jellyfin may go silent before a request is dropped, in seconds. | 300 |
+| Setting | What it does | Default | Range |
+|---|---|---|---|
+| **Idle connections** | How long an unused connection stays open, in seconds. | Auto: 130, or 60 on low memory | 5 to 3600 |
+| **Request headers** | How long a visitor may take to send a request's headers, in seconds. | 15 | 1 to 300 |
+| **Header size** | The largest set of request headers accepted, in KB. | 32 | 8 to 1024 |
+| **Minimum read rate** | The slowest a visitor may read Jellyfin's pages, in bytes per second. Media is exempt. 0 is off. | 240 | 0 or more |
+| **Jellyfin response** | How long Jellyfin may go silent before a request is dropped, in seconds. | 300 | 61 to 86400 |
 
 **Auto** settings follow the server's memory. Below 3 GB available to Jellyfin they use the lower value. See
 [Low-memory servers](RemoteAccess.md#low-memory-servers). **Reset to Defaults** puts every limit and security
-setting back, and keeps trusted networks, the block list, country rules and history. **Restart Proxy** restarts
+setting back, **Unknown addresses** and **Without the location database** included. It keeps trusted networks,
+the block list, **Country rule**, **Countries** and history. Nothing changes until you save. **Restart Proxy** restarts
 the listener without restarting Jellyfin.
 
 ## Scheduled tasks
@@ -151,5 +152,4 @@ Under **Dashboard → Scheduled Tasks**:
 | **Refresh Certificate** | Requests a Let's Encrypt certificate when one is missing, no longer covers your addresses, or expires within 30 days. Reloads certificate files and replaces a self-signed one before it expires. | Daily at 3:00 |
 | **Refresh Locations** | Downloads the newest DB-IP location database. | Weekly |
 
-To force a new certificate now, whatever the current one's state, use **Request a New Certificate** on the
-**Proxy** tab.
+To replace a certificate now, see [Renewal](RemoteAccess.md#renewal).

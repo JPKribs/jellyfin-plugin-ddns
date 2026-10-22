@@ -1,7 +1,7 @@
 ---
 name: "Dynamic DNS"
 guid: "8150dce5-6153-4924-a985-a6927be95baa"
-version: "12.2.3.4"
+version: "12.2.3.5"
 targetAbi: "12.2.0.0"
 framework: "net10.0"
 overview: "Reach your server from anywhere: Dynamic DNS and a secure HTTPS proxy, inside Jellyfin."
@@ -21,5 +21,20 @@ artifacts:
 - "Certes.dll"
 - "BouncyCastle.Cryptography.dll"
 changelog:
+  fixed:
+  - INWX, ClouDNS and Directnic records can be saved again. They have no hostname field, and saving no longer asks for one.
+  - Saving or deleting a record on the Domains tab changes only that record, so a cleared record is never deleted and other records' unsaved edits or newer changes are never overwritten.
+  - With Only through the proxy on, if the proxy fails to start, Jellyfin gets its own addresses back and the setting is turned off, so the server stays reachable. A save or Restart Proxy can no longer leave the proxy stopped while Jellyfin listens only through it.
+  - Trust the Proxy, Undo and saves no longer run over each other, so Jellyfin's original network settings are always kept for Undo.
+  - A record deleted at the DNS provider is put back, and a GoDaddy record for the domain itself is written to the domain instead of a doubled name.
+  - When one address family keeps failing, the record now backs off and only that family is retried, instead of logging an error every 15 minutes.
+  - Let's Encrypt's DNS check no longer fails on networks that block DNS-over-HTTPS, and a certificate that cannot be loaded is not ordered again straight away.
+  - Domains and Address show the server's reason when a save fails, and every tab warns before leaving with unsaved changes.
+  - The warning when visitors look local now also catches setups where only some visitors are hidden, such as IPv6 through Docker.
   changed:
-  - The Compression setting on the Advanced tab is removed. Jellyfin already compresses its own pages through the proxy, so the proxy compressing them again was wasted work. Web assets now serve about 7% faster through HTTPS. Compression for other apps is still set on each Service.
+  - One address block can no longer hold more than a small share of the proxy's connections or requests, and HTTP/2 streams per connection are capped, so a few addresses cannot crowd out everyone else.
+  - Repeat bans on a whole IPv6 network last longer each time, and saved bans apply from the first connection after a restart.
+  - Services no longer receive login headers sent by visitors, and a Service that points at Jellyfin itself is refused.
+  - Provider notes are at most two sentences, and several provider messages are plainer.
+  developer:
+  - The docs fix every finding from an audit against the code, and there are now two Beginner's Guides, a free one with Duck DNS and a recommended one with your own domain.

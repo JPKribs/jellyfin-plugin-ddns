@@ -44,14 +44,43 @@ internal sealed class ProviderAttempt
     internal bool FailureIsTransient => !_sawDefinitive && IsTransientStatus(_lastStatus);
 
     /// <summary>
+    /// Gets a value indicating whether DNS already serves the detected IPv4, so a provider that pushes each
+    /// family in its own request may leave IPv4 out while it pushes IPv6.
+    /// </summary>
+    internal bool HoldIPv4 { get; init; }
+
+    /// <summary>
+    /// Gets a value indicating whether DNS already serves the detected IPv6, so a provider that pushes each
+    /// family in its own request may leave IPv6 out while it pushes IPv4.
+    /// </summary>
+    internal bool HoldIPv6 { get; init; }
+
+    /// <summary>Gets or sets a value indicating whether the provider actually left IPv4 out of the push.</summary>
+    internal bool IPv4Held { get; set; }
+
+    /// <summary>Gets or sets a value indicating whether the provider actually left IPv6 out of the push.</summary>
+    internal bool IPv6Held { get; set; }
+
+    /// <summary>
     /// Starts a new attempt for the current async flow. The caller's flow sees the attempt, and so does
     /// everything it awaits; the value is restored when the calling async method returns.
     /// </summary>
     /// <param name="runToken">The run's own cancellation token, without the per request timeout.</param>
     /// <returns>The attempt that provider requests in this flow report to.</returns>
     internal static ProviderAttempt Begin(CancellationToken runToken = default)
+        => Begin(holdIPv4: false, holdIPv6: false, runToken);
+
+    /// <summary>
+    /// Starts a new attempt for the current async flow, naming a family that is already current and may
+    /// be left out by a provider that pushes each family in its own request.
+    /// </summary>
+    /// <param name="holdIPv4">Whether IPv4 is already current.</param>
+    /// <param name="holdIPv6">Whether IPv6 is already current.</param>
+    /// <param name="runToken">The run's own cancellation token, without the per request timeout.</param>
+    /// <returns>The attempt that provider requests in this flow report to.</returns>
+    internal static ProviderAttempt Begin(bool holdIPv4, bool holdIPv6, CancellationToken runToken)
     {
-        var attempt = new ProviderAttempt(runToken);
+        var attempt = new ProviderAttempt(runToken) { HoldIPv4 = holdIPv4, HoldIPv6 = holdIPv6 };
         CurrentAttempt.Value = attempt;
         return attempt;
     }

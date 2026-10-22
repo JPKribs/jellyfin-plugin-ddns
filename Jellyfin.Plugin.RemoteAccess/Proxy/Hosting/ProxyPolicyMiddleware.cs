@@ -2,6 +2,7 @@ using System;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
@@ -148,7 +149,7 @@ public sealed class ProxyPolicyMiddleware
         var local = runtime.Classifier.IsLocal(client);
         var host = HostnameMatcher.Normalize(request.Host.Host);
         var publicName = HostnameMatcher.IsPublicName(host) && runtime.IsConfiguredHost(host);
-        _localTraffic.Observe(local, publicName, client, DateTime.UtcNow);
+        _localTraffic.Observe(local, publicName, clientAddress, DateTime.UtcNow);
         var facts = new RequestFacts(local, request.IsHttps, request.Host.Host, request.Method, request.Path, request.QueryString);
         var decision = RequestPolicy.Decide(runtime, facts, _challenges);
 
@@ -216,6 +217,36 @@ public sealed class ProxyPolicyMiddleware
             _recorder.RecordRequest(clientAddress, AccessUrl(request), request.Headers.UserAgent.ToString(), local);
         }
 
+        // HTTP/2 lets one connection carry many requests, and each is a connection to the backend, so internet
+        // clients are also capped on requests in flight per address group. The cap is several times the
+        // connection cap, so normal streaming never meets it. Local clients are never capped.
+        ConnectionGate.ClientKeys? slot = null;
+        if (!local && clientAddress is not null)
+        {
+            slot = _gate.TryEnterRequest(clientAddress, context.Features.Get<ConnectionGate.ClientKeys>(), runtime.Options);
+            if (slot is null)
+            {
+                context.Response.StatusCode = StatusCodes.Status429TooManyRequests;
+                return;
+            }
+        }
+
+        try
+        {
+            await ForwardAsync(context, runtime, route, path, clientAddress, local).ConfigureAwait(false);
+        }
+        finally
+        {
+            if (slot is not null)
+            {
+                _gate.ExitRequest(slot);
+            }
+        }
+    }
+
+    private async Task ForwardAsync(HttpContext context, ProxyRuntime runtime, RuntimeRoute? route, PathString path, IPAddress? clientAddress, bool local)
+    {
+        var request = context.Request;
         var signIn = route is null && clientAddress is not null && PathRules.IsSignIn(path);
         var internetSignIn = signIn && !local;
         if (internetSignIn && !await ReadSignInBodyAsync(context).ConfigureAwait(false))
@@ -316,6 +347,11 @@ public sealed class ProxyPolicyMiddleware
         catch (OperationCanceledException) when (!context.RequestAborted.IsCancellationRequested)
         {
             context.Response.StatusCode = StatusCodes.Status408RequestTimeout;
+            return false;
+        }
+        catch (OperationCanceledException)
+        {
+            // The client went away mid-body. Nothing is left to answer, and it is not an error.
             return false;
         }
         catch (Exception ex) when (ex is Microsoft.AspNetCore.Http.BadHttpRequestException or IOException)

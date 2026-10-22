@@ -69,7 +69,9 @@ public abstract class DNSProviderBase : IDNSProvider
     /// Runs <paramref name="update"/> once per enabled+detected family (A then AAAA) and aggregates the
     /// outcomes into a single result. The provider only writes per-address logic. The result carries the
     /// per-family outcomes so the update cycle records exactly which addresses were pushed: a failing
-    /// family never blocks the bookkeeping (or triggers backoff) for one that succeeded.
+    /// family never blocks the bookkeeping for one that succeeded. A family the update cycle found already
+    /// current is left out while another family still needs its push, so a record whose other family keeps
+    /// failing does not rewrite the working one on every run.
     /// </summary>
     /// <param name="record">The record being updated.</param>
     /// <param name="ip">The detected addresses.</param>
@@ -91,17 +93,36 @@ public abstract class DNSProviderBase : IDNSProvider
         bool? v4Ok = null;
         bool? v6Ok = null;
 
-        if (record.UpdateIPv4 && ip.IPv4 is not null)
+        var wantV4 = record.UpdateIPv4 && ip.IPv4 is not null;
+        var wantV6 = record.UpdateIPv6 && ip.IPv6 is not null;
+
+        // Only one family is ever held back, so a push always sends something.
+        var attempt = ProviderAttempt.Current;
+        if (attempt is not null && wantV4 && wantV6 && attempt.HoldIPv4 != attempt.HoldIPv6)
         {
-            var (ok, message) = await UpdateFamilyAsync(update, "A", ip.IPv4, cancellationToken).ConfigureAwait(false);
+            if (attempt.HoldIPv4)
+            {
+                wantV4 = false;
+                attempt.IPv4Held = true;
+            }
+            else
+            {
+                wantV6 = false;
+                attempt.IPv6Held = true;
+            }
+        }
+
+        if (wantV4)
+        {
+            var (ok, message) = await UpdateFamilyAsync(update, "A", ip.IPv4!, cancellationToken).ConfigureAwait(false);
             allOk &= ok;
             v4Ok = ok;
             parts.Add("IPv4: " + message);
         }
 
-        if (record.UpdateIPv6 && ip.IPv6 is not null)
+        if (wantV6)
         {
-            var (ok, message) = await UpdateFamilyAsync(update, "AAAA", ip.IPv6, cancellationToken).ConfigureAwait(false);
+            var (ok, message) = await UpdateFamilyAsync(update, "AAAA", ip.IPv6!, cancellationToken).ConfigureAwait(false);
             allOk &= ok;
             v6Ok = ok;
             parts.Add("IPv6: " + message);
@@ -109,8 +130,51 @@ public abstract class DNSProviderBase : IDNSProvider
 
         return parts.Count == 0
             ? DNSUpdateResult.Fail("No record type enabled or no matching IP detected.")
-            : new DNSUpdateResult(allOk, string.Join("; ", parts)) { IPv4Applied = v4Ok, IPv6Applied = v6Ok };
+            : new DNSUpdateResult(allOk, string.Join(" ", parts.ConvertAll(AsSentence))) { IPv4Applied = v4Ok, IPv6Applied = v6Ok };
     }
+
+    /// <summary>
+    /// Completes a record name that the API expects in full. A bare label with no dot is written beneath
+    /// the zone, and the apex marker <c>@</c> is the zone itself, as <c>RecordTarget</c> resolves them.
+    /// Any other name, or a record with no zone, is returned trimmed and otherwise unchanged.
+    /// </summary>
+    /// <param name="hostname">The hostname field.</param>
+    /// <param name="zone">The zone field.</param>
+    /// <returns>The full record name to send.</returns>
+    protected static string QualifiedName(string? hostname, string? zone)
+    {
+        var host = (hostname ?? string.Empty).Trim();
+        var domain = (zone ?? string.Empty).Trim().TrimEnd('.');
+        if (domain.Length == 0 || host.Length == 0 || host.Contains('.', StringComparison.Ordinal))
+        {
+            return host;
+        }
+
+        return host == "@" ? domain : host + "." + domain;
+    }
+
+    /// <summary>
+    /// Marks which address families a single request carried, for providers that send every family in
+    /// one request. A family the request carried landed exactly when the request succeeded. A family it
+    /// did not carry stays <c>null</c>, so it is never recorded as pushed.
+    /// </summary>
+    /// <param name="result">The result of the single request.</param>
+    /// <param name="ipv4Sent">Whether the request carried the IPv4 address.</param>
+    /// <param name="ipv6Sent">Whether the request carried the IPv6 address.</param>
+    /// <returns>The result with its per-family outcomes set.</returns>
+    protected static DNSUpdateResult WithFamilies(DNSUpdateResult result, bool ipv4Sent, bool ipv6Sent)
+    {
+        ArgumentNullException.ThrowIfNull(result);
+        return new DNSUpdateResult(result.Success, result.Message)
+        {
+            IPv4Applied = ipv4Sent ? result.Success : null,
+            IPv6Applied = ipv6Sent ? result.Success : null
+        };
+    }
+
+    // Ends a per-family message as a sentence, so the joined message reads as plain sentences.
+    private static string AsSentence(string part)
+        => part.EndsWith('.') || part.EndsWith('!') || part.EndsWith('?') ? part : part + ".";
 
     // Pushes one family and reports its outcome to the current attempt. The request timeout spans every
     // family, so one family timing out is caught here as that family's failure: the update cycle still

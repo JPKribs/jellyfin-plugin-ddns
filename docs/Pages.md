@@ -1,6 +1,6 @@
 # The Plugin's Pages
 
-Remote Access adds one entry to Jellyfin's dashboard menu, under **Plugins → Remote Access**. Its pages share a
+Remote Access adds one entry, **Remote Access**, to the dashboard's side menu. Its pages share a
 tab bar along the top: **Dashboard**, **Domains**, **Address**, **Proxy**, **Services** and **Advanced**. Every
 setting, with its default, is listed in the [Settings Reference](Settings.md).
 
@@ -28,8 +28,9 @@ shows its last run. See [Adding Records](Records.md) and [Providers](providers/R
 
 ## Address
 
-The public IP the server was last seen at, how it is found, and how records are updated: the detection
-endpoints for IPv4 and IPv6, the forced refresh, the backoff after repeated failures, and the request timeout. See
+The public IP the server was last seen at, with **Update Now** to run every record's update straight away. Below it
+are how the address is found and how records are updated: the detection URLs for IPv4 and IPv6, **Skip update if
+internal**, the forced update, the backoff after repeated failures, and the request timeout. See
 [How Updates Run](HowItWorks.md).
 
 ![Address tab](screenshots/Address.png)
@@ -60,8 +61,8 @@ settings. Only add apps that have their own login. See [Services](RemoteAccess.m
 
 Every proxy setting not on the other tabs, each starting on its default.
 
-* **Security**: Only through the proxy, Always use HTTPS and how long browsers remember it, and Block embedding.
-* **Blocking**: bans for failed sign-ins, the block list, trusted networks and country rules.
+* **Security**: Only through the proxy, Always use HTTPS, HTTPS memory, Block embedding, and Trusted networks.
+* **Blocking**: the block list, bans for failed sign-ins, and country rules.
 * **History**: whether visits are recorded, for how long, and how precise locations are.
 * **Performance**: HTTP/2, upload sizes and connection limits.
 * **Timeouts**: idle connections, request header limits, the minimum read rate and how long Jellyfin may take to

@@ -21,7 +21,7 @@ public sealed class InwxProvider : DNSProviderBase
 
     private static readonly Dictionary<string, string> Errors = new(StringComparer.Ordinal)
     {
-        ["badauth"] = "Bad authorization (username or password)",
+        ["badauth"] = "Bad authorization. Check the username and password",
         ["badsys"] = "The system parameter given was not valid",
         ["notfqdn"] = "A Fully-Qualified Domain Name was not provided",
         ["nohost"] = "The hostname specified does not exist in the database",
@@ -31,7 +31,7 @@ public sealed class InwxProvider : DNSProviderBase
         ["abuse"] = "The hostname specified is blocked for abuse",
         ["numhost"] = "System error: Too many or too few hosts found.",
         ["dnserr"] = "System error: DNS error encountered.",
-        ["nochg"] = "No update required; the current address is already set"
+        ["nochg"] = "No update required. The current address is already set"
     };
 
     /// <summary>Initializes a new instance of the <see cref="InwxProvider"/> class.</summary>
@@ -116,13 +116,13 @@ public sealed class InwxProvider : DNSProviderBase
         var status = FirstToken(result.Body);
         if (string.IsNullOrEmpty(status))
         {
-            return DNSUpdateResult.Fail("Could not connect to " + DefaultServer + " (empty response).");
+            return DNSUpdateResult.Fail("Could not connect to " + DefaultServer + ". The response was empty.");
         }
 
         if (string.Equals(status, "good", StringComparison.OrdinalIgnoreCase)
             || string.Equals(status, "nochg", StringComparison.OrdinalIgnoreCase))
         {
-            return DNSUpdateResult.Ok(status);
+            return WithFamilies(DNSUpdateResult.Ok(status), ipv4 is not null, ipv6 is not null);
         }
 
         return DNSUpdateResult.Fail(

@@ -2,15 +2,21 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Reflection;
+using Jellyfin.Plugin.DynamicDns.Api;
 using Jellyfin.Plugin.DynamicDns.Configuration;
+using Jellyfin.Plugin.DynamicDns.Models;
+using Jellyfin.Plugin.DynamicDns.Providers;
 using Jellyfin.Plugin.DynamicDns.Proxy;
 using Jellyfin.Plugin.DynamicDns.Proxy.Network;
+using Jellyfin.Plugin.DynamicDns.Services;
 using Jellyfin.Plugin.DynamicDns.Utilities;
 using JPKribs.Jellyfin.Base;
 using MediaBrowser.Common.Configuration;
 using MediaBrowser.Model.Plugins;
 using MediaBrowser.Model.Serialization;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Jellyfin.Plugin.DynamicDns;
 
@@ -25,7 +31,11 @@ public class Plugin : PluginBase<Plugin, PluginConfiguration>
     /// </summary>
     internal const string SecretsName = "Jellyfin.Plugin.DynamicDns";
 
+    // The providers built into this assembly, for the generic save to tell which ones ask for a hostname.
+    private static readonly Lazy<IReadOnlyList<IDNSProvider>> _builtInProviders = new(LoadBuiltInProviders);
+
     private readonly Lazy<SecretProtector> _secrets;
+    private readonly Lazy<StatusStoreService> _statusStore;
     private readonly IConfigurationManager? _configurationManager;
     private readonly ILogger<Plugin> _logger;
 
@@ -36,11 +46,13 @@ public class Plugin : PluginBase<Plugin, PluginConfiguration>
     /// <param name="xmlSerializer">The XML serializer.</param>
     /// <param name="logger">The logger.</param>
     /// <param name="configurationManager">Jellyfin's configuration manager, used to restore its network settings on uninstall.</param>
+    /// <param name="statusStore">The runtime status store the update run uses, so the generic save resets a retargeted record's status in the same store.</param>
     public Plugin(
         IApplicationPaths applicationPaths,
         IXmlSerializer xmlSerializer,
         ILogger<Plugin> logger,
-        IConfigurationManager? configurationManager = null)
+        IConfigurationManager? configurationManager = null,
+        StatusStoreService? statusStore = null)
         : base(applicationPaths, xmlSerializer)
     {
         ArgumentNullException.ThrowIfNull(applicationPaths);
@@ -48,6 +60,10 @@ public class Plugin : PluginBase<Plugin, PluginConfiguration>
         _configurationManager = configurationManager;
         _logger = logger;
         _secrets = new Lazy<SecretProtector>(() => StableSecretProtection.CreateProtector(applicationPaths, SecretsName, logger));
+
+        // Jellyfin builds the plugin from the same container the plugin's services are registered in, so the
+        // shared store normally arrives here. A store of its own over the same file is the fallback.
+        _statusStore = new Lazy<StatusStoreService>(() => statusStore ?? new StatusStoreService(applicationPaths, NullLogger<StatusStoreService>.Instance));
         ProtectFolders(applicationPaths, logger);
         logger.LogInformation("Dynamic DNS plugin initialized");
     }
@@ -120,10 +136,6 @@ public class Plugin : PluginBase<Plugin, PluginConfiguration>
     {
         ArgumentNullException.ThrowIfNull(incoming);
         incoming.Records ??= new();
-        if (XmlText.FindInvalid(incoming) is { } bad)
-        {
-            throw new ArgumentException($"{bad} holds a character that cannot be saved.", nameof(incoming));
-        }
 
         // Checked before anything is changed: XML serialization fails partway on an unknown provider and
         // leaves a truncated configuration file behind.
@@ -132,10 +144,21 @@ public class Plugin : PluginBase<Plugin, PluginConfiguration>
             throw new ArgumentException("A record has an unknown provider.", nameof(incoming));
         }
 
-        if (incoming.Records.Any(r => string.IsNullOrWhiteSpace(r.Hostname)))
+        // Runtime status lives in the status store, so whatever a client sent for it is dropped first.
+        DynamicDNSController.ClearRuntimeStatus(incoming);
+        if (XmlText.FindInvalid(incoming) is { } bad)
+        {
+            throw new ArgumentException($"{bad} holds a character that cannot be saved.", nameof(incoming));
+        }
+
+        if (DynamicDNSController.MissingHostname(incoming.Records, _builtInProviders.Value))
         {
             throw new ArgumentException("Every record needs a hostname.", nameof(incoming));
         }
+
+        incoming.IPv4DetectionUrl ??= string.Empty;
+        incoming.IPv6DetectionUrl ??= string.Empty;
+        DynamicDNSController.ClampSettings(incoming);
 
         // Status, pending TXT records and the audit all go by record id, so a record saved here without
         // one, or with another's, gets its own, as the dashboard's save does.
@@ -144,6 +167,21 @@ public class Plugin : PluginBase<Plugin, PluginConfiguration>
         foreach (var record in needsId)
         {
             record.Id = Guid.NewGuid().ToString("N");
+        }
+
+        // A client that saved the dashboard's redacted configuration here sends its placeholders. The kept one
+        // takes the stored value of the same record, still sent to the same place, and the clear one empties it.
+        var previous = new Dictionary<string, DNSRecord>(StringComparer.Ordinal);
+        foreach (var record in (stored?.Records ?? new List<DNSRecord>()).Where(r => r is not null && !string.IsNullOrEmpty(r.Id)))
+        {
+            previous.TryAdd(record.Id, record);
+        }
+
+        foreach (var record in incoming.Records)
+        {
+            var prior = previous.TryGetValue(record.Id, out var match) && RecordMerge.SameDestination(match, record) ? match : null;
+            record.Login = DynamicDNSController.MapPlaceholder(record.Login, prior?.Login);
+            record.Password = DynamicDNSController.MapPlaceholder(record.Password, prior?.Password);
         }
 
         CredentialEncryption.DropForeignCiphertext(incoming.Records, stored?.Records);
@@ -186,6 +224,49 @@ public class Plugin : PluginBase<Plugin, PluginConfiguration>
         {
             throw new ArgumentException(string.Join(" ", errors), nameof(incoming));
         }
+
+        // As on the dashboard save: a record now pointed somewhere else starts its status over, so it does not
+        // inherit the old target's backoff and last pushed addresses. Done last, once nothing can refuse the save.
+        _statusStore.Value.RemoveRecords(DynamicDNSController.RetargetedIds(stored?.Records, incoming.Records));
+    }
+
+    // Builds one instance of every provider in this assembly to read its fields. Building one only stores
+    // what it is given, so no client or logger is needed to ask which fields it shows.
+    private static List<IDNSProvider> LoadBuiltInProviders()
+    {
+        var providers = new List<IDNSProvider>();
+        var types = typeof(Plugin).Assembly.GetTypes()
+            .Where(t => t is { IsClass: true, IsAbstract: false } && typeof(IDNSProvider).IsAssignableFrom(t));
+        foreach (var type in types)
+        {
+            var constructor = type.GetConstructors().OrderBy(c => c.GetParameters().Length).FirstOrDefault();
+            if (constructor is null)
+            {
+                continue;
+            }
+
+            var arguments = constructor.GetParameters().Select(p => PlaceholderArgument(p.ParameterType)).ToArray();
+            try
+            {
+                providers.Add((IDNSProvider)constructor.Invoke(arguments));
+            }
+            catch (Exception ex) when (ex is TargetInvocationException or ArgumentException or MemberAccessException)
+            {
+                // A provider that cannot be built this way is treated as asking for a hostname.
+            }
+        }
+
+        return providers;
+    }
+
+    private static object? PlaceholderArgument(Type type)
+    {
+        if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(ILogger<>))
+        {
+            return Activator.CreateInstance(typeof(NullLogger<>).MakeGenericType(type.GetGenericArguments()));
+        }
+
+        return type == typeof(ILogger) ? NullLogger.Instance : null;
     }
 
     /// <summary>

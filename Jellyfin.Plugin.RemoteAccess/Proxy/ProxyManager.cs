@@ -120,6 +120,9 @@ public sealed class ProxyManager : IAsyncDisposable
     /// <summary>Gets Jellyfin's running network setup.</summary>
     public JellyfinNetworkView Jellyfin => _jellyfin;
 
+    /// <summary>Gets this Jellyfin server's id, as its public system info reports it.</summary>
+    public string SystemId => _systemId;
+
     /// <summary>Gets a value indicating whether the proxy is listening.</summary>
     public bool IsRunning => Volatile.Read(ref _host) is not null;
 
@@ -331,6 +334,12 @@ public sealed class ProxyManager : IAsyncDisposable
         }
 
         var acme = _acme.Describe(hostnames, records);
+        if (!acme.Issuing && acme.RateLimited && acme.NextAttemptUtc is { } after && after > DateTime.UtcNow)
+        {
+            return (false, "Let's Encrypt is limiting how often it issues certificates for these addresses. Asking again now would only extend the limit, so a new certificate can be requested after "
+                + after.ToString("u", System.Globalization.CultureInfo.InvariantCulture) + ".");
+        }
+
         return (false, acme.Issuing
             ? "A certificate is already being requested."
             : acme.Names.Count == 0
@@ -357,7 +366,8 @@ public sealed class ProxyManager : IAsyncDisposable
         ScheduleAcmeRetry(settings);
     }
 
-    // After a failure the planner waits out a backoff. Nothing else would ask again at that time, so a timer does.
+    // After a failure the planner waits out a backoff, and after a success the certificate is due for renewal at
+    // a known time. Nothing else would ask at either time except the daily task, so a timer does.
     private void ScheduleAcmeRetry(ProxySettings settings)
     {
         // Shutdown has disposed the timer for good; one armed now would never be disposed.
@@ -366,7 +376,10 @@ public sealed class ProxyManager : IAsyncDisposable
             return;
         }
 
-        var next = _acme.Describe(CertificateHostnames(settings), ReadRecords()).NextAttemptUtc;
+        var hostnames = CertificateHostnames(settings);
+        var records = ReadRecords();
+        var retry = _acme.Describe(hostnames, records).NextAttemptUtc;
+        var next = retry ?? _acme.NextCheckUtc(hostnames, records, _certificates.Status);
         if (next is not { } when)
         {
             ArmAcmeRetry(Timeout.InfiniteTimeSpan);
@@ -374,8 +387,11 @@ public sealed class ProxyManager : IAsyncDisposable
         }
 
         // At most a day ahead: a timer cannot wait past about 49 days, and the planner decides again when it fires.
+        // A check that is due at once after a run waits a few minutes, so a planner that keeps saying "now" cannot
+        // turn the timer into a loop.
         var due = when - DateTime.UtcNow;
-        due = due < TimeSpan.Zero ? TimeSpan.Zero : due + TimeSpan.FromSeconds(5);
+        var floor = retry is null ? TimeSpan.FromMinutes(5) : TimeSpan.Zero;
+        due = due < floor ? floor : due + TimeSpan.FromSeconds(5);
         if (due > TimeSpan.FromDays(1))
         {
             due = TimeSpan.FromDays(1);
@@ -591,11 +607,11 @@ public sealed class ProxyManager : IAsyncDisposable
     private void ReportEveryoneLooksLocal()
     {
         const string Why = "Something in front of the proxy, such as rootless Docker, a tunnel or another proxy, may be hiding visitors' addresses. Bans, the block list and country rules cannot apply until it passes them on.";
-        _logger.LogWarning("Every visitor in the last hour came from one local address. {Why}", Why);
+        _logger.LogWarning("Most visitors in the last hour came from one local address. {Why}", Why);
         _activity?.Log(
-            "Remote Access sees every visitor as local",
+            "Remote Access sees most visitors as local",
             "DynamicDNS.EveryoneLooksLocal",
-            $"{LocalTrafficWatch.Threshold} requests for your public names came from one local address and none from the internet. " + Why + " See the Proxy tab.",
+            $"Most of the last hour's requests for your public names, at least {LocalTrafficWatch.Threshold}, came from one local address. " + Why + " See the Proxy tab.",
             LogLevel.Warning);
     }
 
@@ -624,8 +640,10 @@ public sealed class ProxyManager : IAsyncDisposable
                 _activity?.Log("Remote Access started its proxy", "DynamicDNS.ProxyStarted", "It is listening on " + addresses + ".");
             }
         }
-        catch (Exception ex) when (ex is IOException or SocketException or InvalidOperationException)
+        catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
         {
+            // Any start failure is kept for the status page rather than thrown, so the startup check after it
+            // still runs and can give Jellyfin its own addresses back when it listens on this machine only.
             _error = DescribeStartError(ex, runtime.Listener);
             _logger.LogError("Reverse proxy could not start: {Error}", _error);
             if (!string.Equals(_error, _reportedError, StringComparison.Ordinal))
@@ -710,15 +728,11 @@ public sealed class ProxyManager : IAsyncDisposable
             var body = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
             using var json = JsonDocument.Parse(body);
             var id = json.RootElement.TryGetProperty("Id", out var value) ? value.GetString() : null;
-            return SameId(id, _systemId) ? null : "Something other than this Jellyfin server answered through the proxy.";
+            return SelfTarget.SameId(id, _systemId) ? null : "Something other than this Jellyfin server answered through the proxy.";
         }
         catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or JsonException)
         {
             return "Jellyfin could not be reached through the proxy: " + CredentialRedactor.Redact(ex.Message);
         }
     }
-
-    private static bool SameId(string? a, string? b)
-        => !string.IsNullOrEmpty(a) && !string.IsNullOrEmpty(b)
-            && string.Equals(a.Replace("-", string.Empty, StringComparison.Ordinal), b.Replace("-", string.Empty, StringComparison.Ordinal), StringComparison.OrdinalIgnoreCase);
 }

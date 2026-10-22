@@ -61,9 +61,9 @@ public sealed class GoDaddyProvider : DNSProviderBase
         ArgumentNullException.ThrowIfNull(record);
         ArgumentNullException.ThrowIfNull(ip);
 
-        if (string.IsNullOrWhiteSpace(record.Hostname) || string.IsNullOrWhiteSpace(record.Zone))
+        if (string.IsNullOrWhiteSpace(record.Zone))
         {
-            return DNSUpdateResult.Fail("GoDaddy requires a hostname and a zone (domain).");
+            return DNSUpdateResult.Fail("GoDaddy requires a domain.");
         }
 
         if (string.IsNullOrWhiteSpace(record.Login) || string.IsNullOrWhiteSpace(record.Password))
@@ -72,11 +72,7 @@ public sealed class GoDaddyProvider : DNSProviderBase
         }
 
         var zone = record.Zone.Trim();
-        var hostname = record.Hostname.Trim();
-        if (hostname.EndsWith("." + zone, StringComparison.OrdinalIgnoreCase))
-        {
-            hostname = hostname.Substring(0, hostname.Length - zone.Length - 1);
-        }
+        var hostname = RelativeName((record.Hostname ?? string.Empty).Trim(), zone);
 
         var server = ServerBase(record, DefaultServer);
         var authorization = string.Concat("sso-key ", record.Login, ":", record.Password);
@@ -86,6 +82,23 @@ public sealed class GoDaddyProvider : DNSProviderBase
             ip,
             (type, address, ct) => PushAsync(server, zone, hostname, type, address, ResolveTtl(record), authorization, ct),
             cancellationToken).ConfigureAwait(false);
+    }
+
+    // GoDaddy takes the record name relative to the zone. The apex, given as the zone itself or left
+    // blank, is "@" as Hetzner, Gandi and eNom write it.
+    internal static string RelativeName(string hostname, string zone)
+    {
+        if (hostname.Length == 0 || string.Equals(hostname, zone, StringComparison.OrdinalIgnoreCase))
+        {
+            return "@";
+        }
+
+        if (hostname.EndsWith("." + zone, StringComparison.OrdinalIgnoreCase))
+        {
+            return hostname.Substring(0, hostname.Length - zone.Length - 1);
+        }
+
+        return hostname;
     }
 
     private async Task<(bool Ok, string Message)> PushAsync(

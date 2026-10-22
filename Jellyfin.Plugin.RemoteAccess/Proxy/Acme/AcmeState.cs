@@ -22,6 +22,12 @@ public sealed class AcmeState
     /// <summary>Gets or sets why the last attempt failed, empty after a success.</summary>
     public string LastError { get; set; } = string.Empty;
 
+    /// <summary>
+    /// Gets or sets a value indicating whether Let's Encrypt refused the last attempt for its rate limits. Even
+    /// an administrator's request then waits out the backoff, since asking again only prolongs the limit.
+    /// </summary>
+    public bool RateLimited { get; set; }
+
     /// <summary>Gets or sets the names of the last attempt.</summary>
     public List<string> Names { get; set; } = new();
 
@@ -35,13 +41,14 @@ public sealed class AcmeState
     public DateTime? IssuedNotBeforeUtc { get; set; }
 
     /// <summary>
-    /// The state after a failed attempt.
+    /// The state after a failed attempt. What is known about the last issued certificate is kept.
     /// </summary>
     /// <param name="now">When it failed (UTC).</param>
     /// <param name="error">Why.</param>
     /// <param name="names">The names it asked for.</param>
+    /// <param name="rateLimited">Whether Let's Encrypt refused it for its rate limits.</param>
     /// <returns>The new state.</returns>
-    public AcmeState Failed(DateTime now, string error, IEnumerable<string> names)
+    public AcmeState Failed(DateTime now, string error, IEnumerable<string> names, bool rateLimited = false)
     {
         var attempted = new List<string>(names);
         return new AcmeState
@@ -52,8 +59,10 @@ public sealed class AcmeState
             // Different names start a new streak, so fixing the address is retried at once.
             ConsecutiveFailures = attempted.SequenceEqual(Names, StringComparer.Ordinal) ? ConsecutiveFailures + 1 : 1,
             LastError = error,
+            RateLimited = rateLimited,
             Names = attempted,
-            Directory = Directory
+            Directory = Directory,
+            IssuedNotBeforeUtc = IssuedNotBeforeUtc
         };
     }
 

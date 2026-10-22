@@ -36,7 +36,9 @@ public sealed class GeoIpService : IDisposable
     private readonly ILogger<GeoIpService> _logger;
     private readonly string _directory;
     private readonly SemaphoreSlim _download = new(1, 1);
-    private readonly ConcurrentDictionary<string, GeoLocation> _cache = new(StringComparer.Ordinal);
+    // Keyed by the address group, an IPv6 /64, so a client cycling addresses inside its /64 takes one entry
+    // instead of clearing the cache for everyone. IPv4 addresses are their own group, so nothing is allocated.
+    private readonly ConcurrentDictionary<IPAddress, GeoLocation> _cache = new();
     private Reader? _reader;
     private LocationDetail _loadedDetail = LocationDetail.Off;
     private string _error = string.Empty;
@@ -262,7 +264,7 @@ public sealed class GeoIpService : IDisposable
             return GeoLocation.Unknown;
         }
 
-        var key = ip.ToString();
+        var key = NetworkClassifier.Group(ip);
         if (_cache.TryGetValue(key, out var cached))
         {
             return cached;

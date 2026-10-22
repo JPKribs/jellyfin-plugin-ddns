@@ -27,11 +27,15 @@ public class DynamicDNSController : ControllerBase
     // Stand-in returned to the browser for a stored credential and recognized on save as "unchanged".
     // It is deliberately not a value a real credential could take, so a saved record round-trips without
     // the credential ever leaving the server, and a typed replacement is distinguishable from it.
-    private const string SecretSentinel = "__JPK_DDNS_SECRET_KEPT__";
+    internal const string SecretSentinel = "__JPK_DDNS_SECRET_KEPT__";
 
     // Posted in a credential field to remove the stored value. A blank field keeps the stored value, so
     // clearing needs its own marker rather than an empty string.
-    private const string SecretClearSentinel = "__JPK_DDNS_SECRET_CLEAR__";
+    internal const string SecretClearSentinel = "__JPK_DDNS_SECRET_CLEAR__";
+
+    // The longest force update and back off intervals accepted, one year, so the hour counts can never
+    // overflow the TimeSpan and DateTime math the update run does with them.
+    internal const int MaxIntervalHours = 8760;
 
     private readonly DNSUpdateService _updateService;
     private readonly StatusStoreService _statusStore;
@@ -124,17 +128,20 @@ public class DynamicDNSController : ControllerBase
         // leaves a truncated configuration file behind. Encrypted values are never sent by the dashboard,
         // which shows a placeholder instead, so one arriving here was copied from somewhere else.
         incoming.Records ??= new();
-        if (XmlText.FindInvalid(incoming) is { } bad)
-        {
-            return BadRequest(new { Errors = new List<string> { $"{bad} holds a character that cannot be saved." } });
-        }
-
         if (incoming.Records.Any(r => r is null || !Enum.IsDefined(r.Provider)))
         {
             return BadRequest(new { Errors = new List<string> { "A record has an unknown provider." } });
         }
 
-        if (incoming.Records.Any(r => string.IsNullOrWhiteSpace(r.Hostname)))
+        // Status the page shows is echoed back with every save. The server keeps its own copy, so what the
+        // client sent is dropped before the check, and a stored provider reply can never block a save.
+        ClearRuntimeStatus(incoming);
+        if (XmlText.FindInvalid(incoming) is { } bad)
+        {
+            return BadRequest(new { Errors = new List<string> { $"{bad} holds a character that cannot be saved." } });
+        }
+
+        if (MissingHostname(incoming.Records, _providers))
         {
             return BadRequest(new { Errors = new List<string> { "Every record needs a hostname." } });
         }
@@ -146,10 +153,7 @@ public class DynamicDNSController : ControllerBase
 
         incoming.IPv4DetectionUrl ??= string.Empty;
         incoming.IPv6DetectionUrl ??= string.Empty;
-        incoming.ForceUpdateHours = Math.Max(0, incoming.ForceUpdateHours);
-        incoming.BackoffAfterFailures = Math.Max(0, incoming.BackoffAfterFailures);
-        incoming.BackoffHours = Math.Max(1, incoming.BackoffHours);
-        incoming.RequestTimeoutSeconds = Math.Clamp(incoming.RequestTimeoutSeconds, 1, 300);
+        ClampSettings(incoming);
 
         // The merge replaces the record list and never mutates the stored record objects, so the prior
         // list captured here still holds the pre save values for the audit diff after the mutation.
@@ -213,6 +217,69 @@ public class DynamicDNSController : ControllerBase
         return Ok(outcome);
     }
 
+    /// <summary>
+    /// Whether the provider of this kind asks for a hostname. Providers that work the host out from the
+    /// account hide the field, so their records are saved without one. An unknown kind needs one.
+    /// </summary>
+    /// <param name="providers">The registered providers.</param>
+    /// <param name="kind">The record's provider.</param>
+    /// <returns>True when the hostname field is shown for this provider.</returns>
+    internal static bool NeedsHostname(IEnumerable<IDNSProvider> providers, DNSProviderKind kind)
+    {
+        var provider = providers.FirstOrDefault(p => p.Kind == kind);
+        return provider is null || !string.IsNullOrEmpty(provider.Fields.Hostname);
+    }
+
+    /// <summary>
+    /// Whether any record lacks a hostname its provider asks for. A missing hostname on a provider that
+    /// hides the field is stored as empty.
+    /// </summary>
+    /// <param name="records">The submitted records.</param>
+    /// <param name="providers">The registered providers.</param>
+    /// <returns>True when a record must be refused.</returns>
+    internal static bool MissingHostname(IEnumerable<DNSRecord> records, IEnumerable<IDNSProvider> providers)
+    {
+        var missing = false;
+        foreach (var record in records)
+        {
+            if (string.IsNullOrWhiteSpace(record.Hostname))
+            {
+                record.Hostname = string.Empty;
+                missing |= NeedsHostname(providers, record.Provider);
+            }
+        }
+
+        return missing;
+    }
+
+    /// <summary>
+    /// Drops the runtime status a client sent with the configuration. The status store is the only source
+    /// of it, so nothing the page cannot edit is checked or kept from the request.
+    /// </summary>
+    /// <param name="config">The submitted configuration, changed in place.</param>
+    internal static void ClearRuntimeStatus(PluginConfiguration config)
+    {
+        config.LastDetectedIPv4 = string.Empty;
+        config.LastDetectedIPv6 = string.Empty;
+        config.LastDetectionMessage = string.Empty;
+        foreach (var record in config.Records)
+        {
+            new RecordStatus().ApplyTo(record);
+        }
+    }
+
+    /// <summary>
+    /// Brings the update settings into the ranges the update run can work with.
+    /// </summary>
+    /// <param name="config">The submitted configuration, changed in place.</param>
+    internal static void ClampSettings(PluginConfiguration config)
+    {
+        config.ForceUpdateHours = Math.Clamp(config.ForceUpdateHours, 0, MaxIntervalHours);
+        config.BackoffAfterFailures = Math.Max(0, config.BackoffAfterFailures);
+        config.BackoffHours = Math.Clamp(config.BackoffHours, 1, MaxIntervalHours);
+        config.RequestTimeoutSeconds = Math.Clamp(config.RequestTimeoutSeconds, 1, 300);
+    }
+
     // Ids of records kept across a save whose target or credentials changed.
     internal static IEnumerable<string> RetargetedIds(IReadOnlyList<DNSRecord>? before, IReadOnlyList<DNSRecord>? after)
     {
@@ -230,6 +297,23 @@ public class DynamicDNSController : ControllerBase
             .Where(r => prior.TryGetValue(r.Id, out var old) && !RecordTarget.SameTarget(old, r))
             .Select(r => r.Id)
             .ToList();
+    }
+
+    /// <summary>
+    /// Turns the dashboard's credential placeholders into the value to save: the kept placeholder becomes
+    /// the stored value and the clear placeholder becomes empty. Anything else passes through.
+    /// </summary>
+    /// <param name="submitted">The value sent.</param>
+    /// <param name="stored">The stored value for the same field, or null when it may not be kept.</param>
+    /// <returns>The value to save.</returns>
+    internal static string MapPlaceholder(string? submitted, string? stored)
+    {
+        if (string.Equals(submitted, SecretSentinel, StringComparison.Ordinal))
+        {
+            return stored ?? string.Empty;
+        }
+
+        return string.Equals(submitted, SecretClearSentinel, StringComparison.Ordinal) ? string.Empty : submitted ?? string.Empty;
     }
 
     internal string ResolveSecret(string? submitted, string? stored)

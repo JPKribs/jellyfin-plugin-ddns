@@ -50,7 +50,7 @@ public sealed class DuckDnsProvider : DNSProviderBase, IAcmeDnsProvider
 
         if (string.IsNullOrWhiteSpace(record.Hostname) || string.IsNullOrWhiteSpace(record.Password))
         {
-            return DNSUpdateResult.Fail("DuckDNS requires a domain (hostname) and a token (password).");
+            return DNSUpdateResult.Fail("Duck DNS needs Labels and a Token.");
         }
 
         var url = ServerBase(record, DefaultServer)
@@ -73,7 +73,7 @@ public sealed class DuckDnsProvider : DNSProviderBase, IAcmeDnsProvider
         }
 
         return string.Equals(result.Body.Trim(), "OK", StringComparison.Ordinal)
-            ? DNSUpdateResult.Ok("DuckDNS accepted the update.")
+            ? WithFamilies(DNSUpdateResult.Ok("DuckDNS accepted the update."), record.UpdateIPv4 && ip.IPv4 is not null, record.UpdateIPv6 && ip.IPv6 is not null)
             : DNSUpdateResult.Fail("server said: " + FirstLine(result.Body));
     }
 

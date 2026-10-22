@@ -79,4 +79,30 @@ public class GoDaddyProviderTests
         Assert.False(result.Success);
         Assert.Contains("422", result.Message, StringComparison.Ordinal);
     }
+
+    [Theory]
+    [InlineData("example.com")]
+    [InlineData("EXAMPLE.com")]
+    [InlineData("")]
+    [InlineData("@")]
+    public async Task ApexOrBlankHostname_IsWrittenAsAt(string hostname)
+    {
+        string? putUrl = null;
+        string? putBody = null;
+        var factory = StubHttp.Factory(req =>
+        {
+            putUrl = req.RequestUri!.AbsoluteUri;
+            putBody = req.Content is null ? string.Empty : req.Content.ReadAsStringAsync().Result;
+            return (HttpStatusCode.OK, "{}");
+        });
+        var provider = new GoDaddyProvider(factory, NullLogger<GoDaddyProvider>.Instance);
+        var record = Record();
+        record.Hostname = hostname;
+
+        var result = await provider.UpdateAsync(record, new DetectedIP { IPv4 = "1.2.3.4" }, CancellationToken.None);
+
+        Assert.True(result.Success);
+        Assert.EndsWith("/example.com/records/A/%40", putUrl, StringComparison.Ordinal);
+        Assert.Contains("\"name\":\"@\"", putBody, StringComparison.Ordinal);
+    }
 }

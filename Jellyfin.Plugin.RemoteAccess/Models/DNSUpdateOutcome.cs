@@ -35,6 +35,18 @@ public sealed class RecordOutcome
     public bool? IPv6Applied { get; set; }
 
     /// <summary>
+    /// Gets or sets a value indicating whether IPv4 was left out of the push because DNS already served it.
+    /// Internal, for the per-family bookkeeping.
+    /// </summary>
+    internal bool IPv4Held { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether IPv6 was left out of the push because DNS already served it.
+    /// Internal, for the per-family bookkeeping.
+    /// </summary>
+    internal bool IPv6Held { get; set; }
+
+    /// <summary>
     /// Gets or sets a value indicating whether a failure was temporary (a timeout, network error, rate
     /// limit, or provider server error) rather than a sign the record is misconfigured. Internal, so it
     /// drives the backoff bookkeeping without reaching the dashboard response.

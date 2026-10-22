@@ -1,5 +1,5 @@
 import { createConfigPage, confirmDialog } from './configurationpage?name=ddns_jpkribs_shared.js';
-import { PLUGIN_ID, TABS, showText } from './configurationpage?name=ddns_tabs.js';
+import { PLUGIN_ID, TABS, errorText, showText } from './configurationpage?name=ddns_tabs.js';
 
 export default function (view) {
     'use strict';
@@ -16,15 +16,35 @@ export default function (view) {
     // Fallback spec showing every field for an unrecognized provider.
     var DEFAULT_FIELDS = { h: 'Hostname', l: 'Login', p: 'Password', z: 'Zone', s: true, t: true, v6: true, a: ['wildcard', 'static', 'mx', 'backupmx'] };
 
+    // The records on the page: the saved ones, each possibly with edits not saved yet, followed by new
+    // records that were never saved. A record's credentials always hold what the server last sent, its
+    // redacted marker or empty, never a typed value.
     var records = [];
+    // The records as the server last sent them, by id. A record missing here was never saved.
+    var saved = {};
+    var loaded = false;
+    var busy = false;
     var currentIndex = -1;
     var editorEnabled = true;
 
     // Posted in a credential field to remove the stored value. A blank field keeps it, so clearing is an
-    // explicit action. Keyed by input id, reset whenever the editor loads a record.
+    // explicit action.
     var CLEAR_SECRET = '__JPK_DDNS_SECRET_CLEAR__';
     var CLEAR_BUTTONS = { recLogin: 'btnClearLogin', recPassword: 'btnClearPassword' };
+    var SECRET_FIELDS = { recLogin: 'Login', recPassword: 'Password' };
+    // Credential edits not saved yet, by record id and input id: { typed, cleared }. Kept apart from the
+    // record so a typed value is never mistaken for the saved one when the record is shown again.
+    var pendingSecrets = {};
+    // Whether the stored value of the field now shown is marked for removal. Reset whenever the editor
+    // loads a record.
     var clearedSecrets = {};
+
+    // The settings that can be edited, compared to tell whether a record has unsaved edits.
+    var EDITABLE = ['Name', 'Provider', 'Hostname', 'Enabled', 'UpdateIPv4', 'UpdateIPv6', 'Zone', 'Server', 'Ttl',
+        'Proxied', 'Wildcard', 'Static', 'Mx', 'BackupMx'];
+    // The switches among them, and the two that are on unless set off.
+    var SWITCHES = ['Enabled', 'UpdateIPv4', 'UpdateIPv6', 'Proxied', 'Wildcard', 'Static', 'BackupMx'];
+    var ON_BY_DEFAULT = ['Enabled', 'UpdateIPv4'];
 
     // The plugin's own config endpoints redact stored credentials to a write-only sentinel on read and
     // encrypt freshly typed ones on save, so secrets never round-trip through the browser in the clear.
@@ -60,6 +80,10 @@ export default function (view) {
         return PROVIDER_VALUES.indexOf(value) >= 0 ? value : 'Cloudflare';
     }
 
+    function specFor(provider) {
+        return FIELDS[provider] || DEFAULT_FIELDS;
+    }
+
     function newRecord() {
         return {
             Id: Shared.generateGuid(), Name: '', Provider: 'Cloudflare', Hostname: '', Enabled: true,
@@ -68,6 +92,43 @@ export default function (view) {
             Proxied: false, Wildcard: false, Mx: '', BackupMx: false, Static: false,
             LastIPv4: '', LastIPv6: '', LastStatus: '', LastSuccess: false, LastCheckedUtc: null
         };
+    }
+
+    function isSaved(r) {
+        return !!(r && saved[r.Id]);
+    }
+
+    // The editable settings in one canonical form, so a value read back from the form compares equal to
+    // the same value as the server sent it.
+    function editable(r) {
+        var out = {};
+        EDITABLE.forEach(function (key) {
+            var v = r[key];
+            if (key === 'Provider') v = normalizeProvider(v);
+            else if (key === 'Ttl') v = parseInt(v, 10) || 1;
+            else if (ON_BY_DEFAULT.indexOf(key) >= 0) v = v !== false;
+            else if (SWITCHES.indexOf(key) >= 0) v = !!v;
+            else v = (v == null ? '' : String(v)).trim();
+            out[key] = v;
+        });
+        return JSON.stringify(out);
+    }
+
+    function hasPendingSecret(r) {
+        var p = pendingSecrets[r.Id];
+        return !!p && Object.keys(p).some(function (id) { return p[id].typed || p[id].cleared; });
+    }
+
+    // A record never saved always counts, since leaving the page loses it.
+    function isRecordDirty(r) {
+        if (!isSaved(r)) return true;
+        return hasPendingSecret(r) || editable(r) !== editable(saved[r.Id]);
+    }
+
+    function isDirty() {
+        if (!loaded) return false;
+        syncEditor();
+        return records.some(isRecordDirty);
     }
 
     function renderProviderOptions() {
@@ -110,6 +171,8 @@ export default function (view) {
             if (currentIndex < 0 || currentIndex >= records.length) currentIndex = 0;
             select.value = String(currentIndex);
             loadEditor();
+        } else {
+            currentIndex = -1;
         }
     }
 
@@ -170,7 +233,7 @@ export default function (view) {
     }
 
     function applyFields(provider) {
-        var spec = FIELDS[provider] || DEFAULT_FIELDS;
+        var spec = specFor(provider);
         var adv = spec.a || [];
         setField('recHostname', spec.h);
         setField('recLogin', spec.l);
@@ -203,9 +266,13 @@ export default function (view) {
         Shared.getEl('recUpdateIPv4').checked = r.UpdateIPv4 !== false;
         Shared.getEl('recUpdateIPv6').checked = !!r.UpdateIPv6;
         // Credentials are write-only: never bind the stored secret back into the form. Show a "saved"
-        // placeholder when one exists. The value is kept unless the admin types a replacement.
-        setSecretField('recLogin', r.Login);
-        setSecretField('recPassword', r.Password);
+        // placeholder when one exists, then put back any replacement typed or clear asked for earlier.
+        Object.keys(SECRET_FIELDS).forEach(function (id) {
+            setSecretField(id, r[SECRET_FIELDS[id]]);
+            var p = (pendingSecrets[r.Id] || {})[id];
+            if (p && p.cleared) clearSecret(id);
+            if (p && p.typed) Shared.getEl(id).value = p.typed;
+        });
         Shared.getEl('recZone').value = r.Zone || '';
         Shared.getEl('recServer').value = r.Server || '';
         Shared.getEl('recTtl').value = r.Ttl || 1;
@@ -245,21 +312,15 @@ export default function (view) {
         Shared.getEl('stIps').textContent = (r.LastIPv4 || 'none') + ' / ' + (r.LastIPv6 || 'none');
     }
 
+    // Copies the form into the record shown, and its credential edits into pendingSecrets.
     function readEditorInto(r) {
         r.Name = Shared.getEl('recName').value.trim();
         r.Provider = Shared.getEl('recProvider').value;
-        r.Hostname = Shared.getEl('recHostname').value.trim();
+        // A provider that works the host out from the account hides the field, and stores no hostname.
+        r.Hostname = specFor(r.Provider).h ? Shared.getEl('recHostname').value.trim() : '';
         r.UpdateIPv4 = Shared.getEl('recUpdateIPv4').checked;
         r.UpdateIPv6 = Shared.getEl('recUpdateIPv6').checked;
         r.Enabled = editorEnabled;
-        // Only overwrite a credential when the admin typed a replacement. A blank field keeps the stored
-        // (encrypted) value rather than wiping it, unless the admin explicitly cleared it.
-        var login = Shared.getEl('recLogin').value.trim();
-        if (login) r.Login = login;
-        else if (clearedSecrets.recLogin) r.Login = CLEAR_SECRET;
-        var password = Shared.getEl('recPassword').value;
-        if (password) r.Password = password;
-        else if (clearedSecrets.recPassword) r.Password = CLEAR_SECRET;
         r.Zone = Shared.getEl('recZone').value.trim();
         r.Server = Shared.getEl('recServer').value.trim();
         r.Ttl = parseInt(Shared.getEl('recTtl').value, 10) || 1;
@@ -268,52 +329,105 @@ export default function (view) {
         r.Static = Shared.getEl('recStatic').checked;
         r.Mx = Shared.getEl('recMx').value.trim();
         r.BackupMx = Shared.getEl('recBackupMx').checked;
+        pendingSecrets[r.Id] = {
+            recLogin: { typed: Shared.getEl('recLogin').value.trim(), cleared: !!clearedSecrets.recLogin },
+            recPassword: { typed: Shared.getEl('recPassword').value, cleared: !!clearedSecrets.recPassword }
+        };
     }
 
-    function persistRecords(okMessage, errMessage, onFail) {
-        // A new record without a hostname yet is a draft: it stays on the page but is not saved, so saving
-        // another record never stores a blank one.
-        var drafts = records.filter(function (x) { return !x.Hostname; });
+    function syncEditor() {
+        if (records[currentIndex]) readEditorInto(records[currentIndex]);
+    }
+
+    // What to send for a credential: a typed replacement, the clear marker, or the value the server sent,
+    // which is its kept marker for a stored secret and empty otherwise.
+    function secretToSend(r, id) {
+        var p = (pendingSecrets[r.Id] || {})[id] || {};
+        if (p.typed) return p.typed;
+        if (p.cleared) return CLEAR_SECRET;
+        return r[SECRET_FIELDS[id]] || '';
+    }
+
+    function toPost(r) {
+        var copy = JSON.parse(JSON.stringify(r));
+        copy.Login = secretToSend(r, 'recLogin');
+        copy.Password = secretToSend(r, 'recPassword');
+        return copy;
+    }
+
+    // Takes in the records the server now holds. The record just saved or deleted, and any record without
+    // unsaved edits, is replaced by the server's copy, so a record changed or added elsewhere shows as it
+    // is. A record with unsaved edits keeps them, with the server's status. New records never saved stay.
+    function adopt(serverRecords, settledId) {
+        var local = {};
+        records.forEach(function (r) { local[r.Id] = r; });
+        var drafts = records.filter(function (r) { return !isSaved(r) && r.Id !== settledId; });
+
+        var next = (serverRecords || []).map(function (s) {
+            var mine = local[s.Id];
+            if (!mine || s.Id === settledId || !isRecordDirty(mine)) return s;
+            Object.keys(s).forEach(function (key) {
+                if (EDITABLE.indexOf(key) < 0 && key !== 'Login' && key !== 'Password') mine[key] = s[key];
+            });
+            mine.Login = s.Login;
+            mine.Password = s.Password;
+            return mine;
+        });
+
+        saved = {};
+        (serverRecords || []).forEach(function (s) { saved[s.Id] = JSON.parse(JSON.stringify(s)); });
+        if (settledId) delete pendingSecrets[settledId];
+        records = next.concat(drafts);
+    }
+
+    function setBusy(on) {
+        busy = on;
+        ['btnSaveRecord', 'btnDeleteRecord'].forEach(function (id) { Shared.getEl(id).disabled = on; });
+    }
+
+    // Reads the freshest settings, changes only the one record, and saves. Every other record goes back
+    // exactly as the server holds it.
+    function persist(change, settledId, okMessage, fallback) {
+        setBusy(true);
         return getConfig().then(function (fresh) {
             if (!fresh) { throw new Error('settings unavailable'); }
-            fresh.Records = records.filter(function (x) { return !!x.Hostname; });
+            fresh.Records = change(fresh.Records || []);
             return saveConfig(fresh);
-        }).then(function (saved) {
-            // Adopt the records as persisted, so a credential just typed (or cleared) is held as the
-            // server's redacted marker rather than resent, and the status reflects any reset by the save.
-            if (saved && saved.Records) { records = saved.Records.concat(drafts); }
-            else if (onFail) { onFail(); }
+        }).then(function (result) {
+            if (!result || !result.Records) { throw new Error('no reply'); }
+            adopt(result.Records, settledId);
+            currentIndex = records.findIndex(function (x) { return x.Id === settledId; });
             renderSelect();
-            Shared.setStatus('recordStatus', saved ? okMessage : errMessage, !saved);
-        }).catch(function () {
-            if (onFail) { onFail(); }
-            Shared.setStatus('recordStatus', errMessage, true);
+            Shared.setStatus('recordStatus', okMessage, false);
+        }).catch(function (err) {
+            return errorText(err, fallback).then(function (text) {
+                Shared.setStatus('recordStatus', text, true, { timeout: 0 });
+            });
+        }).then(function () {
+            setBusy(false);
         });
     }
 
     function saveRecord() {
         var r = records[currentIndex];
-        if (!r) return;
-        // The credentials as last loaded from the server (its redacted marker or empty), restored if the
-        // save fails, so a typed secret or a clear request never lingers in the record to be shown as
-        // saved or silently resent with a later save.
-        var priorLogin = r.Login;
-        var priorPassword = r.Password;
+        if (!r || busy) return;
         readEditorInto(r);
-        if (!r.Hostname) {
-            r.Login = priorLogin;
-            r.Password = priorPassword;
+        if (specFor(r.Provider).h && !r.Hostname) {
             Shared.setStatus('recordStatus', 'A hostname is required.', true);
             return;
         }
 
-        persistRecords('Saved.', 'Save failed.', function () {
-            r.Login = priorLogin;
-            r.Password = priorPassword;
-        });
+        var posted = toPost(r);
+        persist(function (list) {
+            var index = list.findIndex(function (x) { return x.Id === r.Id; });
+            if (index >= 0) list[index] = posted;
+            else list.push(posted);
+            return list;
+        }, r.Id, 'Saved.', 'Save failed.');
     }
 
     function addRecord() {
+        syncEditor();
         records.push(newRecord());
         currentIndex = records.length - 1;
         renderSelect();
@@ -322,27 +436,33 @@ export default function (view) {
 
     function deleteRecord() {
         var r = records[currentIndex];
-        if (!r) return;
+        if (!r || busy) return;
+        syncEditor();
         var label = r.Name || r.Hostname || 'this record';
         confirmDialog('Delete ' + label + '? This cannot be undone.', { confirmText: 'Delete', destructive: true }).then(function (ok) {
             // The record list can change while the dialog is open, so drop the one that was asked about.
             var index = records.indexOf(r);
             if (!ok || index < 0) return;
-            records.splice(index, 1);
-            currentIndex = -1;
-            // A failed delete puts the record back, so the page never shows it gone while it is still saved.
-            persistRecords('Deleted.', 'Delete failed.', function () {
-                records.splice(Math.min(index, records.length), 0, r);
-                currentIndex = records.indexOf(r);
+
+            // A record never saved only lives on this page.
+            if (!isSaved(r)) {
+                records.splice(index, 1);
+                delete pendingSecrets[r.Id];
+                currentIndex = Math.min(index, records.length - 1);
                 renderSelect();
-            });
+                return;
+            }
+
+            persist(function (list) {
+                return list.filter(function (x) { return x.Id !== r.Id; });
+            }, r.Id, 'Deleted.', 'Delete failed.');
         });
     }
 
     function bind() {
         Shared.getEl('selectRecord').addEventListener('change', function () {
             // Edits not yet saved stay with the record they were made on, rather than being lost on switching.
-            if (records[currentIndex]) { readEditorInto(records[currentIndex]); }
+            syncEditor();
             currentIndex = parseInt(this.value, 10);
             loadEditor();
         });
@@ -360,11 +480,15 @@ export default function (view) {
     }
 
     function load() {
+        loaded = false;
         loadProviders().then(getConfig).then(function (cfg) {
-            records = cfg.Records || [];
+            records = [];
+            pendingSecrets = {};
+            adopt((cfg && cfg.Records) || [], null);
             renderProviderOptions();
             currentIndex = records.length ? 0 : -1;
             renderSelect();
+            loaded = true;
         }).catch(function () {
             // Outside the editor, which stays hidden when there are no records.
             showText(Shared, 'loadError', 'Could not load providers or settings.');
@@ -378,6 +502,7 @@ export default function (view) {
         tabIndex: 1,
         tabs: TABS,
         bind: bind,
-        load: load
+        load: load,
+        isDirty: isDirty
     }).shared;
 }

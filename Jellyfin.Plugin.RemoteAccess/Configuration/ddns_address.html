@@ -31,14 +31,14 @@
                             <span class="material-icons" aria-hidden="true">sync</span>
                             <span>Update Now</span>
                         </button>
-                        <span id="runStatus" class="jpk-status-text"></span>
+                        <span id="runStatus" class="jpk-status-text" aria-live="polite"></span>
                     </div>
 
                     <!-- IP detection -->
                     <div class="jpk-collapsible-section">
                         <button type="button" class="jpk-collapsible-header collapsed" aria-expanded="false" aria-controls="detectionContent" data-target="detectionContent">
                             <span class="jpk-collapsible-title">IP Detection</span>
-                            <span class="jpk-collapsible-icon">&#9660;</span>
+                            <span class="jpk-collapsible-icon" aria-hidden="true">&#9660;</span>
                         </button>
                         <div id="detectionContent" class="jpk-collapsible-content collapsed">
                             <div class="inputContainer">
@@ -65,7 +65,7 @@
                     <div class="jpk-collapsible-section">
                         <button type="button" class="jpk-collapsible-header collapsed" aria-expanded="false" aria-controls="behaviorContent" data-target="behaviorContent">
                             <span class="jpk-collapsible-title">Update Behavior</span>
-                            <span class="jpk-collapsible-icon">&#9660;</span>
+                            <span class="jpk-collapsible-icon" aria-hidden="true">&#9660;</span>
                         </button>
                         <div id="behaviorContent" class="jpk-collapsible-content collapsed">
                             <div class="selectContainer">
@@ -118,7 +118,7 @@
                         <button is="emby-button" type="button" id="btnSaveAddress" class="raised jpk-button-submit block">
                             <span>Save</span>
                         </button>
-                        <span id="addressStatus" class="jpk-status-text"></span>
+                        <span id="addressStatus" class="jpk-status-text" aria-live="polite"></span>
                     </div>
 
                 </div>

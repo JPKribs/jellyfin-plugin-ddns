@@ -62,6 +62,9 @@ public sealed class PeopleHostedService : BackgroundService
     /// <inheritdoc />
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
+        // The proxy reads them too when it starts. Whichever comes first, saved bans hold from the first connection.
+        _bans.Preload();
+
         // Found at startup, before the activity log was ready; it is written there once now.
         if (FolderAccess.Problem.Length > 0)
         {

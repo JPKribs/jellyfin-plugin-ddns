@@ -35,7 +35,7 @@ public sealed class CloudflareProvider : DNSProviderBase, IAcmeDnsProvider
     public override string Label => "Cloudflare";
 
     /// <inheritdoc />
-    public override string Hint => "For a scoped API token, set Auth email or token to the word token. For the Global API Key, set it to your account email. Zone name is the zone, such as example.com.";
+    public override string Hint => "Set Auth email or token to the word token for a scoped API token, or to your account email for the Global API Key. Zone name is the zone, such as example.com.";
 
     /// <inheritdoc />
     public override ProviderFields Fields => new()
@@ -66,10 +66,12 @@ public sealed class CloudflareProvider : DNSProviderBase, IAcmeDnsProvider
             return DNSUpdateResult.Fail(zoneError);
         }
 
+        // A bare label is completed with the zone, since the API looks records up by their full name.
+        var host = QualifiedName(record.Hostname, record.Zone);
         return await ApplyPerFamilyAsync(
             record,
             ip,
-            (type, address, ct) => PatchAsync(server, zoneId, headers, record.Hostname, type, address, ct),
+            (type, address, ct) => PatchAsync(server, zoneId, headers, host, type, address, ct),
             cancellationToken).ConfigureAwait(false);
     }
 

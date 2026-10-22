@@ -82,14 +82,14 @@
                         <div class="inputContainer">
                             <label for="recLogin">Login / username / key</label>
                             <input is="emby-input" type="text" id="recLogin" autocomplete="off" />
-                            <button is="emby-button" type="button" id="btnClearLogin" class="raised jpk-secondary hidden" title="Remove the saved value when the record is saved">
+                            <button is="emby-button" type="button" id="btnClearLogin" class="raised jpk-secondary hidden" title="Remove the saved value when the record is saved" aria-label="Clear the saved login">
                                 <span>Clear saved value</span>
                             </button>
                         </div>
                         <div class="inputContainer">
                             <label for="recPassword">Password / token / secret</label>
                             <input is="emby-input" type="password" id="recPassword" autocomplete="off" />
-                            <button is="emby-button" type="button" id="btnClearPassword" class="raised jpk-secondary hidden" title="Remove the saved value when the record is saved">
+                            <button is="emby-button" type="button" id="btnClearPassword" class="raised jpk-secondary hidden" title="Remove the saved value when the record is saved" aria-label="Clear the saved password">
                                 <span>Clear saved value</span>
                             </button>
                         </div>
@@ -122,7 +122,7 @@
                         <div class="jpk-collapsible-section">
                             <button type="button" class="jpk-collapsible-header collapsed" aria-expanded="false" aria-controls="advancedContent" data-target="advancedContent">
                                 <span class="jpk-collapsible-title">Advanced options</span>
-                                <span class="jpk-collapsible-icon">&#9660;</span>
+                                <span class="jpk-collapsible-icon" aria-hidden="true">&#9660;</span>
                             </button>
                             <div id="advancedContent" class="jpk-collapsible-content collapsed">
                                 <div class="checkboxContainer">
@@ -175,7 +175,7 @@
                             <button is="emby-button" type="button" id="btnSaveRecord" data-theme="b" class="raised jpk-button-submit block">
                                 <span>Save Record</span>
                             </button>
-                            <span id="recordStatus" class="jpk-status-text"></span>
+                            <span id="recordStatus" class="jpk-status-text" aria-live="polite"></span>
                         </div>
                     </div>
 

@@ -109,4 +109,17 @@ public class DynDnsStyleProviderTests
 
         Assert.False(result.Success);
     }
+
+    [Theory]
+    [InlineData("Unsuccessful Update")]
+    [InlineData("200 unsuccessful")]
+    public async Task ChangeIp_UnsuccessfulReply_IsAFailure(string body)
+    {
+        var provider = new ChangeIpProvider(StubHttp.Always(HttpStatusCode.OK, body), NullLogger<ChangeIpProvider>.Instance);
+        var record = new DNSRecord { Hostname = "home.example.com", Login = "u", Password = "p", UpdateIPv4 = true };
+
+        var result = await provider.UpdateAsync(record, V4, CancellationToken.None);
+
+        Assert.False(result.Success);
+    }
 }

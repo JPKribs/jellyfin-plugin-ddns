@@ -22,7 +22,7 @@ public static class UpdateDecisionExtensions
     /// <exception cref="ArgumentOutOfRangeException">Thrown when the decision is not a skip.</exception>
     public static (string Action, string Message, bool Succeeded) SkipOutcome(this UpdateDecision decision) => decision switch
     {
-        UpdateDecision.SkipNoAddress => ("No address", "No IP available for the enabled record type(s).", false),
+        UpdateDecision.SkipNoAddress => ("No address", "No IP available for the enabled record types.", false),
         UpdateDecision.SkipUnchanged => ("IP Unchanged", "Update skipped.", true),
         _ => throw new ArgumentOutOfRangeException(nameof(decision), decision, "Update is not a skip decision.")
     };

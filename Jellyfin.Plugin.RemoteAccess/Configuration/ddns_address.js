@@ -1,10 +1,25 @@
 import { createConfigPage } from './configurationpage?name=ddns_jpkribs_shared.js';
-import { PLUGIN_ID, TABS, showText } from './configurationpage?name=ddns_tabs.js';
+import { PLUGIN_ID, TABS, errorText, showText } from './configurationpage?name=ddns_tabs.js';
 
 export default function (view) {
     'use strict';
 
     var Shared = null;
+    // The form as last loaded or saved, to tell whether leaving would lose changes. Null until loaded.
+    var baseline = null;
+
+    var FORM_IDS = ['ipv4Url', 'ipv6Url', 'forceUpdateHours', 'skipInternal', 'backoffAfterFailures', 'backoffHours', 'requestTimeout'];
+
+    function formState() {
+        return JSON.stringify(FORM_IDS.map(function (id) {
+            var el = Shared.getEl(id);
+            return el.type === 'checkbox' ? el.checked : el.value.trim();
+        }));
+    }
+
+    function isDirty() {
+        return baseline !== null && formState() !== baseline;
+    }
 
     // Use the plugin's own config endpoints so credentials on other records are redacted in transit and
     // any newly entered ones are encrypted at save (see DynamicDnsController).
@@ -23,6 +38,7 @@ export default function (view) {
     }
 
     function load() {
+        baseline = null;
         getConfig().then(function (cfg) {
             if (!cfg) { Shared.setStatus('addressStatus', 'Could not load settings.', true); return; }
             Shared.getEl('ipv4Url').value = cfg.IPv4DetectionUrl || '';
@@ -41,12 +57,17 @@ export default function (view) {
             Shared.getEl('requestTimeout').value = cfg.RequestTimeoutSeconds || 15;
             showCurrentIp(cfg);
             showDetectionWarning(cfg.LastDetectionMessage);
+            baseline = formState();
         }).catch(function () {
             Shared.setStatus('addressStatus', 'Could not load settings.', true);
         });
     }
 
     function saveAddress() {
+        var button = Shared.getEl('btnSaveAddress');
+        if (button.disabled) return;
+        button.disabled = true;
+        var posted = formState();
         getConfig().then(function (fresh) {
             if (!fresh) { throw new Error('settings unavailable'); }
             fresh.IPv4DetectionUrl = Shared.getEl('ipv4Url').value.trim();
@@ -58,29 +79,65 @@ export default function (view) {
             fresh.RequestTimeoutSeconds = Math.max(1, parseInt(Shared.getEl('requestTimeout').value, 10) || 15);
             return saveConfig(fresh);
         }).then(function (saved) {
-            Shared.setStatus('addressStatus', saved ? 'Saved.' : 'Save failed.', !saved);
-        }).catch(function () {
-            Shared.setStatus('addressStatus', 'Save failed.', true);
+            if (!saved) { throw new Error('no reply'); }
+            baseline = posted;
+            Shared.setStatus('addressStatus', 'Saved.', false);
+        }).catch(function (err) {
+            return errorText(err, 'Save failed.').then(function (text) {
+                Shared.setStatus('addressStatus', text, true, { timeout: 0 });
+            });
+        }).then(function () {
+            button.disabled = false;
         });
     }
 
+    // Says how the run went. With no record results, the configuration tells apart having no records,
+    // having none enabled, and a run that left every record as it was.
+    function runMessage(outcome, cfg) {
+        var list = (outcome && outcome.Records) || [];
+        var warnings = (outcome && outcome.Warnings) || [];
+        var ok = list.filter(function (x) { return x.Success; }).length;
+        var text;
+        if (list.length) {
+            text = 'Finished. ' + ok + ' of ' + list.length + ' records succeeded.';
+        } else if (warnings.length) {
+            text = '';
+        } else if (!cfg) {
+            text = 'Finished. No records were updated.';
+        } else {
+            var all = cfg.Records || [];
+            var enabled = all.filter(function (r) { return r.Enabled !== false; }).length;
+            text = !all.length ? 'IP detected. No records configured.'
+                : !enabled ? 'IP detected. No records are enabled.'
+                : 'Finished. No records were updated.';
+        }
+
+        return {
+            text: [text].concat(warnings).filter(function (x) { return x; }).join(' '),
+            bad: warnings.length > 0 || ok < list.length
+        };
+    }
+
     function runNow() {
-        Shared.setStatus('runStatus', 'Updating...', false);
+        var button = Shared.getEl('btnRunNow');
+        if (button.disabled) return;
+        button.disabled = true;
+        Shared.setStatus('runStatus', 'Updating...', false, { timeout: 0 });
         Shared.apiRequest('RunNow', 'POST').then(function (outcome) {
-            var list = (outcome && outcome.Records) || [];
-            var ok = list.filter(function (x) { return x.Success; }).length;
-            var msg = list.length
-                ? 'Finished. ' + ok + ' of ' + list.length + ' records succeeded.'
-                : 'IP detected. No records configured.';
-            Shared.setStatus('runStatus', msg, list.length > 0 && ok < list.length);
-            return getConfig();
-        }).then(function (fresh) {
-            if (fresh) {
-                showCurrentIp(fresh);
-                showDetectionWarning(fresh.LastDetectionMessage);
-            }
-        }).catch(function () {
-            Shared.setStatus('runStatus', 'Update failed.', true);
+            return getConfig().catch(function () { return null; }).then(function (fresh) {
+                var result = runMessage(outcome, fresh);
+                Shared.setStatus('runStatus', result.text, result.bad, result.bad ? { timeout: 0 } : undefined);
+                if (fresh) {
+                    showCurrentIp(fresh);
+                    showDetectionWarning(fresh.LastDetectionMessage);
+                }
+            });
+        }).catch(function (err) {
+            return errorText(err, 'Update failed.').then(function (text) {
+                Shared.setStatus('runStatus', text, true, { timeout: 0 });
+            });
+        }).then(function () {
+            button.disabled = false;
         });
     }
 
@@ -97,6 +154,7 @@ export default function (view) {
         tabIndex: 2,
         tabs: TABS,
         bind: bind,
-        load: load
+        load: load,
+        isDirty: isDirty
     }).shared;
 }

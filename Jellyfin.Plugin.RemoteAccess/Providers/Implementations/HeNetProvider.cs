@@ -21,11 +21,11 @@ public sealed class HeNetProvider : DNSProviderBase
 
     private static readonly Dictionary<string, string> Errors = new(StringComparer.Ordinal)
     {
-        ["badauth"] = "Bad authorization (username or password)",
+        ["badauth"] = "Bad authorization. Check the username and password",
         ["badsys"] = "The system parameter given was not valid",
         ["nohost"] = "The hostname specified does not exist in the database",
         ["abuse"] = "The hostname specified is blocked for abuse",
-        ["nochg"] = "No update required; unnecessary attempts to change the current address are considered abusive"
+        ["nochg"] = "No update required. Unnecessary attempts to change the current address are considered abusive"
     };
 
     /// <summary>Initializes a new instance of the <see cref="HeNetProvider"/> class.</summary>
@@ -127,6 +127,6 @@ public sealed class HeNetProvider : DNSProviderBase
         }
 
         var setTo = string.IsNullOrEmpty(returnedIp) ? ipValue : returnedIp;
-        return (true, status + " (set to " + setTo + ")");
+        return (true, status + ", set to " + setTo);
     }
 }

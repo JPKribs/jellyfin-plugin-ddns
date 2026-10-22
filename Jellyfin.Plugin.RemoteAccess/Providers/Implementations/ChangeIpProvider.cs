@@ -1,5 +1,6 @@
 using System;
 using System.Net.Http;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Jellyfin.Plugin.DynamicDns.Models;
@@ -15,6 +16,12 @@ namespace Jellyfin.Plugin.DynamicDns.Providers.Implementations;
 public sealed class ChangeIpProvider : DNSProviderBase
 {
     private const string DefaultServer = "nic.changeip.com";
+
+    // "Success" as a word of its own, so a reply such as "Unsuccessful Update" is never read as success.
+    private static readonly Regex SuccessWord = new(
+        "\\bsuccess",
+        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant,
+        TimeSpan.FromSeconds(2));
 
     /// <summary>Initializes a new instance of the <see cref="ChangeIpProvider"/> class.</summary>
     /// <param name="httpClientFactory">The HTTP client factory.</param>
@@ -80,7 +87,7 @@ public sealed class ChangeIpProvider : DNSProviderBase
         // ChangeIP replies with a status line such as "200 Successful Update". Match the first line only
         // so an error page that merely mentions the word elsewhere can't be read as success.
         var firstLine = FirstLine(result.Body ?? string.Empty);
-        if (firstLine.Contains("success", StringComparison.OrdinalIgnoreCase))
+        if (SuccessWord.IsMatch(firstLine))
         {
             return (true, type + " set to " + address);
         }

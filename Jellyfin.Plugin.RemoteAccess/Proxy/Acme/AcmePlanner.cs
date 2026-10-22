@@ -76,6 +76,7 @@ public static class AcmePlanner
             LastSuccessUtc = state.LastSuccessUtc > now ? now : state.LastSuccessUtc,
             ConsecutiveFailures = state.ConsecutiveFailures,
             LastError = state.LastError,
+            RateLimited = state.RateLimited,
             Names = state.Names,
             Directory = state.Directory,
             IssuedNotBeforeUtc = state.IssuedNotBeforeUtc
@@ -91,8 +92,9 @@ public static class AcmePlanner
     /// <param name="notAfterUtc">When the loaded certificate expires, null when none is loaded.</param>
     /// <param name="now">The current time (UTC).</param>
     /// <param name="notBeforeUtc">When the loaded certificate became valid, null when not known.</param>
+    /// <param name="directory">The ACME directory in use, null when not known.</param>
     /// <returns>The decision.</returns>
-    public static AcmeDecision Decide(AcmeState state, IReadOnlyList<string> names, IReadOnlyCollection<string> certificateNames, DateTime? notAfterUtc, DateTime now, DateTime? notBeforeUtc = null)
+    public static AcmeDecision Decide(AcmeState state, IReadOnlyList<string> names, IReadOnlyCollection<string> certificateNames, DateTime? notAfterUtc, DateTime now, DateTime? notBeforeUtc = null, string? directory = null)
     {
         ArgumentNullException.ThrowIfNull(state);
         ArgumentNullException.ThrowIfNull(names);
@@ -109,14 +111,10 @@ public static class AcmePlanner
         // counted from when it was issued on this server's clock. A clock that runs fast or slow then still
         // waits the right time, instead of seeing a fresh certificate as expired and ordering one daily. Only the
         // certificate from that issue counts: an older file put back in its place is judged by its own dates below.
-        if (covers && notBeforeUtc is { } from && state.LastSuccessUtc is { } issued && state.Names.SequenceEqual(names, StringComparer.Ordinal)
-            && (state.IssuedNotBeforeUtc is not { } recorded || (from - recorded).Duration() < TimeSpan.FromSeconds(1)))
+        if (covers && LifetimeRenewAt(state, names, notAfterUtc, notBeforeUtc) is { } renewAt && state.LastSuccessUtc is { } issued
+            && now < renewAt && now >= issued)
         {
-            var renewAt = issued + ((notAfterUtc!.Value - from) * 2 / 3);
-            if (now < renewAt && now >= issued)
-            {
-                return new AcmeDecision(AcmeAction.None);
-            }
+            return new AcmeDecision(AcmeAction.None);
         }
 
         AcmeAction wanted;
@@ -144,9 +142,10 @@ public static class AcmePlanner
             }
         }
 
-        // Only a working certificate from this directory for these names holds a new order back; a missing,
-        // broken or staging one is replaced at once.
-        if (covers && notAfterUtc > now && state.LastSuccessUtc is { } success && state.Names.SequenceEqual(names, StringComparer.Ordinal))
+        // Any certificate issued for these names from this directory holds a new order back for a day, whether
+        // or not it loaded. One that never loads would otherwise be ordered again at every check. A staging one
+        // comes from another directory, so it is replaced at once.
+        if (state.LastSuccessUtc is { } success && state.Names.SequenceEqual(names, StringComparer.Ordinal) && SameDirectory(state, directory))
         {
             var next = success + _minInterval;
             if (now < next)
@@ -157,4 +156,56 @@ public static class AcmePlanner
 
         return new AcmeDecision(wanted);
     }
+
+    /// <summary>
+    /// When to look at the certificate again: the end of a wait, now when an order is due, or else when the
+    /// loaded certificate is due for renewal. Lets a timer renew on time rather than only the daily task.
+    /// </summary>
+    /// <param name="state">The record of earlier attempts.</param>
+    /// <param name="names">The names wanted, from <see cref="Names"/>.</param>
+    /// <param name="certificateNames">The names the loaded certificate covers, empty when none is loaded.</param>
+    /// <param name="notAfterUtc">When the loaded certificate expires, null when none is loaded.</param>
+    /// <param name="now">The current time (UTC).</param>
+    /// <param name="notBeforeUtc">When the loaded certificate became valid, null when not known.</param>
+    /// <param name="directory">The ACME directory in use, null when not known.</param>
+    /// <returns>The time (UTC), or null when there is nothing to order.</returns>
+    public static DateTime? NextCheckUtc(AcmeState state, IReadOnlyList<string> names, IReadOnlyCollection<string> certificateNames, DateTime? notAfterUtc, DateTime now, DateTime? notBeforeUtc = null, string? directory = null)
+    {
+        var decision = Decide(state, names, certificateNames, notAfterUtc, now, notBeforeUtc, directory);
+        switch (decision.Action)
+        {
+            case AcmeAction.NoNames:
+                return null;
+            case AcmeAction.Wait:
+                return decision.NextAttemptUtc;
+            case AcmeAction.Issue or AcmeAction.Renew:
+                return now;
+        }
+
+        if (notAfterUtc is not { } notAfter)
+        {
+            return null;
+        }
+
+        var byDates = notAfter - RenewBefore;
+        return LifetimeRenewAt(state, names, notAfterUtc, notBeforeUtc) is { } renewAt && renewAt > now ? renewAt : byDates;
+    }
+
+    // Two thirds into the lifetime of the certificate this plugin was issued for these names, on this server's
+    // clock. Null when the loaded certificate is not that one.
+    private static DateTime? LifetimeRenewAt(AcmeState state, IReadOnlyList<string> names, DateTime? notAfterUtc, DateTime? notBeforeUtc)
+    {
+        if (notAfterUtc is not { } notAfter || notBeforeUtc is not { } from || state.LastSuccessUtc is not { } issued
+            || !state.Names.SequenceEqual(names, StringComparer.Ordinal)
+            || (state.IssuedNotBeforeUtc is { } recorded && (from - recorded).Duration() >= TimeSpan.FromSeconds(1)))
+        {
+            return null;
+        }
+
+        return issued + ((notAfter - from) * 2 / 3);
+    }
+
+    // State from versions that did not record the directory, or a caller that does not know it, counts as the same.
+    private static bool SameDirectory(AcmeState state, string? directory)
+        => directory is null || state.Directory.Length == 0 || string.Equals(state.Directory, directory, StringComparison.OrdinalIgnoreCase);
 }

@@ -51,6 +51,12 @@ public static class RecordBackoff
     /// paused record whose address moved is retried at once, so a pause never holds back a new public IP.
     /// A record paused before the failed addresses were tracked has none stored, which counts as moved and
     /// earns it one retry.
+    /// <para>
+    /// After a partial success only the family that failed keeps a failed address. The family that landed
+    /// counts as moved once its detected address leaves the one last pushed. A family the failed attempt
+    /// carried that the record no longer updates, such as IPv6 unticked after its pushes kept failing, also
+    /// counts as a change, so the fix is tried at once instead of after the pause.
+    /// </para>
     /// </summary>
     /// <param name="record">The record to evaluate.</param>
     /// <param name="ip">The freshly detected public addresses.</param>
@@ -59,8 +65,40 @@ public static class RecordBackoff
     {
         ArgumentNullException.ThrowIfNull(record);
         ArgumentNullException.ThrowIfNull(ip);
-        return (record.WantsIPv4(ip) && !string.Equals(ip.IPv4, record.FailedIPv4, StringComparison.OrdinalIgnoreCase))
-            || (record.WantsIPv6(ip) && !string.Equals(ip.IPv6, record.FailedIPv6, StringComparison.OrdinalIgnoreCase));
+
+        var wantsV4 = record.WantsIPv4(ip);
+        var wantsV6 = record.WantsIPv6(ip);
+        var failedV4 = !string.IsNullOrEmpty(record.FailedIPv4);
+        var failedV6 = !string.IsNullOrEmpty(record.FailedIPv6);
+
+        // The record no longer updates a family the failed attempt carried, so what it sends has changed.
+        if ((failedV4 && !record.UpdateIPv4) || (failedV6 && !record.UpdateIPv6))
+        {
+            return true;
+        }
+
+        var trackedV4 = wantsV4 && failedV4;
+        var trackedV6 = wantsV6 && failedV6;
+        if (!trackedV4 && !trackedV6)
+        {
+            // Nothing stored for a wanted family, as for a pause written before failed addresses were tracked.
+            return wantsV4 || wantsV6;
+        }
+
+        return Moved(wantsV4, trackedV4, ip.IPv4, record.FailedIPv4, record.LastIPv4)
+            || Moved(wantsV6, trackedV6, ip.IPv6, record.FailedIPv6, record.LastIPv6);
+    }
+
+    // A family that failed moved once the detected address leaves the failed one. A wanted family with no
+    // failed address landed on the last attempt, so it moved once the detected address leaves the pushed one.
+    private static bool Moved(bool wanted, bool tracked, string? detected, string failed, string lastPushed)
+    {
+        if (!wanted)
+        {
+            return false;
+        }
+
+        return !string.Equals(detected, tracked ? failed : lastPushed, StringComparison.OrdinalIgnoreCase);
     }
 
     /// <summary>

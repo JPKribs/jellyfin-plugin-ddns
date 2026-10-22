@@ -78,4 +78,34 @@ public class CloudflareProviderTests
 
         Assert.False(result.Success);
     }
+
+    [Fact]
+    public async Task BareLabel_IsCompletedWithTheZoneBeforeTheLookup()
+    {
+        string? lookupUrl = null;
+        var factory = StubHttp.Factory(req =>
+        {
+            var url = req.RequestUri!.AbsoluteUri;
+            if (req.Method == HttpMethod.Get && url.Contains("/dns_records?type=", System.StringComparison.Ordinal))
+            {
+                lookupUrl = url;
+                return (HttpStatusCode.OK, "{\"result\":[{\"id\":\"rec1\",\"name\":\"home.example.com\",\"type\":\"A\"}]}");
+            }
+
+            if (req.Method == HttpMethod.Get)
+            {
+                return (HttpStatusCode.OK, "{\"result\":[{\"id\":\"zone1\",\"name\":\"example.com\"}]}");
+            }
+
+            return (HttpStatusCode.OK, "{\"result\":{\"id\":\"rec1\"}}");
+        });
+        var provider = new CloudflareProvider(factory, NullLogger<CloudflareProvider>.Instance);
+        var record = Record();
+        record.Hostname = "home";
+
+        var result = await provider.UpdateAsync(record, new DetectedIP { IPv4 = "1.2.3.4" }, CancellationToken.None);
+
+        Assert.True(result.Success);
+        Assert.Contains("name=home.example.com", lookupUrl, System.StringComparison.Ordinal);
+    }
 }

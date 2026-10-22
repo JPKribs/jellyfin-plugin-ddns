@@ -4,7 +4,7 @@ Remote Access puts a secure HTTPS address in front of Jellyfin, such as `https:/
 the plugin. It gets the certificate for you, listens on the standard web ports, and turns away people trying to
 break in. There is no separate reverse proxy to run.
 
-For a complete walkthrough with a new domain, see [the Beginner's Guide](BeginnersGuide.md).
+For a complete walkthrough, see the Beginner's Guides: [free with Duck DNS](BeginnersGuideFree.md) or [recommended with your own domain](BeginnersGuide.md).
 
 !!! warning "Everything runs inside Jellyfin"
     If Jellyfin is down, remote access is down too. See [Recovery](#recovery) for getting back in if a setting
@@ -15,10 +15,8 @@ For a complete walkthrough with a new domain, see [the Beginner's Guide](Beginne
 You need:
 
 * **A domain name pointed at your home.** A [Domains record](Records.md) keeps it pointed at your public IP.
-* **A router you can forward ports on**, and a public IP of your own. Compare the internet or WAN address your
-  router shows with the **Public IP** on the **Address** tab. If they differ, or the router's starts with
-  `100.64` to `100.127`, your internet provider shares one address between many homes. This is called
-  carrier-grade NAT, and forwarded ports cannot be reached. Ask your provider for a public IP.
+* **A router you can forward ports on**, and a public IP of your own, not one shared through carrier-grade NAT.
+  See [Check you are not behind CGNAT](BeginnersGuide.md#0-check-you-are-not-behind-cgnat).
 * **On Linux**, permission for Jellyfin to use ports below 1024. Run `sudo systemctl edit jellyfin`, add
   `AmbientCapabilities=CAP_NET_BIND_SERVICE` under `[Service]`, and restart Jellyfin. Windows and macOS need
   nothing.
@@ -34,8 +32,9 @@ Everything is on the **Proxy** tab. The cards at the top show what is left to do
 3. **Certificate**: leave **Let's Encrypt** selected, tick **I accept the Let's Encrypt terms**, and save. See
    [Certificates](#certificates).
 4. **Router**: forward TCP ports **80** and **443** on your router to the address this section shows.
-5. **Jellyfin**: select **Trust the Proxy**. Jellyfin restarts once so it can see each visitor's real address
-   through the proxy. Its own ports stay the same. **Undo** puts its settings back.
+5. **Jellyfin**: select **Trust the Proxy**. Until then, internet visitors are turned away. Jellyfin restarts once
+   so it can see each visitor's real address through the proxy. Its own ports stay the same. **Undo** puts its
+   settings back.
 
 Then open your address on a phone with Wi-Fi turned off. The summary at the top of the tab says when everything is
 ready.
@@ -123,11 +122,13 @@ that happens, and every device then needs the new root.
 These are on by default, and each can be changed under **Advanced**.
 
 * **Your own network is never blocked.** Bans, the block list and country rules only apply to the internet.
-* **Country rule**: only visitors from the country this server is in can connect. Add countries, or turn it off,
-  under **Advanced → Blocking**. Unblocking a country from the Dashboard adds it.
+* **Country rule**: only visitors from the country this server is in can connect. Add countries in the
+  **Countries** picker under **Advanced → Blocking**, or set **Country rule** to **Off**. Unblocking a country from
+  the Dashboard adds it. The rule blocks you abroad too, so see
+  [Travelling abroad](BeginnersGuide.md#after-setup) before a trip.
 * **Bans**: 5 failed sign-ins within 10 minutes bans the address for 60 minutes. An IPv6 visitor is banned with
-  its whole /64, since it can pick any address in it. Failures spread over many /64s ban the wider /56 after 15,
-  or /48 after 30. Those wider bans last at most 15 minutes, since they shut out others in that network too.
+  its whole /64, since it can pick any address in it. Failures spread over many /64s ban the wider /56 after 3 times
+  **Failed sign-ins before a ban**, or the /48 after 6 times, which is 15 and 30 at the default. Those wider bans last at most 15 minutes, since they shut out others in that network too.
 * **Sign-in limits**: an address can have two sign-ins in progress at once, a /56 four and a /48 eight, and each
   must arrive within 10 seconds.
 * **Immediate**: a ban, a block or a new country rule also closes connections already open, streams included.
@@ -136,16 +137,13 @@ These are on by default, and each can be changed under **Advanced**.
   is encrypted.
 * **HTTPS only**: browsers are told to always use HTTPS for your addresses, and TLS 1.2 or 1.3 is required.
 
-!!! tip "Travelling"
-    The country rule also blocks you when you are abroad. Add the country you are visiting under
-    **Advanced → Blocking** before you go.
-
 ### Low-memory servers
 
 When less than 3 GB of memory is available to Jellyfin, such as on a single-board computer or in a container with
 a memory limit, the proxy holds fewer connections: 500 in total instead of 2000, 32 per internet address instead
 of 64, and idle connections close after 60 seconds instead of 130. .NET counts three quarters of a container's
-limit, so a 4 GB container counts as 3 GB. This only changes settings you have not set yourself. **Advanced**
+limit, so a 4 GB container counts as 3 GB and gets the standard values, while a 2 GB container counts as 1.5 GB
+and gets the lower ones. This only changes settings you have not set yourself. **Advanced**
 shows both defaults and which one applies.
 
 ## Dashboard
@@ -184,6 +182,9 @@ Visitors at home still count as local, so bans, the block list and country rules
 It needs at least one address that is not a wildcard. Turning it on or off while Jellyfin trusts the proxy
 restarts Jellyfin once, and a change that cannot be applied is refused rather than saved.
 
+If the proxy fails to start while this is on, nothing could reach Jellyfin. The plugin then puts Jellyfin's own
+addresses back by itself, and Jellyfin's activity log says why, such as a port in use.
+
 ## Docker, tunnels and other proxies
 
 The proxy needs to see each visitor's real address. Some setups hide it, because something in front of the proxy
@@ -213,8 +214,8 @@ requests for your public names, all from one local address and none from the int
 * **Undo** on the Proxy tab puts Jellyfin's network settings back as they were before **Trust the Proxy**.
 * **Locked out of the dashboard?** Create an empty file named `DISABLE` in
   `plugins/configurations/Jellyfin.Plugin.DynamicDns.Proxy/` under Jellyfin's data folder, and restart
-  Jellyfin. The proxy stays off and Jellyfin's network settings go back as they were. Delete the file to turn
-  the proxy on again.
+  Jellyfin. The proxy stays off and Jellyfin's network settings go back as they were. Putting them back may
+  restart Jellyfin a second time. Delete the file to turn the proxy on again.
 * **Files the plugin cannot open?** Jellyfin is running as a different account than the one that made them. Run
   the command the Proxy tab shows, then restart Jellyfin.
 * **Uninstalling** puts Jellyfin's network settings back first.

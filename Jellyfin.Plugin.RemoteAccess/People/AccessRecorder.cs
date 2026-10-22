@@ -166,17 +166,40 @@ public sealed class AccessRecorder : IAccessRecorder
             var ready = _failures.Where(f => f.At <= cutoff).ToList();
             _failures.RemoveAll(f => f.At <= cutoff);
             var unpaired = new List<PendingFailure>();
-            foreach (var failure in ready)
+            if (ready.Count > 0)
             {
-                var pair = _reported.FindIndex(r => string.Equals(r.Ip, failure.Ip, StringComparison.Ordinal)
-                    && (r.At - failure.At).Duration() <= _pairWindow);
-                if (pair >= 0)
+                // Grouped by address once, so a burst of failures is paired in one pass rather than each one
+                // scanning every reported failure.
+                var byIp = new Dictionary<string, List<PendingFailure>>(StringComparer.Ordinal);
+                foreach (var reported in _reported)
                 {
-                    _reported.RemoveAt(pair);
+                    if (!byIp.TryGetValue(reported.Ip, out var list))
+                    {
+                        byIp[reported.Ip] = list = new List<PendingFailure>(1);
+                    }
+
+                    list.Add(reported);
                 }
-                else
+
+                foreach (var failure in ready)
                 {
-                    unpaired.Add(failure);
+                    var pair = byIp.TryGetValue(failure.Ip, out var candidates)
+                        ? candidates.FindIndex(r => (r.At - failure.At).Duration() <= _pairWindow)
+                        : -1;
+                    if (pair >= 0)
+                    {
+                        candidates!.RemoveAt(pair);
+                    }
+                    else
+                    {
+                        unpaired.Add(failure);
+                    }
+                }
+
+                _reported.Clear();
+                foreach (var list in byIp.Values)
+                {
+                    _reported.AddRange(list);
                 }
             }
 

@@ -10,6 +10,8 @@ export default function (view) {
     var current = -1;
     var hostnames = null;
     var globals = {};
+    // The routes as last loaded or saved, in canonical form, to tell whether leaving would lose changes.
+    var baseline = null;
 
     // Where each override's global value comes from, and how to say it in the field's description.
     var INHERITED = {
@@ -73,6 +75,33 @@ export default function (view) {
     }
 
     function getSettings() { return Shared.apiRequest('Proxy/Settings', 'GET'); }
+
+    // A route's editable settings in one form, so a route read back from the editor compares equal to the
+    // same route as the server sent it.
+    function canonical(r) {
+        var overrides = {};
+        overrideFields().forEach(function (el) {
+            var v = (r.Overrides || {})[el.dataset.ov];
+            overrides[el.dataset.ov] = v == null ? null : v;
+        });
+        var names = (r.Hostnames || []).map(function (x) { return String(x).trim().toLowerCase().replace(/\.$/, ''); })
+            .filter(function (x, i, all) { return x && all.indexOf(x) === i; }).sort();
+        return {
+            Id: r.Id || '', Name: (r.Name || '').trim(), Enabled: r.Enabled !== false, Hostnames: names,
+            Target: (r.Target || '').trim(), Exposure: r.Exposure || 'LanAndWan', PreserveHost: !!r.PreserveHost,
+            BackendTls: r.BackendTls || 'Verify', PinnedThumbprint: (r.PinnedThumbprint || '').trim(), Overrides: overrides
+        };
+    }
+
+    function routesState() {
+        return JSON.stringify(routes.map(canonical));
+    }
+
+    function isDirty() {
+        if (baseline === null) return false;
+        storeEditor();
+        return routesState() !== baseline;
+    }
 
     function newRoute() {
         return {
@@ -143,6 +172,7 @@ export default function (view) {
     }
 
     function load() {
+        baseline = null;
         Promise.all([getSettings(), hostnames.load(), Shared.apiRequest('Proxy/Defaults', 'GET')]).then(function (results) {
             var s = results[0];
             // What a route falls back to: the Advanced tab's value, or the built-in default when that is empty too.
@@ -154,12 +184,16 @@ export default function (view) {
             routes = (s && s.Routes) || [];
             current = routes.length ? 0 : -1;
             render();
+            baseline = routesState();
         }).catch(function () {
             Shared.setStatus('routesStatus', 'Could not load services.', true);
         });
     }
 
     function save() {
+        var button = Shared.getEl('btnSaveRoutes');
+        if (button.disabled) return;
+        button.disabled = true;
         storeEditor();
         Shared.setStatus('routesStatus', 'Saving...', false);
         getSettings().then(function (fresh) {
@@ -168,11 +202,14 @@ export default function (view) {
         }).then(function (result) {
             routes = (result && result.Settings && result.Settings.Routes) || routes;
             render();
+            baseline = routesState();
             Shared.setStatus('routesStatus', 'Saved.', false);
         }).catch(function (err) {
-            errorText(err, 'Save failed.').then(function (text) {
+            return errorText(err, 'Save failed.').then(function (text) {
                 Shared.setStatus('routesStatus', text, true, { timeout: 0 });
             });
+        }).then(function () {
+            button.disabled = false;
         });
     }
 
@@ -216,6 +253,7 @@ export default function (view) {
         tabIndex: 4,
         tabs: TABS,
         bind: bind,
-        load: load
+        load: load,
+        isDirty: isDirty
     }).shared;
 }

@@ -20,10 +20,10 @@
                             <div id="routeState" class="fieldDescription hidden"></div>
                         </div>
                         <div class="jpk-selector-actions">
-                            <button is="emby-button" type="button" id="btnNewRoute" class="raised jpk-icon-btn jpk-button-submit" title="Add a service">
+                            <button is="emby-button" type="button" id="btnNewRoute" class="raised jpk-icon-btn jpk-button-submit" title="Add a service" aria-label="Add a service">
                                 <span class="material-icons" aria-hidden="true">add</span>
                             </button>
-                            <button is="emby-button" type="button" id="btnDeleteRoute" class="raised jpk-icon-btn jpk-button-destructive" title="Delete this service">
+                            <button is="emby-button" type="button" id="btnDeleteRoute" class="raised jpk-icon-btn jpk-button-destructive" title="Delete this service" aria-label="Delete this service">
                                 <span class="material-icons" aria-hidden="true">delete</span>
                             </button>
                         </div>
@@ -68,7 +68,7 @@
                         <div class="jpk-collapsible-section">
                             <button type="button" class="jpk-collapsible-header collapsed" aria-expanded="false" aria-controls="routeAdvanced" data-target="routeAdvanced">
                                 <span class="jpk-collapsible-title">Advanced</span>
-                                <span class="jpk-collapsible-icon">&#9660;</span>
+                                <span class="jpk-collapsible-icon" aria-hidden="true">&#9660;</span>
                             </button>
                             <div id="routeAdvanced" class="jpk-collapsible-content collapsed">
                                 <div class="fieldDescription">Empty or Default follows the Advanced tab.</div>
@@ -84,7 +84,7 @@
                                 </div>
                                 <div class="inputContainer">
                                     <label for="ovTimeout">App timeout</label>
-                                    <input is="emby-input" type="number" id="ovTimeout" data-ov="BackendActivityTimeoutSeconds" min="61" step="1" />
+                                    <input is="emby-input" type="number" id="ovTimeout" data-ov="BackendActivityTimeoutSeconds" min="61" max="86400" step="1" />
                                     <div class="fieldDescription">How long the app may go silent before a request is dropped, in seconds. <span data-inherit-text="BackendActivityTimeoutSeconds"></span></div>
                                 </div>
                                 <div class="inputContainer">
@@ -152,7 +152,7 @@
                         <button is="emby-button" type="button" id="btnSaveRoutes" class="raised jpk-button-submit block">
                             <span>Save</span>
                         </button>
-                        <span id="routesStatus" class="jpk-status-text"></span>
+                        <span id="routesStatus" class="jpk-status-text" aria-live="polite"></span>
                     </div>
 
                 </div>

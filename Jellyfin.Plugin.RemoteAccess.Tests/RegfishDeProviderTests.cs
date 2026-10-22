@@ -49,6 +49,18 @@ public class RegfishDeProviderTests
     }
 
     [Fact]
+    public async Task UnsuccessfulBody_IsFailure()
+    {
+        var provider = new RegfishDeProvider(
+            StubHttp.Always(HttpStatusCode.OK, "unsuccessful|401|token rejected"),
+            NullLogger<RegfishDeProvider>.Instance);
+
+        var result = await provider.UpdateAsync(Record(), new DetectedIP { IPv4 = "1.2.3.4" }, CancellationToken.None);
+
+        Assert.False(result.Success);
+    }
+
+    [Fact]
     public async Task HttpError_IsFailure()
     {
         var provider = new RegfishDeProvider(

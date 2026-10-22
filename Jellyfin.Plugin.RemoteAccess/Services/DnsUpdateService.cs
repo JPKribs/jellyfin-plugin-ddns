@@ -247,7 +247,7 @@ public sealed class DNSUpdateService : IDisposable
             // record whose hostname field holds no resolvable name (a record id, several DuckDNS labels).
             var name = record.Proxied ? null : RecordTarget.ResolvableName(record);
             var dns = name is null
-                ? DNSResolution.Failed
+                ? DNSResolution.NotChecked
                 : await _dnsLookup.ResolveAsync(name, cancellationToken).ConfigureAwait(false);
             var decision = UpdatePolicy.Decide(record, ip, dns, forceInterval, now);
             if (decision.IsSkip())
@@ -287,7 +287,13 @@ public sealed class DNSUpdateService : IDisposable
                 continue;
             }
 
-            var (providerResult, transient) = await PushAsync(provider, record, login, password, ip, timeout, cancellationToken).ConfigureAwait(false);
+            // A family DNS already serves is left out while the other one is pushed, where the provider sends
+            // each family in its own request. A forced refresh needs neither, so it still sends both.
+            var (needV4, needV6) = UpdatePolicy.FamiliesNeedingPush(record, ip, dns, now);
+            var holdV4 = record.WantsIPv4(ip) && !needV4 && needV6;
+            var holdV6 = record.WantsIPv6(ip) && !needV6 && needV4;
+
+            var (providerResult, transient, heldV4, heldV6) = await PushAsync(provider, record, login, password, ip, timeout, holdV4, holdV6, cancellationToken).ConfigureAwait(false);
             result.Success = providerResult.Success;
             result.Action = providerResult.Success ? "Updated" : "Failed";
 
@@ -298,6 +304,8 @@ public sealed class DNSUpdateService : IDisposable
                 : FormatUtilities.SanitizeForLog(providerResult.Message, MaxMessageLength);
             result.IPv4Applied = providerResult.IPv4Applied;
             result.IPv6Applied = providerResult.IPv6Applied;
+            result.IPv4Held = heldV4;
+            result.IPv6Held = heldV6;
             result.Transient = !providerResult.Success && transient;
             result.DnsAlreadyServes = !providerResult.Success && ServesWanted(record, ip, dns);
             statusUpdates[record.Id] = result;
@@ -309,7 +317,7 @@ public sealed class DNSUpdateService : IDisposable
     private static string PauseSummary(DNSRecord record, int threshold)
         => record.ConsecutiveFailures >= threshold
             ? "Paused after " + record.ConsecutiveFailures + " consecutive failures."
-            : "Paused after " + record.TransientFailures + " consecutive temporary failures (timeouts, network or provider server errors).";
+            : "Paused after " + record.TransientFailures + " consecutive temporary failures. These are timeouts, network errors or provider server errors.";
 
     /// <summary>
     /// Tracks detection health across runs so a persistent inability to find a public IP surfaces once
@@ -460,20 +468,23 @@ public sealed class DNSUpdateService : IDisposable
         RequestTimeoutSeconds = config.RequestTimeoutSeconds
     };
 
-    private async Task<(DNSUpdateResult Result, bool Transient)> PushAsync(
+    private async Task<(DNSUpdateResult Result, bool Transient, bool HeldV4, bool HeldV6)> PushAsync(
         IDNSProvider provider,
         DNSRecord record,
         string login,
         string password,
         DetectedIP ip,
         TimeSpan timeout,
+        bool holdV4,
+        bool holdV6,
         CancellationToken cancellationToken)
     {
         using var reqCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         reqCts.CancelAfter(timeout);
 
-        // Watch the provider's HTTP responses so a failure can be classed as temporary or definitive.
-        var attempt = ProviderAttempt.Begin(cancellationToken);
+        // Watch the provider's HTTP responses so a failure can be classed as temporary or definitive. The
+        // attempt also tells a per-family provider which family is already current.
+        var attempt = ProviderAttempt.Begin(holdV4, holdV6, cancellationToken);
 
         try
         {
@@ -481,17 +492,17 @@ public sealed class DNSUpdateService : IDisposable
             // encrypted values.
             var live = record.WithSecrets(login, password);
             var result = await provider.UpdateAsync(live, ip, reqCts.Token).ConfigureAwait(false);
-            return (result, attempt.FailureIsTransient);
+            return (result, attempt.FailureIsTransient, attempt.IPv4Held, attempt.IPv6Held);
         }
         catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
         {
             // The per request timeout fired rather than an outer cancellation.
-            return (DNSUpdateResult.Fail("Request timed out after " + timeout.TotalSeconds.ToString("0", CultureInfo.InvariantCulture) + "s."), true);
+            return (DNSUpdateResult.Fail("Request timed out after " + timeout.TotalSeconds.ToString("0", CultureInfo.InvariantCulture) + "s."), true, attempt.IPv4Held, attempt.IPv6Held);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             _logger.LogError(ex, "Unexpected error updating {Host}", record.Hostname);
-            return (DNSUpdateResult.Fail("Unexpected error: " + ex.Message), false);
+            return (DNSUpdateResult.Fail("Unexpected error: " + ex.Message), false, attempt.IPv4Held, attempt.IPv6Held);
         }
     }
 
@@ -598,18 +609,22 @@ public sealed class DNSUpdateService : IDisposable
             return;
         }
 
-        // A partial success (one family pushed, the other rejected) still reaches the provider and is
-        // accepted by it, so it must not walk a record into backoff and silence the family that works.
-        // The overall result stays failed, which surfaces the broken family and retries it next run.
-        var v4Applied = result.IPv4Applied ?? (result.Success && record.WantsIPv4(ip));
-        var v6Applied = result.IPv6Applied ?? (result.Success && record.WantsIPv6(ip));
-        var accepted = result.Success || v4Applied || v6Applied;
-        RecordBackoff.ApplyAttempt(record, accepted, result.Transient, backoffThreshold, backoffWindow, now);
+        // A family left out of the push because DNS already served it was not attempted, so it neither
+        // landed nor failed this run.
+        var v4Sent = record.WantsIPv4(ip) && !result.IPv4Held;
+        var v6Sent = record.WantsIPv6(ip) && !result.IPv6Held;
+        var v4Applied = result.IPv4Applied ?? (result.Success && v4Sent);
+        var v6Applied = result.IPv6Applied ?? (result.Success && v6Sent);
 
-        // Remember what a failed attempt tried to push, so a pause is lifted early only once the address
-        // moves. An accepted attempt clears it.
-        record.FailedIPv4 = !accepted && record.WantsIPv4(ip) ? ip.IPv4! : string.Empty;
-        record.FailedIPv6 = !accepted && record.WantsIPv6(ip) ? ip.IPv6! : string.Empty;
+        // A partial success (one family pushed, the other rejected) is still a failed attempt for backoff.
+        // Otherwise a family the provider keeps refusing would be retried, and logged, on every run forever.
+        // The family that landed is still recorded below, and later pushes leave it out where they can.
+        RecordBackoff.ApplyAttempt(record, result.Success, result.Transient, backoffThreshold, backoffWindow, now);
+
+        // Remember what each failed family tried to push, so a pause is lifted early only once an address
+        // moves. A family that landed, or was not sent, keeps none. A success clears both.
+        record.FailedIPv4 = !result.Success && v4Sent && !v4Applied ? ip.IPv4! : string.Empty;
+        record.FailedIPv6 = !result.Success && v6Sent && !v6Applied ? ip.IPv6! : string.Empty;
 
         // Record only the addresses that actually landed, per family, so a family the provider rejected
         // (or cannot carry) is never marked as pushed and silently skipped forever after.

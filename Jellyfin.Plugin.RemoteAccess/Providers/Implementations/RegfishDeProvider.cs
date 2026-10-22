@@ -1,5 +1,6 @@
 using System;
 using System.Net.Http;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Jellyfin.Plugin.DynamicDns.Models;
@@ -17,6 +18,12 @@ namespace Jellyfin.Plugin.DynamicDns.Providers.Implementations;
 public sealed class RegfishDeProvider : DNSProviderBase
 {
     private const string DefaultServer = "dyndns.regfish.de";
+
+    // "Success" as a word of its own, so a reply such as "unsuccessful" is never read as success.
+    private static readonly Regex SuccessWord = new(
+        "\\bsuccess",
+        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant,
+        TimeSpan.FromSeconds(2));
 
     /// <summary>Initializes a new instance of the <see cref="RegfishDeProvider"/> class.</summary>
     /// <param name="httpClientFactory">The HTTP client factory.</param>
@@ -80,14 +87,14 @@ public sealed class RegfishDeProvider : DNSProviderBase
             return DNSUpdateResult.Fail("regfish.de returned HTTP " + result.Status + ".");
         }
 
-        if (!result.Body.Contains("success", StringComparison.OrdinalIgnoreCase))
+        if (!SuccessWord.IsMatch(result.Body))
         {
             return DNSUpdateResult.Fail("server said: " + FirstLine(result.Body));
         }
 
         var detail = wantIPv4 && wantIPv6
-            ? "IPv4 set to " + ip.IPv4 + "; IPv6 set to " + ip.IPv6
+            ? "IPv4 set to " + ip.IPv4 + " and IPv6 set to " + ip.IPv6
             : wantIPv4 ? "IPv4 set to " + ip.IPv4 : "IPv6 set to " + ip.IPv6;
-        return DNSUpdateResult.Ok("regfish.de: " + detail + ".");
+        return WithFamilies(DNSUpdateResult.Ok("regfish.de: " + detail + "."), wantIPv4, wantIPv6);
     }
 }

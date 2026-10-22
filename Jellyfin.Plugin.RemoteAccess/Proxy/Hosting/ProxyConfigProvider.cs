@@ -29,6 +29,13 @@ public sealed class ProxyConfigProvider : IProxyConfigProvider
     /// <summary>The cluster metadata key carrying a pinned backend certificate thumbprint.</summary>
     public const string PinnedThumbprintKey = "PinnedThumbprint";
 
+    /// <summary>
+    /// The most connections each Jellyfin cluster opens to Jellyfin. YARP otherwise opens one per request in
+    /// flight without limit. This is far above what a household uses, open sessions and streams included, and
+    /// requests past it wait for a free connection rather than fail.
+    /// </summary>
+    public const int JellyfinConnections = 256;
+
     private volatile Snapshot _snapshot;
 
     /// <summary>
@@ -107,7 +114,8 @@ public sealed class ProxyConfigProvider : IProxyConfigProvider
             {
                 [ProxyRuntime.JellyfinId] = new() { Address = runtime.JellyfinBackend.ToString() }
             },
-            HttpRequest = Request(null)
+            HttpRequest = Request(null),
+            HttpClient = new HttpClientConfig { MaxConnectionsPerServer = JellyfinConnections }
         });
 
         // YARP's activity timer only restarts when a read or write completes, and a paused player stops
@@ -119,7 +127,8 @@ public sealed class ProxyConfigProvider : IProxyConfigProvider
             {
                 [ProxyRuntime.JellyfinMediaId] = new() { Address = runtime.JellyfinBackend.ToString() }
             },
-            HttpRequest = Request(null) with { ActivityTimeout = MediaActivityTimeout }
+            HttpRequest = Request(null) with { ActivityTimeout = MediaActivityTimeout },
+            HttpClient = new HttpClientConfig { MaxConnectionsPerServer = JellyfinConnections }
         });
 
         return clusters;

@@ -22,6 +22,10 @@ public sealed class SpaceshipProvider : DNSProviderBase
 {
     private const string DefaultServer = "spaceship.dev";
 
+    // The largest page the record list returns, and a bound on how many pages one push reads.
+    private const int ListPageSize = 500;
+    private const int MaxListPages = 20;
+
     /// <summary>Initializes a new instance of the <see cref="SpaceshipProvider"/> class.</summary>
     /// <param name="httpClientFactory">The HTTP client factory.</param>
     /// <param name="logger">The logger.</param>
@@ -165,24 +169,36 @@ public sealed class SpaceshipProvider : DNSProviderBase
         int ttl,
         CancellationToken cancellationToken)
     {
-        var list = await SendAsync(
-            HttpMethod.Get,
-            basePath + "?take=500&skip=0",
-            cancellationToken,
-            headers).ConfigureAwait(false);
-        if (!list.Ok)
+        // The list is paged, so a zone with more records than one page holds is read page by page.
+        var addresses = new List<string>();
+        for (var page = 0; page < MaxListPages; page++)
         {
-            return (false, "list failed (HTTP " + list.Status + Detail(list.Body) + ")");
-        }
+            var skip = page * ListPageSize;
+            var list = await SendAsync(
+                HttpMethod.Get,
+                basePath + "?take=" + ListPageSize.ToString(CultureInfo.InvariantCulture) + "&skip=" + skip.ToString(CultureInfo.InvariantCulture),
+                cancellationToken,
+                headers).ConfigureAwait(false);
+            if (!list.Ok)
+            {
+                return (false, "list failed (HTTP " + list.Status + Detail(list.Body) + ")");
+            }
 
-        List<string> addresses;
-        try
-        {
-            addresses = ExistingAddresses(list.Body, rrtype, subdomain);
-        }
-        catch (JsonException)
-        {
-            return (false, "failed to parse record list");
+            int count;
+            int? total;
+            try
+            {
+                (count, total) = ExistingAddresses(list.Body, rrtype, subdomain, addresses);
+            }
+            catch (JsonException)
+            {
+                return (false, "failed to parse record list");
+            }
+
+            if (count < ListPageSize || (total is { } t && skip + count >= t))
+            {
+                break;
+            }
         }
 
         // Already serving exactly the target address: nothing to write.
@@ -230,12 +246,13 @@ public sealed class SpaceshipProvider : DNSProviderBase
         return (true, "set to " + ipValue);
     }
 
-    private static List<string> ExistingAddresses(string body, string rrtype, string subdomain)
+    // Adds the matching addresses on one page of the record list to result. Returns how many items the
+    // page held and the total the API reports, when it reports one, so the caller knows whether to page on.
+    private static (int Count, int? Total) ExistingAddresses(string body, string rrtype, string subdomain, List<string> result)
     {
-        var result = new List<string>();
         if (string.IsNullOrWhiteSpace(body))
         {
-            return result;
+            return (0, null);
         }
 
         using var doc = JsonDocument.Parse(body);
@@ -243,8 +260,14 @@ public sealed class SpaceshipProvider : DNSProviderBase
             || !doc.RootElement.TryGetProperty("items", out var items)
             || items.ValueKind != JsonValueKind.Array)
         {
-            return result;
+            return (0, null);
         }
+
+        int? total = doc.RootElement.TryGetProperty("total", out var totalElement)
+            && totalElement.ValueKind == JsonValueKind.Number
+            && totalElement.TryGetInt32(out var totalValue)
+                ? totalValue
+                : null;
 
         foreach (var item in items.EnumerateArray())
         {
@@ -256,7 +279,7 @@ public sealed class SpaceshipProvider : DNSProviderBase
             if (item.TryGetProperty("type", out var type)
                 && string.Equals(type.GetString(), rrtype, StringComparison.Ordinal)
                 && item.TryGetProperty("name", out var name)
-                && string.Equals(name.GetString(), subdomain, StringComparison.Ordinal)
+                && string.Equals(name.GetString(), subdomain, StringComparison.OrdinalIgnoreCase)
                 && item.TryGetProperty("address", out var address)
                 && address.ValueKind == JsonValueKind.String)
             {
@@ -264,7 +287,7 @@ public sealed class SpaceshipProvider : DNSProviderBase
             }
         }
 
-        return result;
+        return (items.GetArrayLength(), total);
     }
 
     private static string RecordObject(string rrtype, string subdomain, string address, int? ttl)

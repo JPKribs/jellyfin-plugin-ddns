@@ -36,7 +36,7 @@
                     <div class="jpk-collapsible-section" data-section="address">
                         <button type="button" class="jpk-collapsible-header" aria-expanded="true" aria-controls="secAddress" data-target="secAddress">
                             <span class="jpk-collapsible-title">Address</span>
-                            <span class="jpk-collapsible-icon">&#9660;</span>
+                            <span class="jpk-collapsible-icon" aria-hidden="true">&#9660;</span>
                         </button>
                         <div id="secAddress" class="jpk-collapsible-content">
                             <div style="margin-bottom: 1.8em;">
@@ -54,7 +54,7 @@
                     <div class="jpk-collapsible-section" data-section="certificate">
                         <button type="button" class="jpk-collapsible-header" aria-expanded="true" aria-controls="secCertificate" data-target="secCertificate">
                             <span class="jpk-collapsible-title">Certificate</span>
-                            <span class="jpk-collapsible-icon">&#9660;</span>
+                            <span class="jpk-collapsible-icon" aria-hidden="true">&#9660;</span>
                         </button>
                         <div id="secCertificate" class="jpk-collapsible-content">
                             <div class="selectContainer">
@@ -116,7 +116,7 @@
                                     </button>
                                 </div>
                                 <div class="fieldDescription">Renewal is automatic, so use this only to replace a certificate now, such as after its key may have leaked.</div>
-                                <span id="certRequestStatus" class="jpk-status-text"></span>
+                                <span id="certRequestStatus" class="jpk-status-text" aria-live="polite"></span>
                             </div>
                         </div>
                     </div>
@@ -124,7 +124,7 @@
                     <div class="jpk-collapsible-section" data-section="router">
                         <button type="button" class="jpk-collapsible-header" aria-expanded="true" aria-controls="secRouter" data-target="secRouter">
                             <span class="jpk-collapsible-title">Router</span>
-                            <span class="jpk-collapsible-icon">&#9660;</span>
+                            <span class="jpk-collapsible-icon" aria-hidden="true">&#9660;</span>
                         </button>
                         <div id="secRouter" class="jpk-collapsible-content">
                             <div id="routerInstruction" class="jpk-record-card"></div>
@@ -135,7 +135,7 @@
                     <div class="jpk-collapsible-section" data-section="jellyfin">
                         <button type="button" class="jpk-collapsible-header" aria-expanded="true" aria-controls="secJellyfin" data-target="secJellyfin">
                             <span class="jpk-collapsible-title">Jellyfin</span>
-                            <span class="jpk-collapsible-icon">&#9660;</span>
+                            <span class="jpk-collapsible-icon" aria-hidden="true">&#9660;</span>
                         </button>
                         <div id="secJellyfin" class="jpk-collapsible-content">
                             <div id="jellyfinState" class="jpk-info"></div>
@@ -150,7 +150,7 @@
                                     <span>Undo</span>
                                 </button>
                             </div>
-                            <span id="moveStatus" class="jpk-status-text"></span>
+                            <span id="moveStatus" class="jpk-status-text" aria-live="polite"></span>
                         </div>
                     </div>
 
@@ -158,7 +158,7 @@
                         <button is="emby-button" type="button" id="btnSave" class="raised jpk-button-submit block">
                             <span>Save</span>
                         </button>
-                        <span id="saveStatus" class="jpk-status-text"></span>
+                        <span id="saveStatus" class="jpk-status-text" aria-live="polite"></span>
                     </div>
 
                 </div>

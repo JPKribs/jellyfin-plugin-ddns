@@ -46,7 +46,7 @@ public sealed class NfsnProvider : DNSProviderBase
     public override string Label => "NearlyFreeSpeech.NET";
 
     /// <inheritdoc />
-    public override string Hint => "Member login is your NFSN member login. API key comes from Profile, then API. This protocol carries IPv4 only.";
+    public override string Hint => "Member login is your NFSN member login and API key comes from Profile, then API. This protocol carries IPv4 only.";
 
     /// <inheritdoc />
     public override ProviderFields Fields => new()
@@ -131,6 +131,12 @@ public sealed class NfsnProvider : DNSProviderBase
         catch (JsonException)
         {
             return DNSUpdateResult.Fail("JSON decoding failure on listRRs response.");
+        }
+
+        // The record already holds the address, so removing and re-adding it would only open a gap.
+        if (existingData is not null && string.Equals(existingData.Trim(), ipv4, StringComparison.OrdinalIgnoreCase))
+        {
+            return DNSUpdateResult.Ok("A record already set to " + ipv4);
         }
 
         // 2. Remove the existing A record if one exists (there is no updateRR endpoint).

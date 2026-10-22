@@ -75,7 +75,7 @@ public sealed class FreeMyIpProvider : DNSProviderBase
         // Match the status token, not a substring: the body "OK" must not be confused with words like
         // "TOKEN" that also contain "OK".
         return string.Equals(FirstToken(result.Body), "OK", StringComparison.OrdinalIgnoreCase)
-            ? DNSUpdateResult.Ok("freemyip accepted the update.")
+            ? WithFamilies(DNSUpdateResult.Ok("freemyip accepted the update."), v4 is not null, v6 is not null)
             : DNSUpdateResult.Fail("server said: " + FirstLine(result.Body));
     }
 }

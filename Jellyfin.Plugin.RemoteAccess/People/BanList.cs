@@ -32,6 +32,16 @@ public sealed class BanList : IFailureTracker
     // A ban on a /56 or /48 also shuts out everyone else in it, such as a carrier's or a university's customers,
     // so it is short; an attacker who carries on is banned again when it ends.
     private const int WideBanMinutes = 15;
+
+    // A /56 or /48 banned again within a day gets twice its last ban, up to the configured ban length, or up
+    // to a day when bans last until lifted. The short first ban spares the neighbours, the doubling stops an
+    // attacker who simply waits each one out.
+    private const int MaxWideBanMinutes = 24 * 60;
+    private static readonly TimeSpan _repeatWindow = TimeSpan.FromDays(1);
+
+    // Wide networks remembered for doubling, bounded like the failure counts.
+    private const int MaxRepeats = 10_000;
+    private readonly ConcurrentDictionary<string, (DateTime Last, int Minutes)> _repeats = new(StringComparer.Ordinal);
     private readonly PeopleStore _store;
     private readonly GeoIpService _geo;
     private readonly ActivityLogger? _activity;
@@ -172,7 +182,7 @@ public sealed class BanList : IFailureTracker
         var minutes = options.BanMinutes;
         if (!string.Equals(key, NetworkClassifier.GroupKey(client), StringComparison.Ordinal))
         {
-            minutes = minutes > 0 ? Math.Min(minutes, WideBanMinutes) : WideBanMinutes;
+            minutes = WideMinutes(key, now, options.BanMinutes);
         }
 
         var location = _geo.IsLoaded ? _geo.Lookup(client) : GeoLocation.Unknown;
@@ -194,6 +204,48 @@ public sealed class BanList : IFailureTracker
             _logger.LogWarning("Banned {Key} in {Country} after {Failures} failed sign-ins", key, where, count);
         }
     }
+
+    /// <summary>
+    /// How long a /56 or /48 is banned: short the first time, doubled each time it is banned again within a day.
+    /// </summary>
+    /// <param name="key">The network's key.</param>
+    /// <param name="now">The time, UTC.</param>
+    /// <param name="banMinutes">The configured ban length, zero for until lifted.</param>
+    /// <returns>The minutes, never zero.</returns>
+    internal int WideMinutes(string key, DateTime now, int banMinutes)
+    {
+        var cap = banMinutes > 0 ? banMinutes : MaxWideBanMinutes;
+        var minutes = Math.Min(cap, WideBanMinutes);
+        if (_repeats.TryGetValue(key, out var last) && now - last.Last < _repeatWindow)
+        {
+            minutes = (int)Math.Min(cap, Math.Max(minutes, last.Minutes * 2L));
+        }
+
+        if (!_repeats.ContainsKey(key) && _repeats.Count >= MaxRepeats)
+        {
+            foreach (var stale in _repeats.Where(p => now - p.Value.Last >= _repeatWindow).Select(p => p.Key).ToList())
+            {
+                _repeats.TryRemove(stale, out _);
+            }
+
+            if (_repeats.Count >= MaxRepeats)
+            {
+                foreach (var oldest in _repeats.OrderBy(p => p.Value.Last).Take(MaxRepeats / 10).Select(p => p.Key).ToList())
+                {
+                    _repeats.TryRemove(oldest, out _);
+                }
+            }
+        }
+
+        _repeats[key] = (now, minutes);
+        return minutes;
+    }
+
+    /// <summary>
+    /// Reads the saved bans now, before the proxy listens, so they apply from the first connection. A failed
+    /// read is retried on later use, as before.
+    /// </summary>
+    public void Preload() => _ = Bans;
 
     // A few bans a minute are logged one by one; past that, they are summed up, so an attack spread over many
     // addresses cannot bury everything else in Jellyfin's activity log.
@@ -319,6 +371,7 @@ public sealed class BanList : IFailureTracker
     public bool Unban(string ip)
     {
         _failures.TryRemove(ip, out _);
+        _repeats.TryRemove(ip, out _);
         var removed = Bans.TryRemove(ip, out _);
         if (removed)
         {

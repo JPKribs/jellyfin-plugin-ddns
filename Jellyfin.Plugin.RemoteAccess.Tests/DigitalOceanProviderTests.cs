@@ -101,9 +101,33 @@ public class DigitalOceanProviderTests
 
         await provider.UpdateAsync(Record(), new DetectedIP { IPv4 = "1.2.3.4" }, CancellationToken.None);
 
-        Assert.Equal("https://api.digitalocean.com/v2/domains/example.com/records?name=home&type=A", listUrl);
+        // The bare label is completed with the zone, since the name filter takes the full record name.
+        Assert.Equal("https://api.digitalocean.com/v2/domains/example.com/records?name=home.example.com&type=A", listUrl);
         Assert.Equal("Bearer do-token", listAuth);
         Assert.Equal("https://api.digitalocean.com/v2/domains/example.com/records/42", patchUrl);
         Assert.Equal("{\"type\":\"A\",\"data\":\"1.2.3.4\"}", patchBody);
+    }
+
+    [Fact]
+    public async Task FullName_IsSentUnchanged()
+    {
+        string? listUrl = null;
+        var factory = StubHttp.Factory(req =>
+        {
+            if (req.Method == HttpMethod.Get)
+            {
+                listUrl = req.RequestUri!.AbsoluteUri;
+                return (HttpStatusCode.OK, ListOne);
+            }
+
+            return (HttpStatusCode.OK, "{}");
+        });
+        var provider = new DigitalOceanProvider(factory, NullLogger<DigitalOceanProvider>.Instance);
+        var record = Record();
+        record.Hostname = "home.example.com";
+
+        await provider.UpdateAsync(record, new DetectedIP { IPv4 = "1.2.3.4" }, CancellationToken.None);
+
+        Assert.Equal("https://api.digitalocean.com/v2/domains/example.com/records?name=home.example.com&type=A", listUrl);
     }
 }

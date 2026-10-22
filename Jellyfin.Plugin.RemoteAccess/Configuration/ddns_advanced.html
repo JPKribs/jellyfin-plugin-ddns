@@ -14,7 +14,7 @@
                     <div class="jpk-collapsible-section">
                         <button type="button" class="jpk-collapsible-header collapsed" aria-expanded="false" aria-controls="advSecurity" data-target="advSecurity">
                             <span class="jpk-collapsible-title">Security</span>
-                            <span class="jpk-collapsible-icon">&#9660;</span>
+                            <span class="jpk-collapsible-icon" aria-hidden="true">&#9660;</span>
                         </button>
                         <div id="advSecurity" class="jpk-collapsible-content collapsed">
                             <div class="selectContainer">
@@ -35,7 +35,7 @@
                             </div>
                             <div class="inputContainer">
                                 <label for="advHstsMaxAgeDays">HTTPS memory</label>
-                                <input is="emby-input" type="number" id="advHstsMaxAgeDays" data-adv="HstsMaxAgeDays" data-kind="int" min="0" step="1" />
+                                <input is="emby-input" type="number" id="advHstsMaxAgeDays" data-adv="HstsMaxAgeDays" data-kind="int" min="1" max="730" step="1" />
                                 <div class="fieldDescription">How long browsers keep using HTTPS after a visit, in days. <span data-default="HstsMaxAgeDays" data-unit="days"></span></div>
                             </div>
                             <div class="selectContainer">
@@ -57,7 +57,7 @@
                     <div class="jpk-collapsible-section">
                         <button type="button" class="jpk-collapsible-header collapsed" aria-expanded="false" aria-controls="advCountries" data-target="advCountries">
                             <span class="jpk-collapsible-title">Blocking</span>
-                            <span class="jpk-collapsible-icon">&#9660;</span>
+                            <span class="jpk-collapsible-icon" aria-hidden="true">&#9660;</span>
                         </button>
                         <div id="advCountries" class="jpk-collapsible-content collapsed">
                             <div class="fieldDescription">These only apply to the internet, never to your own or trusted networks.</div>
@@ -68,17 +68,17 @@
                             </div>
                             <div class="inputContainer">
                                 <label for="advBanFailures">Failed sign-ins before a ban</label>
-                                <input is="emby-input" type="number" id="advBanFailures" data-adv="BanFailures" data-kind="int" min="0" step="1" max="1000" />
+                                <input is="emby-input" type="number" id="advBanFailures" data-adv="BanFailures" data-kind="int" min="0" max="1000" step="1" />
                                 <div class="fieldDescription">Failed sign-ins within the window that ban an address, with 0 for no bans. <span data-default="BanFailures" data-unit="count-off"></span></div>
                             </div>
                             <div class="inputContainer">
                                 <label for="advBanWindowMinutes">Ban window</label>
-                                <input is="emby-input" type="number" id="advBanWindowMinutes" data-adv="BanWindowMinutes" data-kind="int" min="0" step="1" max="1440" />
+                                <input is="emby-input" type="number" id="advBanWindowMinutes" data-adv="BanWindowMinutes" data-kind="int" min="1" max="1440" step="1" />
                                 <div class="fieldDescription">Failures are counted over this many minutes. <span data-default="BanWindowMinutes" data-unit="minutes"></span></div>
                             </div>
                             <div class="inputContainer">
                                 <label for="advBanMinutes">Ban length</label>
-                                <input is="emby-input" type="number" id="advBanMinutes" data-adv="BanMinutes" data-kind="int" min="0" step="1" max="525600" />
+                                <input is="emby-input" type="number" id="advBanMinutes" data-adv="BanMinutes" data-kind="int" min="0" max="525600" step="1" />
                                 <div class="fieldDescription">How long a ban lasts in minutes, with 0 until you lift it. <span data-default="BanMinutes" data-unit="minutes"></span></div>
                             </div>
                             <div class="selectContainer">
@@ -118,7 +118,7 @@
                     <div class="jpk-collapsible-section">
                         <button type="button" class="jpk-collapsible-header collapsed" aria-expanded="false" aria-controls="advHistory" data-target="advHistory">
                             <span class="jpk-collapsible-title">History</span>
-                            <span class="jpk-collapsible-icon">&#9660;</span>
+                            <span class="jpk-collapsible-icon" aria-hidden="true">&#9660;</span>
                         </button>
                         <div id="advHistory" class="jpk-collapsible-content collapsed">
                             <div class="selectContainer">
@@ -152,14 +152,14 @@
                                     <span>Clear History</span>
                                 </button>
                             </div>
-                            <span id="historyStatus" class="jpk-status-text"></span>
+                            <span id="historyStatus" class="jpk-status-text" aria-live="polite"></span>
                         </div>
                     </div>
 
                     <div class="jpk-collapsible-section">
                         <button type="button" class="jpk-collapsible-header collapsed" aria-expanded="false" aria-controls="advPerformance" data-target="advPerformance">
                             <span class="jpk-collapsible-title">Performance</span>
-                            <span class="jpk-collapsible-icon">&#9660;</span>
+                            <span class="jpk-collapsible-icon" aria-hidden="true">&#9660;</span>
                         </button>
                         <div id="advPerformance" class="jpk-collapsible-content collapsed">
                             <div class="selectContainer">
@@ -196,22 +196,22 @@
                     <div class="jpk-collapsible-section">
                         <button type="button" class="jpk-collapsible-header collapsed" aria-expanded="false" aria-controls="advTimeouts" data-target="advTimeouts">
                             <span class="jpk-collapsible-title">Timeouts</span>
-                            <span class="jpk-collapsible-icon">&#9660;</span>
+                            <span class="jpk-collapsible-icon" aria-hidden="true">&#9660;</span>
                         </button>
                         <div id="advTimeouts" class="jpk-collapsible-content collapsed">
                             <div class="inputContainer">
                                 <label for="advKeepAliveSeconds">Idle connections</label>
-                                <input is="emby-input" type="number" id="advKeepAliveSeconds" data-adv="KeepAliveSeconds" data-kind="int" min="0" step="1" />
+                                <input is="emby-input" type="number" id="advKeepAliveSeconds" data-adv="KeepAliveSeconds" data-kind="int" min="5" max="3600" step="1" />
                                 <div class="fieldDescription">How long an unused connection stays open, in seconds. <span data-default="KeepAliveSeconds" data-unit="seconds"></span></div>
                             </div>
                             <div class="inputContainer">
                                 <label for="advRequestHeadersTimeoutSeconds">Request headers</label>
-                                <input is="emby-input" type="number" id="advRequestHeadersTimeoutSeconds" data-adv="RequestHeadersTimeoutSeconds" data-kind="int" min="0" step="1" />
+                                <input is="emby-input" type="number" id="advRequestHeadersTimeoutSeconds" data-adv="RequestHeadersTimeoutSeconds" data-kind="int" min="1" max="300" step="1" />
                                 <div class="fieldDescription">How long a visitor may take to send a request's headers, in seconds. <span data-default="RequestHeadersTimeoutSeconds" data-unit="seconds"></span></div>
                             </div>
                             <div class="inputContainer">
                                 <label for="advMaxRequestHeadersKb">Header size</label>
-                                <input is="emby-input" type="number" id="advMaxRequestHeadersKb" data-adv="MaxRequestHeadersKb" data-kind="int" min="0" step="1" />
+                                <input is="emby-input" type="number" id="advMaxRequestHeadersKb" data-adv="MaxRequestHeadersKb" data-kind="int" min="8" max="1024" step="1" />
                                 <div class="fieldDescription">Largest set of request headers accepted, in KB. <span data-default="MaxRequestHeadersKb" data-unit="kb"></span></div>
                             </div>
                             <div class="inputContainer">
@@ -221,7 +221,7 @@
                             </div>
                             <div class="inputContainer">
                                 <label for="advBackendActivityTimeoutSeconds">Jellyfin response</label>
-                                <input is="emby-input" type="number" id="advBackendActivityTimeoutSeconds" data-adv="BackendActivityTimeoutSeconds" data-kind="int" min="0" step="1" />
+                                <input is="emby-input" type="number" id="advBackendActivityTimeoutSeconds" data-adv="BackendActivityTimeoutSeconds" data-kind="int" min="61" max="86400" step="1" />
                                 <div class="fieldDescription">How long Jellyfin may go silent before a request is dropped, in seconds. <span data-default="BackendActivityTimeoutSeconds" data-unit="seconds"></span></div>
                             </div>
                         </div>
@@ -231,7 +231,7 @@
                         <button is="emby-button" type="button" id="btnSaveAdvanced" class="raised jpk-button-submit block">
                             <span>Save</span>
                         </button>
-                        <span id="advancedStatus" class="jpk-status-text"></span>
+                        <span id="advancedStatus" class="jpk-status-text" aria-live="polite"></span>
                     </div>
                     <div class="ddns-button-row">
                         <button is="emby-button" type="button" id="btnResetAdvanced" class="raised jpk-secondary">
@@ -241,7 +241,7 @@
                             <span>Restart Proxy</span>
                         </button>
                     </div>
-                    <span id="restartStatus" class="jpk-status-text"></span>
+                    <span id="restartStatus" class="jpk-status-text" aria-live="polite"></span>
 
                 </div>
             </form>

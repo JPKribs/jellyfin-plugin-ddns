@@ -7,8 +7,8 @@ namespace Jellyfin.Plugin.DynamicDns.Tests;
 
 /// <summary>
 /// Covers the per-record bookkeeping applied after a push (<see cref="DNSUpdateService.ApplyOutcome"/>):
-/// only addresses that actually landed are recorded per family, a partial success does not feed the
-/// backoff counter, a full failure does, and skips leave the counters untouched.
+/// only addresses that actually landed are recorded per family, a partial success feeds the
+/// backoff counter like a full failure does, and skips leave the counters untouched.
 /// </summary>
 public class DNSUpdateServiceOutcomeTests
 {
@@ -47,7 +47,7 @@ public class DNSUpdateServiceOutcomeTests
     }
 
     [Fact]
-    public void PartialSuccess_RecordsOnlyTheLandedFamily_AndDoesNotFeedBackoff()
+    public void PartialSuccess_RecordsOnlyTheLandedFamily_AndCountsTheFailedOneForBackoff()
     {
         var record = Record();
         var result = Outcome(success: false);
@@ -59,9 +59,11 @@ public class DNSUpdateServiceOutcomeTests
         Assert.Equal("1.2.3.4", record.LastIPv4);
         Assert.Equal(string.Empty, record.LastIPv6);
         Assert.Null(record.LastUpdateUtc);
-        Assert.Equal(0, record.ConsecutiveFailures);
+        Assert.Equal(1, record.ConsecutiveFailures);
         Assert.Null(record.BackoffUntilUtc);
         Assert.False(record.LastSuccess);
+        Assert.Equal(string.Empty, record.FailedIPv4);
+        Assert.Equal("2001:db8::1", record.FailedIPv6);
     }
 
     [Fact]

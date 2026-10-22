@@ -8,6 +8,7 @@ relative to that folder.
 | The plugin itself | `plugins/Dynamic DNS_<version>/` |
 | Records, settings and encrypted credentials | `plugins/configurations/Jellyfin.Plugin.DynamicDns.xml` |
 | The key for those credentials | `plugins/configurations/Jellyfin.Plugin.DynamicDns.Keys/` |
+| Each record's last status, its backoff state, and the last detected public IP | `plugins/configurations/Jellyfin.Plugin.DynamicDns.Status.json` |
 | Remote Access data | `plugins/configurations/Jellyfin.Plugin.DynamicDns.Proxy/` |
 
 The Remote Access folder holds:

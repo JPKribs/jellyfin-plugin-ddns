@@ -41,7 +41,7 @@ public sealed class Ns1Provider : DNSProviderBase
     public override string Label => "NS1";
 
     /// <inheritdoc />
-    public override string Hint => "API key is your NS1 API key. Zone is optional. Left blank, it is taken from the record name.";
+    public override string Hint => "API key is your NS1 API key. Zone is optional and is taken from the record name when left blank.";
 
     /// <inheritdoc />
     public override ProviderFields Fields => new()

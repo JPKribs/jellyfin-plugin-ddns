@@ -47,7 +47,17 @@ public sealed class ProxyHostedService : IHostedService, IDisposable
             {
                 try
                 {
-                    await _proxy.ApplyAsync(stopping).ConfigureAwait(false);
+                    try
+                    {
+                        await _proxy.ApplyAsync(stopping).ConfigureAwait(false);
+                    }
+                    catch (Exception ex) when (ex is not OperationCanceledException || !stopping.IsCancellationRequested)
+                    {
+                        // The startup check below still runs, so a proxy that failed to start never leaves Jellyfin
+                        // listening on this machine alone.
+                        _logger.LogError(ex, "Reverse proxy start-up failed");
+                    }
+
                     await _orchestrator.OnStartupAsync(_proxy, stopping).ConfigureAwait(false);
                 }
                 catch (Exception ex) when (ex is not OperationCanceledException || !stopping.IsCancellationRequested)

@@ -4,25 +4,27 @@
 
 The cards at the top of the **Domains** tab count your records:
 
-* **Healthy**: the last update succeeded within 24 hours.
-* **Unhealthy**: it has not succeeded within 24 hours.
+* **Healthy**: the last check succeeded, and happened within the last 24 hours.
+* **Unhealthy**: the last check failed, or none happened within the last 24 hours.
 * **Unpublished**: it has not run yet.
 
 ![Record health summary](screenshots/Record%20Health.png)
 
 ## Activity log
 
-The plugin writes what it does to Jellyfin's activity log, under **Dashboard → Activity**. Changes you make are
-credited to you.
+The plugin writes what it does to Jellyfin's activity log, which is part of Jellyfin's own dashboard, not the
+plugin's **Dashboard** tab. Changes you make are credited to you.
 
 ![Activity log](screenshots/Activity%20Log.png)
 
 Each entry has a level:
 
 * **Error**: something people rely on is broken. A record is left on an old address, the proxy did not start,
-  there is no working certificate, or Jellyfin does not answer through the proxy.
+  there is no working certificate, Jellyfin does not answer through the proxy, or the plugin cannot use its own
+  files.
 * **Warning**: something needs attention but still works. A certificate expires soon, a renewal failed while the
-  current certificate is still valid, a record is paused, or an address was banned.
+  current certificate is still valid, a record is paused, an address was banned, or a Let's Encrypt TXT record
+  was left at the provider.
 * **Information**: everything else.
 
 A problem is written once when it starts, and once more when it clears, not on every run. A run where every
@@ -38,20 +40,29 @@ record is already current writes nothing.
 * **Detection unhealthy**: no public IP was found for about an hour, with an entry when it is found again.
 * **Configuration changes**: a record was added, changed or removed, or the Address tab's settings changed.
 * **Plaintext credentials**: credentials cannot be encrypted on this server, once per outage.
+* **Remote Access cannot use its own files**: Jellyfin runs as an account that cannot open the plugin's folders.
+  It is an error, and names the command that fixes it. See [Recovery](RemoteAccess.md#recovery).
 
 ### Remote Access entries
 
 * **Settings changed**: a tab was saved with a change, naming what changed.
-* **Proxy could not start**: once per reason, such as a port in use, with an entry when it starts.
+* **Proxy could not start**: once per reason, such as a port in use, with an entry when it starts. With
+  **Only through the proxy** on, the plugin also puts Jellyfin's own addresses back, so Jellyfin stays reachable,
+  and says why.
 * **Trust the Proxy**: Jellyfin was set to trust the proxy, answered through it after the restart or did not,
   or **Undo** put its settings back.
 * **Certificates**: a certificate was issued, renewed, could not be, could not be loaded, or expires soon. Asking
   for a new one is logged with who asked.
+* **Root certificate created**: the plugin made a new self-signed root. Every device that should trust the
+  self-signed certificate needs it installed. See [Self-signed certificates](RemoteAccess.md#self-signed-certificates).
+* **TXT record left over**: a Let's Encrypt TXT record could not be removed from the provider. It is a warning. The
+  record does no harm, but you can delete it there.
 * **Bans**: an address or network was banned. Past five bans in a minute, the rest are summed up in one entry.
   Lifting a ban is logged too.
-* **Blocks**: an address or country was blocked or unblocked from the Dashboard.
+* **Blocks**: an address was blocked or unblocked, or a country unblocked, from the Dashboard.
 * **Refused connections**: an hourly summary of what the block list, bans and country rules turned away.
-* **Every visitor looks local**: see [When every visitor looks local](RemoteAccess.md#when-every-visitor-looks-local).
+* **Most visitors look local**: see [When every visitor looks local](RemoteAccess.md#when-every-visitor-looks-local).
   Logged once.
 * **Location database**: downloading it failed, once per reason, with an entry when it works again.
+* **History settings changed**: **Recording**, **History period** or **Location** was changed.
 * **History cleared**: every recorded visit, sign-in and refusal was deleted.

@@ -30,6 +30,7 @@ public sealed class BlockFilter : IConnectionFilter
     private long _byAddress;
     private long _byBan;
     private long _byCountry;
+    private long _byLimit;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="BlockFilter"/> class.
@@ -62,7 +63,10 @@ public sealed class BlockFilter : IConnectionFilter
     /// <returns>The counts.</returns>
     public RefusalTotals TakeTotals()
     {
-        var totals = new RefusalTotals(Interlocked.Exchange(ref _byAddress, 0), Interlocked.Exchange(ref _byBan, 0), Interlocked.Exchange(ref _byCountry, 0));
+        var totals = new RefusalTotals(Interlocked.Exchange(ref _byAddress, 0), Interlocked.Exchange(ref _byBan, 0), Interlocked.Exchange(ref _byCountry, 0))
+        {
+            Limit = Interlocked.Exchange(ref _byLimit, 0)
+        };
         if (totals.Total > 0)
         {
             _logger.LogDebug("Refused {Count} internet connections in the last minute: {Detail}", totals.Total, totals.Describe());
@@ -128,6 +132,12 @@ public sealed class BlockFilter : IConnectionFilter
 
         return false;
     }
+
+    /// <inheritdoc />
+    public void RecordLimited(IPAddress address) => Interlocked.Increment(ref _byLimit);
+
+    /// <inheritdoc />
+    public void Prepare() => _bans.Preload();
 
     private void Record(IPAddress address, BlockReason reason, GeoLocation? location)
     {
@@ -196,8 +206,11 @@ public sealed class BlockFilter : IConnectionFilter
 /// <param name="Country">Refused by the country rules.</param>
 public readonly record struct RefusalTotals(long Address, long Ban, long Country)
 {
+    /// <summary>Gets how many the connection limits refused, such as a full proxy or one address holding too many.</summary>
+    public long Limit { get; init; }
+
     /// <summary>Gets every refusal counted.</summary>
-    public long Total => Address + Ban + Country;
+    public long Total => Address + Ban + Country + Limit;
 
     /// <summary>
     /// Adds two periods together.
@@ -205,7 +218,7 @@ public readonly record struct RefusalTotals(long Address, long Ban, long Country
     /// <param name="a">One period.</param>
     /// <param name="b">The other.</param>
     /// <returns>The sum.</returns>
-    public static RefusalTotals operator +(RefusalTotals a, RefusalTotals b) => new(a.Address + b.Address, a.Ban + b.Ban, a.Country + b.Country);
+    public static RefusalTotals operator +(RefusalTotals a, RefusalTotals b) => new(a.Address + b.Address, a.Ban + b.Ban, a.Country + b.Country) { Limit = a.Limit + b.Limit };
 
     /// <summary>
     /// Adds another period to this one.
@@ -220,7 +233,7 @@ public readonly record struct RefusalTotals(long Address, long Ban, long Country
     /// <returns>The description, empty when nothing was refused.</returns>
     public string Describe()
     {
-        var parts = new List<string>(3);
+        var parts = new List<string>(4);
         if (Country > 0)
         {
             parts.Add(Country + " by the country rules");
@@ -234,6 +247,11 @@ public readonly record struct RefusalTotals(long Address, long Ban, long Country
         if (Address > 0)
         {
             parts.Add(Address + " by the block list");
+        }
+
+        if (Limit > 0)
+        {
+            parts.Add(Limit + " by the connection limits");
         }
 
         return string.Join(", ", parts);

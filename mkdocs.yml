@@ -42,7 +42,9 @@ markdown_extensions:
 
 nav:
   - Overview: index.md
-  - "Beginner's Guide": BeginnersGuide.md
+  - "Beginner's Guides":
+      - Free: BeginnersGuideFree.md
+      - Recommended: BeginnersGuide.md
   - Getting Started:
       - Installation: Installation.md
       - The Plugin's Pages: Pages.md

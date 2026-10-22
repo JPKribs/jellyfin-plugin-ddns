@@ -30,8 +30,6 @@ public sealed class AcmeCertificateService : IDisposable
     private const string DirectoryVariable = "DDNS_ACME_DIRECTORY";
     private static readonly TimeSpan _validationPoll = TimeSpan.FromSeconds(2);
     private const int ValidationPolls = 60;
-    private const int TxtPolls = 24;
-    private static readonly TimeSpan _txtPoll = TimeSpan.FromSeconds(5);
     private static readonly Uri _dnsOverHttps = new("https://cloudflare-dns.com/dns-query");
 
     private readonly ProxyPaths _paths;
@@ -81,6 +79,15 @@ public sealed class AcmeCertificateService : IDisposable
         _pendingTxt = new JsonFileStore<PendingTxtList>(paths.AcmeTxtCleanupFile, logger);
     }
 
+    /// <summary>Gets or sets how many times public DNS is asked for a published TXT record.</summary>
+    internal int TxtPolls { get; set; } = 24;
+
+    /// <summary>Gets or sets the pause before each TXT lookup.</summary>
+    internal TimeSpan TxtPollDelay { get; set; } = TimeSpan.FromSeconds(5);
+
+    /// <summary>Gets or sets how long one TXT lookup may take.</summary>
+    internal TimeSpan TxtLookupTimeout { get; set; } = TimeSpan.FromSeconds(10);
+
     /// <summary>Gets the ACME directory in use: Let's Encrypt, unless overridden for testing.</summary>
     public static Uri DirectoryUri
         => Uri.TryCreate(Environment.GetEnvironmentVariable(DirectoryVariable), UriKind.Absolute, out var custom) ? custom : WellKnownServers.LetsEncryptV2;
@@ -104,6 +111,7 @@ public sealed class AcmeCertificateService : IDisposable
             LastError = state.ConsecutiveFailures > 0 && !issuing ? state.LastError : string.Empty,
             LastSuccessUtc = state.LastSuccessUtc,
             NextAttemptUtc = !issuing && state.ConsecutiveFailures > 0 && state.LastAttemptUtc is { } last ? last + AcmePlanner.Backoff(state.ConsecutiveFailures) : null,
+            RateLimited = !issuing && state.ConsecutiveFailures > 0 && state.RateLimited,
             Names = plan.Names,
             Method = plan.Method,
             DnsProviders = plan.Records.Values.Select(r => ProviderLabel(r.Provider)).Distinct(StringComparer.Ordinal).ToList()
@@ -156,11 +164,15 @@ public sealed class AcmeCertificateService : IDisposable
                 loadedNames = new List<string>();
             }
 
-            var decision = AcmePlanner.Decide(state, names, loadedNames, current.Loaded ? current.NotAfterUtc : null, DateTime.UtcNow, current.Loaded ? current.NotBeforeUtc : null);
-            if (force && decision.Action != AcmeAction.NoNames)
+            var decision = AcmePlanner.Decide(state, names, loadedNames, current.Loaded ? current.NotAfterUtc : null, DateTime.UtcNow, current.Loaded ? current.NotBeforeUtc : null, directory);
+
+            // A request past the timing rules still waits out Let's Encrypt's rate limit: asking during it only
+            // fails again and counts against the limit.
+            if (force && decision.Action != AcmeAction.NoNames && !InRateLimit(state, DateTime.UtcNow))
             {
                 decision = new AcmeDecision(current.Loaded ? AcmeAction.Renew : AcmeAction.Issue);
             }
+
             if (decision.Action is not (AcmeAction.Issue or AcmeAction.Renew))
             {
                 return false;
@@ -192,7 +204,7 @@ public sealed class AcmeCertificateService : IDisposable
             catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
             {
                 var error = Explain(ex);
-                var failed = state.Failed(started, error, names);
+                var failed = state.Failed(started, error, names, IsRateLimit(ex));
                 _store.Save(failed);
                 var next = started + AcmePlanner.Backoff(failed.ConsecutiveFailures);
                 // A failed renewal still has a working certificate, so it is a warning. Without one, HTTPS is down.
@@ -216,8 +228,46 @@ public sealed class AcmeCertificateService : IDisposable
         }
     }
 
+    /// <summary>
+    /// When the certificate should next be looked at, for the retry timer: the end of a wait, or the loaded
+    /// certificate's renewal time.
+    /// </summary>
+    /// <param name="hostnames">The proxy's hostnames.</param>
+    /// <param name="records">The DDNS records, for DNS-01.</param>
+    /// <param name="current">The loaded certificate's status.</param>
+    /// <returns>The time (UTC), or null when there is nothing to order.</returns>
+    public DateTime? NextCheckUtc(IEnumerable<string> hostnames, IEnumerable<DNSRecord> records, CertificateStatus current)
+    {
+        ArgumentNullException.ThrowIfNull(current);
+        var now = DateTime.UtcNow;
+        var state = AcmePlanner.Normalize(_store.Load(), now);
+        var directory = DirectoryUri.ToString();
+        var loadedNames = current.Loaded && (state.Directory.Length == 0 || string.Equals(state.Directory, directory, StringComparison.OrdinalIgnoreCase))
+            ? current.Names
+            : new List<string>();
+        return AcmePlanner.NextCheckUtc(state, Plan(hostnames, records).Names, loadedNames, current.Loaded ? current.NotAfterUtc : null, now, current.Loaded ? current.NotBeforeUtc : null, directory);
+    }
+
     /// <inheritdoc />
     public void Dispose() => _run.Dispose();
+
+    /// <summary>
+    /// Whether Let's Encrypt's rate limit refused the last attempt and its backoff has not run out yet.
+    /// </summary>
+    /// <param name="state">The stored state.</param>
+    /// <param name="now">The current time (UTC).</param>
+    /// <returns>True while a request must wait.</returns>
+    internal static bool InRateLimit(AcmeState state, DateTime now)
+        => state.RateLimited && state.ConsecutiveFailures > 0 && state.LastAttemptUtc is { } last && now < last + AcmePlanner.Backoff(state.ConsecutiveFailures);
+
+    /// <summary>
+    /// Whether an ACME error is Let's Encrypt's rate limit.
+    /// </summary>
+    /// <param name="ex">The error.</param>
+    /// <returns>True for a rate limit.</returns>
+    internal static bool IsRateLimit(Exception ex)
+        => ex is AcmeRequestException { Error: { } error }
+            && ((error.Type?.ToString() ?? string.Empty).Contains("rateLimited", StringComparison.OrdinalIgnoreCase) || error.Status == System.Net.HttpStatusCode.TooManyRequests);
 
     // Let's Encrypt's own message says what it could not reach; the rest are network or file problems.
     private static string Explain(Exception ex) => ex switch
@@ -277,6 +327,15 @@ public sealed class AcmeCertificateService : IDisposable
             var keyPem = key.ToPem();
             WriteSecret(_paths.AcmeKeyFile, keyPem);
             WriteSecret(_paths.AcmeChainFile, chain.ToPem().TrimEnd() + "\n" + keyPem);
+
+            // Only a certificate the proxy can serve counts as issued. One that does not load is recorded as a
+            // failure, so it backs off instead of being ordered again at every check.
+            if (CertificateStore.PemLoadError(_paths.AcmeChainFile) is { } problem)
+            {
+                _logger.LogWarning("The certificate Let's Encrypt issued could not be loaded: {Problem}", problem);
+                throw new InvalidOperationException("Let's Encrypt issued a certificate, but the saved files could not be loaded.");
+            }
+
             using var leaf = System.Security.Cryptography.X509Certificates.X509Certificate2.CreateFromPem(chain.Certificate.ToPem());
             return leaf.NotBefore.ToUniversalTime();
         }
@@ -305,10 +364,11 @@ public sealed class AcmeCertificateService : IDisposable
         // Noted before it is published, so a crash right after still leaves a record of what to remove.
         var pending = new PendingTxt { RecordId = record.Id, Name = txtName, Value = value, PublishedUtc = DateTime.UtcNow };
         ChangePending(list => list.Records.Add(pending));
+        // A refusal may still have published the record, for example when the provider timed out answering. The
+        // entry stays so the cleanup removes it, which is harmless when the record is not there.
         var (ok, message) = await provider.SetTxtAsync(live, txtName, value, cancellationToken).ConfigureAwait(false);
         if (!ok)
         {
-            ChangePending(list => list.Forget(pending));
             throw new InvalidOperationException(message);
         }
 
@@ -433,18 +493,22 @@ public sealed class AcmeCertificateService : IDisposable
 
     // Let's Encrypt looks the record up once, so wait until public DNS answers with it. If the lookup itself
     // keeps failing, go ahead after the wait rather than never trying.
-    private async Task WaitForTxtAsync(string name, string value, CancellationToken cancellationToken)
+    // Each lookup is bounded on its own, so one that hangs costs a poll rather than the whole wait. A lookup that
+    // times out, from this bound or the client's own timeout, is a failed lookup, not a cancelled run.
+    internal async Task WaitForTxtAsync(string name, string value, CancellationToken cancellationToken)
     {
         using var client = _http.CreateClient(nameof(AcmeCertificateService));
         for (var i = 0; i < TxtPolls; i++)
         {
-            await Task.Delay(_txtPoll, cancellationToken).ConfigureAwait(false);
+            await Task.Delay(TxtPollDelay, cancellationToken).ConfigureAwait(false);
+            using var lookup = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            lookup.CancelAfter(TxtLookupTimeout);
             try
             {
                 using var request = new HttpRequestMessage(HttpMethod.Get, _dnsOverHttps + "?name=" + Uri.EscapeDataString(name) + "&type=TXT");
                 request.Headers.Accept.ParseAdd("application/dns-json");
-                using var response = await client.SendAsync(request, cancellationToken).ConfigureAwait(false);
-                var body = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+                using var response = await client.SendAsync(request, lookup.Token).ConfigureAwait(false);
+                var body = await response.Content.ReadAsStringAsync(lookup.Token).ConfigureAwait(false);
                 if (response.IsSuccessStatusCode && TxtAnswers(body).Contains(value, StringComparer.Ordinal))
                 {
                     return;
@@ -453,6 +517,10 @@ public sealed class AcmeCertificateService : IDisposable
             catch (HttpRequestException ex)
             {
                 _logger.LogDebug("Checking the TXT record {Name} failed: {Message}", name, ex.Message);
+            }
+            catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+            {
+                _logger.LogDebug("Checking the TXT record {Name} timed out", name);
             }
         }
 
@@ -507,24 +575,44 @@ public sealed class AcmeCertificateService : IDisposable
         throw new InvalidOperationException($"Let's Encrypt did not finish checking {name}. Make sure port 80 is forwarded to this server.");
     }
 
-    private IKey LoadOrCreateAccountKey()
+    /// <summary>
+    /// Loads the Let's Encrypt account key, making one only when there is none. A key file that cannot be read
+    /// right now, such as one locked by a backup, fails this attempt and is read again on the next. Only a file
+    /// that was read and holds no usable key is set aside and replaced: a new key is a new account, which is
+    /// harmless, while keeping the bad one would stop every renewal.
+    /// </summary>
+    /// <returns>The key.</returns>
+    internal IKey LoadOrCreateAccountKey()
     {
-        if (File.Exists(_paths.AcmeAccountKeyFile))
+        var path = _paths.AcmeAccountKeyFile;
+        if (File.Exists(path))
         {
+            string pem;
             try
             {
-                return KeyFactory.FromPem(File.ReadAllText(_paths.AcmeAccountKeyFile));
+                pem = File.ReadAllText(path);
             }
-            catch (Exception ex) when (ex is NotSupportedException or ArgumentException or InvalidOperationException or IOException)
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
             {
-                // An empty or damaged key, for example after a power cut, is replaced: a new key is a new account,
-                // which is harmless, while keeping the bad one would stop every renewal.
-                _logger.LogWarning("The Let's Encrypt account key could not be read and is being replaced: {Message}", ex.Message);
+                _logger.LogWarning("The Let's Encrypt account key could not be read: {Message}", ex.Message);
+                throw new IOException("The Let's Encrypt account key could not be read. It is tried again on the next check.", ex);
+            }
+
+            try
+            {
+                return KeyFactory.FromPem(pem);
+            }
+            catch (Exception ex) when (ex is NotSupportedException or ArgumentException or InvalidOperationException or FormatException or IOException or System.Security.Cryptography.CryptographicException)
+            {
+                // The file was read, so this is its content, not a passing read error: the key parser reports bad
+                // PEM as an IOException too. Kept beside, in case it is wanted, rather than overwritten.
+                _logger.LogWarning("The Let's Encrypt account key is damaged and is being replaced: {Message}", ex.Message);
+                File.Move(path, path + ".damaged-" + DateTime.UtcNow.ToString("yyyyMMddHHmmss", System.Globalization.CultureInfo.InvariantCulture), overwrite: true);
             }
         }
 
         var key = KeyFactory.NewKey(KeyAlgorithm.ES256);
-        WriteSecret(_paths.AcmeAccountKeyFile, key.ToPem());
+        WriteSecret(path, key.ToPem());
         return key;
     }
 

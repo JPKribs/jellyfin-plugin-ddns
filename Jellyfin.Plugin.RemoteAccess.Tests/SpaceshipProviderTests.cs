@@ -117,4 +117,46 @@ public class SpaceshipProviderTests
         Assert.All(urls, u => Assert.Contains("/dns/records/example.com", u, StringComparison.Ordinal));
         Assert.Contains("\"name\":\"@\"", putBody, StringComparison.Ordinal);
     }
+
+    [Fact]
+    public async Task RecordName_IsMatchedIgnoringCase()
+    {
+        // The API returns the name as stored, so a hostname typed in another case still finds it.
+        var (provider, writes) = Tracked("{\"items\":[{\"type\":\"A\",\"name\":\"HOME\",\"address\":\"1.2.3.4\"}]}");
+
+        var result = await provider.UpdateAsync(Record(), new DetectedIP { IPv4 = "1.2.3.4" }, CancellationToken.None);
+
+        Assert.True(result.Success);
+        Assert.Empty(writes);
+    }
+
+    [Fact]
+    public async Task RecordList_IsPagedBeyondTheFirst500()
+    {
+        // The first page is full of other records, the matching one sits on the second page.
+        var others = string.Join(",", Enumerable.Range(0, 500).Select(i => "{\"type\":\"A\",\"name\":\"other" + i + "\",\"address\":\"9.9.9.9\"}"));
+        var queries = new List<string>();
+        var writes = new List<HttpMethod>();
+        var factory = StubHttp.Factory(req =>
+        {
+            if (req.Method == HttpMethod.Get)
+            {
+                var query = req.RequestUri!.Query;
+                queries.Add(query);
+                return query.Contains("skip=0", StringComparison.Ordinal)
+                    ? (HttpStatusCode.OK, "{\"items\":[" + others + "],\"total\":501}")
+                    : (HttpStatusCode.OK, "{\"items\":[{\"type\":\"A\",\"name\":\"home\",\"address\":\"1.2.3.4\"}],\"total\":501}");
+            }
+
+            writes.Add(req.Method);
+            return (HttpStatusCode.NoContent, "{}");
+        });
+        var provider = new SpaceshipProvider(factory, NullLogger<SpaceshipProvider>.Instance);
+
+        var result = await provider.UpdateAsync(Record(), new DetectedIP { IPv4 = "1.2.3.4" }, CancellationToken.None);
+
+        Assert.True(result.Success);
+        Assert.Equal(new[] { "?take=500&skip=0", "?take=500&skip=500" }, queries);
+        Assert.Empty(writes);
+    }
 }

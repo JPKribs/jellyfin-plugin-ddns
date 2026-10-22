@@ -5,9 +5,11 @@ often under **Dashboard → Scheduled Tasks**. Each run:
 
 1. Finds your public IP.
 2. Looks up what each record's name points at right now.
-3. Sends the new address to the provider only for records that point somewhere else.
+3. Sends the new address to the provider only for records that point somewhere else, or whose name no longer
+   resolves at all.
 
-So a run where nothing changed sends nothing. The status card at the bottom of each record shows what its last run
+So a run where nothing changed sends nothing. When a name does not resolve, such as after its record was deleted
+at the provider, the update is sent anyway, so a provider that creates records on update puts it back. The status card at the bottom of each record shows what its last run
 did and when.
 
 ![Last update status](screenshots/Last%20Update.png)

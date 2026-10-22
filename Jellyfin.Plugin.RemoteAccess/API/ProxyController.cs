@@ -1,6 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
+using System.Net.Http;
+using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
 using Jellyfin.Plugin.DynamicDns.People;
@@ -129,37 +132,65 @@ public class ProxyController : ControllerBase
             return BadRequest(new { Errors = errors });
         }
 
-        // Binding Jellyfin to this machine is part of trusting the proxy, so while it is trusted a change to it is
-        // applied the same way, with Jellyfin restarting once, and before it is saved: a change that cannot be
-        // applied is refused, so the setting never claims what Jellyfin is not doing. Otherwise it waits for
-        // Trust the Proxy.
-        string? restart = null;
-        var loopbackNow = options.JellyfinLoopbackOnly;
-        if (ProxyOptions.From(stored.Advanced).JellyfinLoopbackOnly != loopbackNow)
+        if (await SelfPointingServices(stored, incoming).ConfigureAwait(false) is { } self)
         {
-            var phase = _orchestrator.State.Phase;
-            if (phase == TakeoverPhase.PendingRestart)
-            {
-                return BadRequest(new { Errors = new List<string> { "Jellyfin is still restarting from the last change to trusting the proxy. Try again once it is back." } });
-            }
-
-            if (phase == TakeoverPhase.Managed)
-            {
-                var result = await _orchestrator.ApplyAsync(incoming, _proxy, CancellationToken.None, ActivityUser.Of(User), checkProxy: loopbackNow).ConfigureAwait(false);
-                if (!result.Success)
-                {
-                    return BadRequest(new { Errors = new List<string> { result.Message } });
-                }
-
-                restart = "Jellyfin is restarting so the change takes effect.";
-            }
+            return BadRequest(new { Errors = new List<string> { self } });
         }
 
+        // Binding Jellyfin to this machine is part of trusting the proxy, so while it is trusted a change to it is
+        // applied the same way, with Jellyfin restarting once: a change that cannot be applied is refused, so the
+        // setting never claims what Jellyfin is not doing. Otherwise it waits for Trust the Proxy. Turning it off
+        // is applied first, since it needs nothing of the proxy. Turning it on is applied last, once the proxy
+        // runs with the new settings, so the check that the proxy works is made against them.
+        string? restart = null;
+        var user = ActivityUser.Of(User);
+        var loopbackNow = options.JellyfinLoopbackOnly;
+        var loopbackChanged = ProxyOptions.From(stored.Advanced).JellyfinLoopbackOnly != loopbackNow;
+        if (loopbackChanged && !loopbackNow)
+        {
+            var result = await _orchestrator.ApplyLoopbackChangeAsync(incoming, _proxy, user).ConfigureAwait(false);
+            if (!result.Success)
+            {
+                return BadRequest(new { Errors = new List<string> { result.Message } });
+            }
+
+            restart = result.Restarting ? "Jellyfin is restarting so the change takes effect." : null;
+        }
+
+        // While Jellyfin listens on this machine only, the proxy is the only way in. A save that stops a working
+        // proxy, such as a port another program holds, is undone and refused.
+        var wasRunning = _proxy.IsRunning;
         plugin.MutateConfiguration(c =>
         {
             c.Proxy = incoming;
             return true;
         });
+        await _proxy.ApplyAsync(CancellationToken.None).ConfigureAwait(false);
+        if (incoming.Enabled && wasRunning && !_proxy.IsRunning && _orchestrator.IsBoundToLoopback)
+        {
+            var why = await _proxy.CheckRunningAsync(CancellationToken.None).ConfigureAwait(false);
+            await PutBackAsync(plugin, stored).ConfigureAwait(false);
+            return BadRequest(new { Errors = new List<string> { "The proxy could not start with these settings, so they were not saved. Jellyfin only listens on this machine, so the proxy has to keep running. " + why } });
+        }
+
+        if (loopbackChanged && loopbackNow)
+        {
+            var result = await _orchestrator.ApplyLoopbackChangeAsync(incoming, _proxy, user).ConfigureAwait(false);
+            if (!result.Success)
+            {
+                await PutBackAsync(plugin, stored).ConfigureAwait(false);
+                return BadRequest(new { Errors = new List<string> { result.Message } });
+            }
+
+            restart = result.Restarting ? "Jellyfin is restarting so the change takes effect." : null;
+        }
+        else if (!loopbackChanged)
+        {
+            // New hostnames change the address Jellyfin gives its clients. Jellyfin reads that again when its
+            // network settings are saved, so this needs no restart. A loopback change above already wrote it.
+            _orchestrator.UpdatePublishedAddresses(incoming, user);
+        }
+
         var changed = ChangedSections(stored, incoming);
         if (changed.Count > 0)
         {
@@ -167,10 +198,8 @@ public class ProxyController : ControllerBase
                 "Remote Access settings were changed",
                 "DynamicDNS.ProxySettingsChanged",
                 "Changed: " + string.Join(", ", changed) + ". The proxy is " + (incoming.Enabled ? "on." : "off."),
-                userId: ActivityUser.Of(User));
+                userId: user);
         }
-
-        await _proxy.ApplyAsync(CancellationToken.None).ConfigureAwait(false);
 
         return Ok(new { Settings = Redact(ProxyRuntimeFactory.Clone(incoming)), Status = _proxy.GetStatus(_orchestrator.State), Restart = restart });
     }
@@ -279,9 +308,96 @@ public class ProxyController : ControllerBase
     [ProducesResponseType(StatusCodes.Status200OK)]
     public async Task<ActionResult<ProxyStatus>> RestartProxy()
     {
-        await _proxy.StopAsync().ConfigureAwait(false);
+        // While Jellyfin listens on this machine only, a working proxy is not stopped: if it could not bind its
+        // ports again, nothing would reach Jellyfin. A stopped one is still started, which is what the button is
+        // for after a port conflict.
+        if (!(_proxy.IsRunning && _orchestrator.IsBoundToLoopback))
+        {
+            await _proxy.StopAsync().ConfigureAwait(false);
+        }
+
         await _proxy.ApplyAsync(CancellationToken.None).ConfigureAwait(false);
         return Ok(_proxy.GetStatus(_orchestrator.State));
+    }
+
+    // Puts the settings from before a refused save back, and the proxy with them.
+    private async Task PutBackAsync(Plugin plugin, ProxySettings stored)
+    {
+        plugin.MutateConfiguration(c =>
+        {
+            c.Proxy = stored;
+            return true;
+        });
+        await _proxy.ApplyAsync(CancellationToken.None).ConfigureAwait(false);
+    }
+
+    // A Service whose target answers as this Jellyfin server would serve Jellyfin past the rules meant for it.
+    // Only targets new or changed in this save are asked, so saving another tab never waits on a Service that
+    // is down. A target that does not answer is allowed.
+    private async Task<string?> SelfPointingServices(ProxySettings stored, ProxySettings incoming)
+    {
+        var before = stored.Routes.Where(r => r.Enabled).Select(r => r.Id + "\n" + r.Target).ToHashSet(StringComparer.Ordinal);
+        var asked = incoming.Routes.Where(r => r.Enabled && !before.Contains(r.Id + "\n" + r.Target)).ToList();
+        if (asked.Count == 0)
+        {
+            return null;
+        }
+
+        using var strict = new HttpClient(ProbeHandler(acceptAnyCertificate: false)) { MaxResponseContentBufferSize = 64 * 1024 };
+        using var lenient = new HttpClient(ProbeHandler(acceptAnyCertificate: true)) { MaxResponseContentBufferSize = 64 * 1024 };
+        var found = await SelfTarget.FindJellyfinTargetsAsync(
+            asked,
+            _proxy.SystemId,
+            (route, request, token) => (route.BackendTls == BackendTlsMode.Verify ? strict : lenient).SendAsync(request, token),
+            TimeSpan.FromSeconds(3),
+            HttpContext?.RequestAborted ?? CancellationToken.None).ConfigureAwait(false);
+        return found.Count == 0
+            ? null
+            : string.Join(" ", found.Select(r => (r.Name.Length > 0 ? r.Name : "This Service") + " points at Jellyfin itself."));
+    }
+
+    // Never follows a redirect or a system proxy, and never connects to a cloud metadata address, whatever the
+    // name resolves to. A Service set to skip or pin its certificate is asked without checking the certificate,
+    // since only the answer's server id is read.
+    private static SocketsHttpHandler ProbeHandler(bool acceptAnyCertificate)
+    {
+        var handler = new SocketsHttpHandler
+        {
+            UseProxy = false,
+            AllowAutoRedirect = false,
+            ConnectTimeout = TimeSpan.FromSeconds(3),
+            ConnectCallback = async (context, token) =>
+            {
+                var host = context.DnsEndPoint.Host;
+                var addresses = IPAddress.TryParse(host.Trim('[', ']'), out var literal)
+                    ? new[] { literal }
+                    : await Dns.GetHostAddressesAsync(host, token).ConfigureAwait(false);
+                var allowed = addresses.Where(a => !ProxySettingsValidator.IsMetadataAddress(a)).ToArray();
+                if (allowed.Length == 0)
+                {
+                    throw new HttpRequestException(host + " is not an address a Service may reach.");
+                }
+
+                var socket = new Socket(SocketType.Stream, ProtocolType.Tcp) { NoDelay = true };
+                try
+                {
+                    await socket.ConnectAsync(allowed, context.DnsEndPoint.Port, token).ConfigureAwait(false);
+                    return new NetworkStream(socket, ownsSocket: true);
+                }
+                catch
+                {
+                    socket.Dispose();
+                    throw;
+                }
+            }
+        };
+
+        if (acceptAnyCertificate)
+        {
+            handler.SslOptions.RemoteCertificateValidationCallback = (_, certificate, _, _) => certificate is not null;
+        }
+
+        return handler;
     }
 
     // What a save changed, in the page's own words, for the activity entry. Unchanged saves log nothing.

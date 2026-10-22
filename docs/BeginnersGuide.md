@@ -1,9 +1,13 @@
-# Beginner's Guide
+# Beginner's Guide: Recommended
 
 This page takes you from nothing to watching Jellyfin from your phone at `https://media.example.com`, in one pass:
 buying a domain, installing the plugin, keeping the domain pointed at your home, and turning on secure remote
 access. It uses Cloudflare for the domain, because the plugin can then also prove the domain to Let's Encrypt
 with no extra setup. Plan on about 30 minutes, and the price of a domain, usually around $10 a year.
+
+!!! tip "Rather not pay?"
+    The [free guide](BeginnersGuideFree.md) uses a free Duck DNS name, such as `mymedia.duckdns.org`, instead of a
+    domain of your own.
 
 Wherever you see `example.com`, use your own domain. `media` is the name this guide gives the server. Any name
 works.
@@ -13,6 +17,11 @@ works.
 * Jellyfin 12.2 running at home, and an administrator account on it.
 * Access to your home router's settings, to forward two ports.
 * A public IP from your internet provider. Step 0 shows how to check.
+* **On Linux**, permission for Jellyfin to use ports 80 and 443. Run `sudo systemctl edit jellyfin`, add
+  `AmbientCapabilities=CAP_NET_BIND_SERVICE` under `[Service]`, and restart Jellyfin. Windows and macOS need
+  nothing.
+* **In Docker**, host networking, `network_mode: host`. See
+  [Docker, tunnels and other proxies](RemoteAccess.md#docker-tunnels-and-other-proxies).
 
 ## 0. Check you are not behind CGNAT
 
@@ -79,17 +88,17 @@ The token lets the plugin change DNS records in this domain, and nothing else.
    under its original name.
 4. Restart Jellyfin when it asks, and wait until it is fully back up.
 
-The plugin is now in the dashboard menu under **Plugins → Remote Access**.
+The plugin now has a **Remote Access** entry in the dashboard's side menu.
 
 ## 5. Add the record to the plugin
 
-1. Open **Dashboard → Plugins → Remote Access**, then the **Domains** tab, and select **New**.
+1. Open the **Remote Access** entry in the dashboard's side menu, then the **Domains** tab, and select **New**.
 2. Fill it in:
     * **Name**: anything, such as `Home`
     * **Provider**: **Cloudflare**
     * **Record name**: `media.example.com`, the full name
     * **Update IPv4**: on
-    * **Update IPv6**: on only if you made the `AAAA` record in step 2
+    * **Update IPv6**: it starts on. Turn it off unless you made the `AAAA` record in step 2
     * **Auth email or token**: the word `token`
     * **API token or key**: the token from step 3
     * **Zone name**: `example.com`
@@ -101,6 +110,9 @@ show your real address instead of `192.0.2.1`. From now on the plugin checks eve
 record whenever your address changes.
 
 ## 6. Turn on Remote Access
+
+Check the Linux or Docker item in [What you need](#what-you-need) first. Without it the proxy cannot use ports 80
+and 443, and no certificate arrives.
 
 On the **Proxy** tab:
 
@@ -126,15 +138,11 @@ settings, usually under **Port forwarding**, **NAT** or **Virtual servers**, add
 Port 443 carries everything. Port 80 only sends `http://` links on to HTTPS. Do not forward Jellyfin's own ports,
 8096 or 8920.
 
-!!! note "Linux and Docker"
-    On Linux, Jellyfin needs permission to use ports 80 and 443. In Docker, use host networking. See
-    [Before you start](RemoteAccess.md#before-you-start).
-
 ## 8. Trust the Proxy
 
-On the **Proxy** tab, under **Jellyfin**, select **Trust the Proxy** and confirm. Jellyfin restarts once. After that
-it sees each visitor's real address, so its own remote-access rules and bitrate limits work, and the proxy's bans
-and country rules apply.
+Until this step is done, the proxy turns every internet visitor away. On the **Proxy** tab, under **Jellyfin**,
+select **Trust the Proxy** and confirm. Jellyfin restarts once. After that it sees each visitor's real address, so
+its own remote-access rules and bitrate limits work, and the proxy's bans and country rules apply.
 
 ## 9. Test it
 
@@ -146,11 +154,12 @@ inside your home.
 
 ## After setup
 
-* **Travelling abroad**: by default only visitors from your own country can connect. Add the countries you will
-  visit under **Advanced → Blocking → Country rule** before you go.
+* **Travelling abroad**: by default only visitors from your own country can connect. Before you go, add the
+  countries you will visit in the **Countries** picker under **Advanced → Blocking**.
 * **Who is connecting**: the **Dashboard** tab shows visitors, failed sign-ins and bans.
 * **More apps**: the **Services** tab can put other apps on their own address, such as `requests.example.com`.
-  Add a Cloudflare record for each, as in step 2.
+  Add a Cloudflare record for each, as in step 2. Then keep it current: either add each name on the **Domains**
+  tab too, as in step 5, or make it a `CNAME` record pointing at `media.example.com`, which follows it.
 
 ## Troubleshooting
 
@@ -158,10 +167,10 @@ inside your home.
 |---|---|
 | The record's status says `no 'A' record at Cloudflare` | The record from step 2 is missing, or its name differs from **Record name**. Create it, or fix the name. |
 | `no 'AAAA' record at Cloudflare` | Turn off **Update IPv6**, or add an `AAAA` record as in step 2. |
-| An authentication or permission error | The token is wrong, or limited to a different zone. Make a new one as in step 3, and check **Auth email or token** is `token`. |
-| `no zone ID found` | **Zone name** must be the domain alone, such as `example.com`, not `media.example.com`. |
+| `zone lookup failed`, or another authentication or permission error | The token is wrong. Make a new one as in step 3, and check **Auth email or token** is `token`. |
+| `no zone ID found for zone ...` | **Zone name** must be the domain alone, such as `example.com`, not `media.example.com`. It can also mean the token is limited to a different zone. |
 | The Address tab warns that the address is internal | The server has no public IP of its own. See step 0. |
-| The Proxy tab shows no certificate | Its Certificate section shows Let's Encrypt's reason. The activity log under **Dashboard → Activity** has it too. |
+| The Proxy tab shows no certificate | Its Certificate section shows Let's Encrypt's reason. Jellyfin's activity log has it too. |
 | The phone cannot connect | Check the forwarding rules in step 7, and step 0. Some providers block ports 80 and 443 on home lines. Ask them. |
 | Works away from home, not at home | Normal for many routers. Use Jellyfin's local address at home. |
 | The sign-in page loads, but everyone shows as local on the Dashboard | Something in front of the proxy hides visitors' addresses. See [When every visitor looks local](RemoteAccess.md#when-every-visitor-looks-local). |

@@ -7,6 +7,8 @@ export default function (view) {
 
     var Shared = null;
     var data = null;
+    // While a block, unblock or unban request runs, the row buttons are off so a second click sends nothing.
+    var busy = false;
     // Which kinds the map and its table show. Any mix can be picked; all three is everything.
     var mapShown = { people: true, failed: true, blocked: true };
     // The Activity table's own filters, kept across the 30-second refresh.
@@ -49,9 +51,11 @@ export default function (view) {
         return (host || '').replace(/^https?:\/\//, '');
     }
 
-    function button(label, cls, attrs, title) {
+    // The accessible name says which address or country the button acts on, since every row has one.
+    function button(label, cls, attrs, title, name) {
         return '<button is="emby-button" type="button" class="raised jpk-button-small ' + cls + '" ' + attrs +
-            (title ? ' title="' + esc(title) + '"' : '') + '><span>' + label + '</span></button>';
+            (title ? ' title="' + esc(title) + '"' : '') + (name ? ' aria-label="' + esc(name) + '"' : '') +
+            (busy && attrs !== 'disabled' ? ' disabled' : '') + '><span>' + label + '</span></button>';
     }
 
     // Every row has one button. A banned address can be unbanned; your network is never blocked, so its button
@@ -59,27 +63,27 @@ export default function (view) {
     // anything else can be blocked.
     function action(r) {
         if (r.Banned) {
-            return button('Unban', 'jpk-secondary', 'data-unban="' + esc(r.Ip) + '"');
+            return button('Unban', 'jpk-secondary', 'data-unban="' + esc(r.Ip) + '"', '', 'Unban ' + r.Ip);
         }
 
         if (r.Exempt) {
-            return button('Block', 'jpk-button-destructive', 'disabled', 'Your network and trusted networks are never blocked.');
+            return button('Block', 'jpk-button-destructive', 'disabled', 'Your network and trusted networks are never blocked.', 'Block ' + r.Ip);
         }
 
         if (r.Listed) {
-            return button('Unblock', 'jpk-secondary', 'data-unblock="' + esc(r.Ip) + '"');
+            return button('Unblock', 'jpk-secondary', 'data-unblock="' + esc(r.Ip) + '"', '', 'Unblock ' + r.Ip);
         }
 
         // Blocked only by a range: unblocking one address would not help, so say where it is changed.
         if (r.Covered) {
-            return button('Unblock', 'jpk-secondary', 'disabled', 'Blocked by a range under Advanced.');
+            return button('Unblock', 'jpk-secondary', 'disabled', 'Blocked by a range under Advanced.', 'Unblock ' + r.Ip);
         }
 
         if (r.CountryBlocked) {
-            return button('Unblock', 'jpk-secondary', 'data-unblock-country="' + esc(r.CountryCode) + '" data-country="' + esc(r.Country) + '"', 'Allow connections from ' + r.Country);
+            return button('Unblock', 'jpk-secondary', 'data-unblock-country="' + esc(r.CountryCode) + '" data-country="' + esc(r.Country) + '"', 'Allow connections from ' + r.Country, 'Unblock ' + r.Country + ' for ' + r.Ip);
         }
 
-        return button('Block', 'jpk-button-destructive', 'data-block="' + esc(r.Ip) + '"');
+        return button('Block', 'jpk-button-destructive', 'data-block="' + esc(r.Ip) + '"', '', 'Block ' + r.Ip);
     }
 
     // When a ban ends, in the same short form as the tables.
@@ -109,7 +113,7 @@ export default function (view) {
                     '<td>' + esc(b.Failures) + '</td>' +
                     '<td>' + esc(agoShort(b.BannedUtc)) + '</td>' +
                     '<td>' + esc(untilText(b.UntilUtc)) + '</td>' +
-                    '<td class="ddns-action">' + button('Unban', 'jpk-secondary', 'data-unban="' + esc(b.Ip) + '"') + '</td></tr>';
+                    '<td class="ddns-action">' + button('Unban', 'jpk-secondary', 'data-unban="' + esc(b.Ip) + '"', '', 'Unban ' + b.Ip) + '</td></tr>';
             }).join('') + '</tbody></table></div>';
     }
 
@@ -283,15 +287,26 @@ export default function (view) {
         });
     }
 
+    function setBusy(on) {
+        busy = on;
+        Array.prototype.slice.call(view.querySelectorAll('[data-unban], [data-block], [data-unblock], [data-unblock-country]')).forEach(function (b) {
+            b.disabled = on;
+        });
+    }
+
     // Posts one change, reports it under the Activity heading and reloads.
     function post(path, done, failed) {
+        if (busy) return;
+        setBusy(true);
         Shared.apiRequest(path, 'POST').then(function () {
             Shared.setStatus('activityStatus', done, false);
-            load();
         }).catch(function (err) {
-            errorText(err, failed).then(function (message) {
+            return errorText(err, failed).then(function (message) {
                 Shared.setStatus('activityStatus', message, true);
             });
+        }).then(function () {
+            setBusy(false);
+            return load();
         });
     }
 
@@ -305,6 +320,7 @@ export default function (view) {
     }
 
     function onActivityClick(e) {
+        if (busy) return;
         var lift = e.target.closest('[data-unban]');
         if (lift) {
             unban(lift.getAttribute('data-unban'));

@@ -74,10 +74,12 @@ public sealed class DigitalOceanProvider : DNSProviderBase
             new("Authorization", "Bearer " + record.Password),
         };
 
+        // A bare label is completed with the zone, since the name filter matches the full record name.
+        var host = QualifiedName(record.Hostname, record.Zone);
         return await ApplyPerFamilyAsync(
             record,
             ip,
-            (type, address, ct) => UpdateOneAsync(server, headers, record, type, address, ct),
+            (type, address, ct) => UpdateOneAsync(server, headers, record, host, type, address, ct),
             cancellationToken).ConfigureAwait(false);
     }
 
@@ -85,6 +87,7 @@ public sealed class DigitalOceanProvider : DNSProviderBase
         string server,
         List<KeyValuePair<string, string>> headers,
         DNSRecord record,
+        string host,
         string type,
         string ipValue,
         CancellationToken cancellationToken)
@@ -94,7 +97,7 @@ public sealed class DigitalOceanProvider : DNSProviderBase
             "/v2/domains/",
             Uri.EscapeDataString(record.Zone),
             "/records?name=",
-            Uri.EscapeDataString(record.Hostname),
+            Uri.EscapeDataString(host),
             "&type=",
             type);
 

@@ -6,12 +6,14 @@ matching `nic_{name}_update` in ddclient.
 
 ## The pieces
 
-A provider is one C# class plus two small touch points. Nothing else is wired by hand, since providers are
-discovered by scanning the assembly at startup.
+A provider is one C# class plus two small touch points. Nothing else is wired by hand. Every concrete
+`IDNSProvider` is found by scanning the assembly at startup, and records are matched to a provider by its `Kind`
+property.
 
 ```
 Models/DNSProviderKind.cs                      the enum value for the provider
-Providers/IDNSProvider.cs                      the contract (Kind plus UpdateAsync)
+Providers/IDNSProvider.cs                      the contract (Kind, Label, Hint, Fields, SupportsIPv6, UpdateAsync)
+Providers/IAcmeDnsProvider.cs                  optional, for the Let's Encrypt DNS check
 Providers/DNSProviderBase.cs                   the shared base with the helpers below
 Providers/Implementations/{Kind}Provider.cs    the provider itself, including its label, hint, and fields
 docs/providers/{Kind}.md                       the user facing setup doc
@@ -22,19 +24,27 @@ each provider class, so the JS needs no per provider edit.
 
 ## Steps
 
-1. Add the value to `DNSProviderKind` in `Models/`. The name you choose is the provider's identity: the
-   class must be `{Kind}Provider` and the reflection in `DNSProviderKindExtensions` resolves the class from
-   the enum name, so they must match.
+1. Add the value to `DNSProviderKind` in `Models/`. The name you choose is the provider's identity. Name the
+   class `{Kind}Provider` and the doc page `{Kind}.md` after it. The doc name must match exactly, because the
+   **Setup guide** link under the provider picker is built from the enum value.
 2. Add `Providers/Implementations/{Kind}Provider.cs` deriving from `DNSProviderBase`. Override `Kind` to
-   return your enum value and implement `UpdateAsync`. Put the per family request logic behind
-   `ApplyPerFamilyAsync` so IPv4 and IPv6 are handled the same way.
+   return your enum value and implement `UpdateAsync`. The plugin finds the class through `Kind`, not its
+   name. Put the per family request logic behind `ApplyPerFamilyAsync` so IPv4 and IPv6 are handled the same
+   way.
 3. Map the record fields to the provider's credentials in the class summary (see below), and read them from
    the `DNSRecord` passed to `UpdateAsync`.
 4. Override `Label`, `Hint`, and `Fields` on the provider. `Label` is the friendly name in the dropdown,
    `Hint` is the one line note under it, and `Fields` is the label for each used field with a null for any
-   field the provider does not use. The dashboard renders itself from these, so no JS edit is needed.
-5. Add `docs/providers/{Kind}.md` describing where the user gets each field.
-6. Add a test under `Jellyfin.Plugin.RemoteAccess.Tests` that exercises the request shape and the success and
+   field the provider does not use. The dashboard renders itself from these, so no JS edit is needed. The
+   other flags on `ProviderFields` are `Server` for the **Server override** field, `Ttl` for the **TTL** field,
+   `IPv6` for the **Update IPv6** toggle, and `Advanced` for the DynDNS style options such as `wildcard`.
+5. If the protocol can only send IPv4, override `SupportsIPv6` to return false and set `IPv6 = false` in
+   `Fields`, so the toggle is hidden.
+6. If the provider's API can publish and remove TXT records, also implement `IAcmeDnsProvider`. Remote Access
+   then uses the record to prove the address to Let's Encrypt through DNS, with no port 80 needed.
+7. Add `docs/providers/{Kind}.md` describing where the user gets each field, and add it to the nav in
+   `mkdocs.yml` and the list in `docs/providers/README.md`.
+8. Add a test under `Jellyfin.Plugin.RemoteAccess.Tests` that exercises the request shape and the success and
    failure detection, following the existing provider tests.
 
 ## Base class helpers

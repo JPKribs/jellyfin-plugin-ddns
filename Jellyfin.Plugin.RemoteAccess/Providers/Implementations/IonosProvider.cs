@@ -152,6 +152,10 @@ public sealed class IonosProvider : DNSProviderBase
                 return null;
             }
 
+            // The account can hold both example.com and a delegated sub.example.com, so the longest zone
+            // name that covers the host wins rather than the first one listed.
+            string? bestId = null;
+            var bestLength = -1;
             foreach (var zone in doc.RootElement.EnumerateArray())
             {
                 if (!zone.TryGetProperty("name", out var nameElement))
@@ -160,7 +164,7 @@ public sealed class IonosProvider : DNSProviderBase
                 }
 
                 var name = nameElement.GetString();
-                if (string.IsNullOrEmpty(name))
+                if (string.IsNullOrEmpty(name) || name.Length <= bestLength)
                 {
                     continue;
                 }
@@ -169,9 +173,12 @@ public sealed class IonosProvider : DNSProviderBase
                         || host.EndsWith("." + name, StringComparison.OrdinalIgnoreCase))
                     && zone.TryGetProperty("id", out var idElement))
                 {
-                    return idElement.GetString();
+                    bestId = idElement.GetString();
+                    bestLength = name.Length;
                 }
             }
+
+            return bestId;
         }
         catch (JsonException)
         {

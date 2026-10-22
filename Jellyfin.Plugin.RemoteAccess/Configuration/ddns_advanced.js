@@ -14,6 +14,8 @@ export default function (view) {
     var settingsLoaded = false;
     // Until the history settings load, saving would overwrite them with the form's defaults.
     var historyLoaded = false;
+    // The history settings as last loaded or saved, to tell whether leaving would lose changes.
+    var historyBaseline = '';
     // What the server said about restarting Jellyfin after the last save, if anything.
     var restartNote = '';
     var countries = null;
@@ -191,6 +193,7 @@ export default function (view) {
             fillHistory(d && d.Settings);
             showLocationStatus(d && d.Location);
             historyLoaded = !!(d && d.Settings);
+            historyBaseline = JSON.stringify(readHistory());
         }).catch(function () { /* the rest of the page still works */ });
     }
 
@@ -215,7 +218,15 @@ export default function (view) {
         });
     }
 
+    // Whether leaving now would lose changes, against the values last loaded or saved.
+    function isDirty() {
+        return (settingsLoaded && JSON.stringify(read()) !== JSON.stringify(loaded))
+            || (historyLoaded && JSON.stringify(readHistory()) !== historyBaseline);
+    }
+
     function load() {
+        settingsLoaded = false;
+        historyLoaded = false;
         loadHistory();
         var defaultsLoaded = defaultSets ? Promise.resolve(defaultSets) : Shared.apiRequest('Proxy/Defaults', 'GET');
         Promise.all([defaultsLoaded, Shared.apiRequest('Proxy/Settings', 'GET')]).then(function (results) {
@@ -252,6 +263,9 @@ export default function (view) {
     }
 
     function doSave() {
+        var button = Shared.getEl('btnSaveAdvanced');
+        if (button.disabled) return;
+        button.disabled = true;
         Shared.setStatus('advancedStatus', 'Saving...', false);
         Shared.apiRequest('Proxy/Settings', 'GET').then(function (fresh) {
             // Settings this page does not show, such as the ports, are kept as they are.
@@ -276,12 +290,18 @@ export default function (view) {
             return historyLoaded ? Shared.apiRequest('People/Settings', 'POST', readHistory()) : null;
         }).then(function (history) {
             if (history) fillHistory(history);
+            // History settings that never loaded were not sent, so the page does not claim to have saved them.
+            var skipped = !historyLoaded;
             loadHistory();
-            Shared.setStatus('advancedStatus', restartNote ? 'Saved. ' + restartNote : 'Saved.', false, restartNote ? { timeout: 0 } : undefined);
+            var text = 'Saved.' + (skipped ? ' The history settings did not load, so they were not saved.' : '') + (restartNote ? ' ' + restartNote : '');
+            var keep = skipped || !!restartNote;
+            Shared.setStatus('advancedStatus', text, skipped, keep ? { timeout: 0 } : undefined);
         }).catch(function (err) {
-            errorText(err, 'Save failed.').then(function (text) {
+            return errorText(err, 'Save failed.').then(function (text) {
                 Shared.setStatus('advancedStatus', text, true, { timeout: 0 });
             });
+        }).then(function () {
+            button.disabled = false;
         });
     }
 
@@ -328,6 +348,7 @@ export default function (view) {
         tabIndex: 5,
         tabs: TABS,
         bind: bind,
-        load: load
+        load: load,
+        isDirty: isDirty
     }).shared;
 }

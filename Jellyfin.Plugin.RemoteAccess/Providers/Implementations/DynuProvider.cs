@@ -20,16 +20,16 @@ public sealed class DynuProvider : DNSProviderBase
 
     private static readonly Dictionary<string, string> Errors = new(StringComparer.Ordinal)
     {
-        ["badauth"] = "Bad authorization (username or password)",
+        ["badauth"] = "Bad authorization. Check the username and password",
         ["notfqdn"] = "A fully-qualified domain name was not provided",
         ["nohost"] = "The hostname does not exist",
         ["!donator"] = "Feature restricted to members",
         ["numhost"] = "Too many hostnames specified",
         ["abuse"] = "Update blocked due to abusive behaviour",
-        ["servererror"] = "Server error; retry later",
-        ["dnserr"] = "DNS error encountered; retry later",
-        ["911"] = "Server maintenance; retry in 10 minutes",
-        ["nochg"] = "IP address is current; no update required"
+        ["servererror"] = "Server error. Retry later",
+        ["dnserr"] = "DNS error encountered. Retry later",
+        ["911"] = "Server maintenance. Retry in 10 minutes",
+        ["nochg"] = "IP address is current. No update required"
     };
 
     /// <summary>Initializes a new instance of the <see cref="DynuProvider"/> class.</summary>
@@ -132,7 +132,7 @@ public sealed class DynuProvider : DNSProviderBase
         if (string.Equals(status, "good", StringComparison.OrdinalIgnoreCase)
             || string.Equals(status, "nochg", StringComparison.OrdinalIgnoreCase))
         {
-            return DNSUpdateResult.Ok(status);
+            return WithFamilies(DNSUpdateResult.Ok(status), ipv4 is not null, ipv6 is not null);
         }
 
         return DNSUpdateResult.Fail(Errors.TryGetValue(status, out var msg) ? status + ": " + msg : "server said: " + FirstLine(result.Body));

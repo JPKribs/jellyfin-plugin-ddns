@@ -317,11 +317,12 @@ public sealed class HardeningTests : IDisposable
         var now = new DateTime(2026, 10, 20, 12, 0, 0, DateTimeKind.Utc);
         var state = AcmeState.Succeeded(now.AddMinutes(-1), names, "https://acme.example/directory");
 
-        // A certificate ordered a minute ago that already looks due for renewal is held back a day; an expired or
-        // missing one is not, since it needs replacing now.
+        // A certificate ordered a minute ago is held back a day, whether it looks due for renewal, expired or does
+        // not load at all: ordering again would get the same result. One from another directory is replaced now.
         Assert.Equal(AcmeAction.Wait, AcmePlanner.Decide(state, names, names, now.AddDays(20), now).Action);
-        Assert.Equal(AcmeAction.Issue, AcmePlanner.Decide(state, names, names, now.AddDays(-1), now).Action);
-        Assert.Equal(AcmeAction.Issue, AcmePlanner.Decide(state, names, Array.Empty<string>(), null, now).Action);
+        Assert.Equal(AcmeAction.Wait, AcmePlanner.Decide(state, names, names, now.AddDays(-1), now).Action);
+        Assert.Equal(AcmeAction.Wait, AcmePlanner.Decide(state, names, Array.Empty<string>(), null, now).Action);
+        Assert.Equal(AcmeAction.Issue, AcmePlanner.Decide(state, names, Array.Empty<string>(), null, now, directory: "https://staging.example/directory").Action);
 
         // A day later it may be ordered again, and different names never wait.
         Assert.Equal(AcmeAction.Renew, AcmePlanner.Decide(state, names, names, now.AddDays(20), now.AddHours(25)).Action);
@@ -391,7 +392,9 @@ public sealed class HardeningTests : IDisposable
         var accepted = Enumerable.Range(0, 60)
             .Select(i => gate.OnConnectionAsync(new DefaultConnectionContext { RemoteEndPoint = new IPEndPoint(IPAddress.Parse($"2001:db8:7:{i:x}00::1"), 1) }, _ => never.Task))
             .Count(t => !t.IsCompleted);
-        Assert.Equal(25, accepted);
+
+        // A 32nd of the whole limit, but never below one address's worth.
+        Assert.Equal(10, accepted);
         never.SetResult();
     }
 

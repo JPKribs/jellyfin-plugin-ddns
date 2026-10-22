@@ -1,7 +1,7 @@
 # Installation
 
-The plugin needs **Jellyfin 12.2**. Servers on Jellyfin 12.0 or 12.1 are offered an earlier version without
-Remote Access.
+The plugin needs **Jellyfin 12.2**. Servers on Jellyfin 10.11, 12.0 or 12.1 are offered an earlier version
+without Remote Access.
 
 ## Add the repository
 
@@ -22,7 +22,7 @@ Remote Access.
 
 ## Find it
 
-After the restart, the plugin is in the dashboard menu under **Plugins → Remote Access**. It opens on the
+After the restart, the plugin has a **Remote Access** entry in the dashboard's side menu. It opens on the
 **Dashboard** tab. The other tabs are **Domains**, **Address**, **Proxy**, **Services** and **Advanced**.
 
 Next: [Adding Records](Records.md).
