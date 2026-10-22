@@ -4,9 +4,6 @@ A Jellyfin plugin for reaching your server from anywhere. It keeps your DNS reco
 
 <br clear="left">
 
-> [!WARNING]
-> **Remote Access is being actively tested.** The proxy, certificates and blocking are new and still changing between releases. Keep another way into your server while you try it, and please report anything that looks wrong in [Issues](https://github.com/JPKribs/jellyfin-plugin-remoteaccess/issues).
-
 ## Documentation
 
 Installation, record setup, every provider, and security are covered in the **[Remote Access documentation](https://jpkribs.github.io/jellyfin-plugin-remoteaccess/)**.
