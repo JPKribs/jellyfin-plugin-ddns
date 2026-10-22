@@ -1,7 +1,49 @@
 # Settings Reference
 
-Every setting on every tab, with its default and range. For what each tab is for, see
-[The Plugin's Pages](Pages.md).
+Remote Access adds one entry, **Remote Access**, to the dashboard's side menu. Its pages share a tab bar along the
+top: **Dashboard**, **Configuration** and **Advanced**. This page tours the three tabs, then lists every setting
+with its default and range.
+
+## The three tabs
+
+### Dashboard
+
+Who reaches the server, from where, and what was turned away: the share card with **Copy URL**, **Copy Image** and
+**Share**, a map and table of **Locations**, the **Banned** list and the **Activity** list. See
+[Dashboard & Monitoring](Dashboard.md).
+
+### Configuration
+
+Everything needed to reach Jellyfin from outside, as six numbered steps. Each step shows its state on the right,
+such as **Ready** or **Forward by hand**, and opens to show its settings. Steps that are not done yet open on their
+own. The summary at the top counts the steps that are done, with a bar for each step in its colour. It explains
+the first step that needs attention, with **Open step** to jump to it, or says **Ready to share** once all six are
+done. Under it, a note names the countries that can connect, with a link to change them in **Advanced → Blocking**.
+
+![Configuration tab](screenshots/Configuration.png)
+
+1. **Proxy on**: tick **Enabled** to start the proxy.
+2. **Address**: the one DDNS record, with only **Provider**, **Hostname** and the credentials that provider asks
+   for. A card shows the public IP, the last update and its result, with **Update Now**. See
+   [The DDNS Record](Records.md).
+3. **Certificate**: Let's Encrypt, your own files, or a self-signed certificate, with its status.
+4. **Router**: the ports to forward by hand when the router does not, **Try Again**, and a warning when your
+   provider shares your public address.
+5. **Trust the Proxy**: lets Jellyfin see each visitor's real address. **Undo** puts it back.
+6. **Reachable from outside**: **Test from Outside** checks that the internet can reach your address.
+
+**Save** at the bottom keeps every step, the record in step 2 included. Steps 1 and 3 to 6 are explained in
+[Remote Access](RemoteAccess.md).
+
+![Step 2, Address](screenshots/Address%20Step.png)
+
+### Advanced
+
+Every setting not on the other tabs, each starting on its default, in seven sections: **Dynamic DNS** with the
+record's **Record** group, **Addresses**, **Security**, **Blocking**, **History**, **Performance** and
+**Timeouts**. **Save** on that tab keeps them. Each section has its own table below.
+
+![Advanced tab](screenshots/Advanced.png)
 
 ## Defaults worth knowing
 
@@ -9,8 +51,9 @@ The defaults favour safety. Three of them can surprise you, and each is one chan
 
 * **Country rule: Server country only.** Only visitors from the country this server is in can connect from the
   internet. The **Configuration** tab names the countries that can connect, in green. Family abroad or a phone on a
-  VPN in another country is refused, so add their countries under **Advanced → Blocking**, or set **Country rule**
-  to **Off**. Until the server's own country is known, shown in yellow, everyone can connect.
+  VPN in another country is refused, so add their countries in the **Countries** picker under
+  **Advanced → Blocking**, or set **Country rule** to **Off**. Until the server's own country is known, shown in
+  yellow, everyone can connect.
 * **HTTPS memory: 180 days.** A browser that visited once keeps using HTTPS for your address for 180 days, which
   stops anyone downgrading the connection. If you later turn the proxy off, those browsers refuse `http://` for
   your address until it runs out, so open Jellyfin by its local IP instead.
@@ -19,17 +62,17 @@ The defaults favour safety. Three of them can surprise you, and each is one chan
 
 ## DDNS record
 
-A server keeps one record, and its hostname is also the proxy's address. The fields shown, and their labels,
-depend on the **Provider**. Each [provider page](providers/README.md) lists exactly what it shows.
+The fields shown, and their labels, depend on the **Provider**. Each [provider page](providers/README.md) lists
+exactly what it shows. See [The DDNS Record](Records.md) for how the record works.
 
-In step 2, **Address**, of the **Configuration** tab, kept with **Save** at the bottom of the page:
+In step 2, **Address**, of the **Configuration** tab:
 
 | Setting | What it does | Default |
 |---|---|---|
 | **Provider** | The DNS company, out of 45. | Cloudflare |
 | Hostname, login, password and zone fields | What the provider needs. Their labels change per provider. | Empty |
 
-Under **Advanced → Dynamic DNS**, in the **Record** group, kept with **Save** on that tab:
+Under **Advanced → Dynamic DNS**, in the **Record** group:
 
 | Setting | What it does | Default |
 |---|---|---|
@@ -44,8 +87,8 @@ Under **Advanced → Dynamic DNS**, in the **Record** group, kept with **Save** 
 
 ## Configuration
 
-The proxy's settings, in the numbered steps of the **Configuration** tab. **Save** at the bottom keeps every step,
-the record in step 2 included. The proxy answers on the record's names and the **Other addresses** under Advanced.
+The proxy's settings in the numbered steps of the **Configuration** tab. The proxy answers on the record's names
+and the **Other addresses** under Advanced.
 
 | Setting | What it does | Default |
 |---|---|---|
@@ -54,8 +97,6 @@ the record in step 2 included. The proxy answers on the record's names and the *
 | **I accept the Let's Encrypt terms** | Step 3. Nothing is requested from Let's Encrypt until this is ticked. | Off |
 | **Certificate file**, **Private key file**, **Password** | Step 3. The files for PEM or PKCS#12. The password is stored encrypted. | Empty |
 | **Trust the Proxy** | Step 5. Lets Jellyfin see each visitor's real address. Until it is done, internet visitors are turned away. Jellyfin restarts once. **Undo** reverses it. | Not set |
-
-See [Remote Access](RemoteAccess.md).
 
 ## Advanced
 
@@ -75,7 +116,7 @@ group of this section, listed under [DDNS record](#ddns-record).
 | **Request timeout** | How long each request may take, in seconds. | 15 | 1 to 300 |
 
 How often updates run is set on the **Update DDNS** scheduled task, every 15 minutes by default. See
-[How Updates Run](HowItWorks.md).
+[How updates run](Records.md#how-updates-run).
 
 ### Addresses
 
@@ -94,8 +135,7 @@ How often updates run is set on the **Update DDNS** scheduled task, every 15 min
 | **Block embedding** | Other websites cannot frame Jellyfin's pages. | On | |
 | **Trusted networks** | Addresses or ranges treated like your own network, such as a VPN, one per line. | None | |
 
-**Request a New Certificate** asks Let's Encrypt for a new certificate now. Renewal is automatic, so it is only
-for replacing a certificate early, such as after its key leaked.
+**Request a New Certificate** replaces the certificate early. See [Renewal](RemoteAccess.md#renewal).
 
 ### Blocking
 
@@ -112,8 +152,7 @@ These only ever apply to the internet, never to your own or trusted networks.
 | **Unknown addresses** | Allow or block addresses the location database has no country for. | Allow | |
 | **Without the location database** | Allow or block everyone while the database is missing or downloading. | Allow | |
 
-IPv6 bans cover the visitor's whole /64, and widen to the /56 and /48 when failures spread across them. See
-[Protection](RemoteAccess.md#protection).
+How bans work for IPv6 is under [Protection](RemoteAccess.md#protection).
 
 ### History
 
@@ -163,5 +202,3 @@ Under **Dashboard → Scheduled Tasks**:
 | **Update DDNS** | Checks and updates the DDNS record. | At startup and every 15 minutes |
 | **Refresh Certificate** | Requests a Let's Encrypt certificate when one is missing, no longer covers your addresses, or expires within 30 days. Reloads certificate files and replaces a self-signed one before it expires. | Daily at 3:00 |
 | **Refresh Locations** | Downloads the newest DB-IP location database. | Weekly |
-
-To replace a certificate now, see [Renewal](RemoteAccess.md#renewal).

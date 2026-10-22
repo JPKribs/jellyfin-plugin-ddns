@@ -4,47 +4,17 @@ Remote Access puts a secure HTTPS address in front of Jellyfin, such as `https:/
 the plugin. It gets the certificate for you, listens on the standard web ports, and turns away people trying to
 break in. There is no separate reverse proxy to run.
 
-For a complete walkthrough, see the Beginner's Guides: [free with Duck DNS](BeginnersGuideFree.md) or [recommended with your own domain](BeginnersGuide.md).
-
 !!! warning "Everything runs inside Jellyfin"
     If Jellyfin is down, remote access is down too. See [Recovery](#recovery) for getting back in if a setting
     locks you out.
 
-## Before you start
-
-You need:
-
-* **A domain name pointed at your home.** A [DDNS record](Records.md) keeps it pointed at your public IP.
-* **A router that forwards ports**, on its own through UPnP or NAT-PMP or by hand, and a public IP of your own,
-  not one shared through carrier-grade NAT. See [Shared addresses](#shared-addresses-and-cgnat).
-* **On Linux**, permission for Jellyfin to use ports below 1024. Run `sudo systemctl edit jellyfin`, add
-  `AmbientCapabilities=CAP_NET_BIND_SERVICE` under `[Service]`, and restart Jellyfin. Windows and macOS need
-  nothing.
-* **In Docker**, host networking. See [Docker, tunnels and other proxies](#docker-tunnels-and-other-proxies).
-
 ## Setup
 
-Everything is on the **Configuration** tab, as six numbered steps. Each step shows its state, and the summary at
-the top counts the steps done and explains the first one that needs attention.
-
-1. **Proxy on**: tick **Enabled** and select **Save** at the bottom of the page.
-2. **Address**: set up the DDNS record. Its hostname is the name people will use, and the proxy answers on it.
-   More names go under **Other addresses** in **Advanced → Addresses**. The step then checks that the name points
-   at this server. See [Name check](#name-check).
-3. **Certificate**: leave **Let's Encrypt** selected, tick **I accept the Let's Encrypt terms**, and save. See
-   [Certificates](#certificates).
-4. **Router**: the plugin asks the router to forward the ports. If the router does not, forward TCP ports **80**
-   and **443** by hand to the address this step shows. See
-   [Automatic port forwarding](#automatic-port-forwarding).
-5. **Trust the Proxy**: select **Trust the Proxy**. Until then, internet visitors are turned away. Jellyfin
-   restarts once so it can see each visitor's real address through the proxy. Its own ports stay the same.
-   **Undo** puts its settings back.
-6. **Reachable from outside**: select **Test from Outside**. See [Test from Outside](#test-from-outside).
-
-When every step is done, the summary says **Ready to share**. Then open your
-address on a phone with Wi-Fi turned off.
-
-![Configuration tab](screenshots/Configuration.png)
+Setup is the six numbered steps of the **Configuration** tab: **Proxy on**, **Address**, **Certificate**,
+**Router**, **Trust the Proxy** and **Reachable from outside**. When every step is done, the summary at the top
+says **Ready to share**. The [Beginner's Guide](BeginnersGuide.md) walks through them from the start, including
+what you need first: a name kept pointed at your home by [the DDNS record](Records.md), a public IP that is not
+shared through CGNAT, and on Linux or in Docker access to ports 80 and 443. The [Settings Reference](Settings.md#configuration) lists each step's settings.
 
 ### Ports
 
@@ -55,13 +25,13 @@ address on a phone with Wi-Fi turned off.
 | Jellyfin's own | Usually 8096 and 8920. Unchanged, and your home network keeps using them. |
 
 Do not forward Jellyfin's own ports. Internet traffic should only reach the proxy. If this server has a public
-address of its own, such as a VPS or a public IPv6 address, block Jellyfin's ports in its firewall too. Step 5 of
-the Configuration tab warns when it finds one. To close that gap from the plugin instead, see
+address of its own, such as a VPS or a public IPv6 address, block Jellyfin's ports in its firewall too. Step 5,
+**Trust the Proxy**, warns when it finds one. To close that gap from the plugin instead, see
 [Only through the proxy](#only-through-the-proxy).
 
 ## Name check
 
-Step 2 looks up the proxy's first public name, the record's hostname, and compares it with this server's public IP.
+Step 2, **Address**, looks up the proxy's first public name, the record's hostname, and compares it with this server's public IP.
 
 * **Ready**: the name points to this server.
 * **Not pointed here**: the name does not point anywhere yet, or points somewhere else. A new record can take a few
@@ -76,7 +46,7 @@ A name behind Cloudflare's orange cloud points at Cloudflare, so it shows as **N
 ## Automatic port forwarding
 
 **Automatic port forwarding**, under **Advanced → Addresses**, asks your router to forward the ports for you. It is
-on by default. Step 4 of the Configuration tab shows how it went.
+on by default. Step 4, **Router**, shows how it went.
 
 * The plugin asks the router through NAT-PMP first, then UPnP. Most home routers support one of them, though some
   ship with it turned off.
@@ -89,7 +59,7 @@ on by default. Step 4 of the Configuration tab shows how it went.
   rule on the router, or forward by hand.
 * It only covers IPv4. For visitors over IPv6, allow ports 80 and 443 to this server in the router's firewall.
 * **Try Again** in step 4 asks the router once more straight away.
-* Each change is written to the activity log. See [Monitoring](Monitoring.md#remote-access-entries).
+* Each change is written to the activity log. See [Remote Access entries](Dashboard.md#remote-access-entries).
 
 When the router does not open the ports, or the setting is off, step 4 shows **Forward by hand** with the rule to
 add: TCP ports **80** and **443** to the address it shows. The server cannot see ports forwarded by hand, so step 4
@@ -159,7 +129,7 @@ check, and the Certificate step says which is in use:
 
 ### Renewal
 
-Certificates last 90 days. The **Refresh Certificate** scheduled task checks daily, and saving the
+Certificates last 90 days. The **Refresh Certificate** scheduled task checks daily at 3:00, and saving the
 Configuration tab checks too. Either one requests a new certificate when there is none, when it no longer covers your addresses, or
 within 30 days of expiry. A new certificate is used straight away.
 
@@ -202,11 +172,9 @@ that happens, and every device then needs the new root.
 These are on by default, and each can be changed under **Advanced**.
 
 * **Your own network is never blocked.** Bans, the block list and country rules only apply to the internet.
-* **Country rule**: only visitors from the country this server is in can connect. The **Configuration** tab lists
-  the countries that can connect, in green, or says in yellow that the server's country is not known yet. Add countries in the
-  **Countries** picker under **Advanced → Blocking**, or set **Country rule** to **Off**. Unblocking a country from
-  the Dashboard adds it. The rule blocks you abroad too, so see
-  [Travelling abroad](BeginnersGuide.md#after-setup) before a trip.
+* **Country rule**: only visitors from the country this server is in can connect, which blocks you abroad too.
+  See [Defaults worth knowing](Settings.md#defaults-worth-knowing) for how to add countries. Unblocking a country
+  from the Dashboard also adds it.
 * **Bans**: 5 failed sign-ins within 10 minutes bans the address for 60 minutes. An IPv6 visitor is banned with
   its whole /64, since it can pick any address in it. Failures spread over many /64s ban the wider /56 after 3 times
   **Failed sign-ins before a ban**, or the /48 after 6 times, which is 15 and 30 at the default. Those wider bans last at most 15 minutes, since they shut out others in that network too.
@@ -218,19 +186,17 @@ These are on by default, and each can be changed under **Advanced**.
   is encrypted.
 * **HTTPS only**: browsers are told to always use HTTPS for your addresses, and TLS 1.2 or 1.3 is required.
 
+The [Dashboard](Dashboard.md) shows who connects and what was turned away, with bans you can lift and addresses
+you can block.
+
 ### Low-memory servers
 
 When less than 3 GB of memory is available to Jellyfin, such as on a single-board computer or in a container with
 a memory limit, the proxy holds fewer connections: 500 in total instead of 2000, 32 per internet address instead
 of 64, and idle connections close after 60 seconds instead of 130. .NET counts three quarters of a container's
 limit, so a 4 GB container counts as 3 GB and gets the standard values, while a 2 GB container counts as 1.5 GB
-and gets the lower ones. This only changes settings you have not set yourself. **Advanced**
-shows both defaults and which one applies.
-
-## Dashboard
-
-The **Dashboard** tab shows who connects, where from, and what was turned away, with bans you can lift and
-addresses you can block. See [Dashboard](Dashboard.md).
+and gets the lower ones. This only changes settings you have not set yourself, the ones marked **Auto** in the
+[Settings Reference](Settings.md#timeouts). **Advanced** shows both defaults and which one applies.
 
 ## Other apps
 
@@ -274,7 +240,7 @@ makes the connections itself:
 * Docker's IPv6 handling when ip6tables is off,
 * a tunnel such as Cloudflare Tunnel, or another reverse proxy in front of this one.
 
-In Docker, use host networking (`network_mode: host`). Do not also publish Jellyfin's own port with
+In Docker, use host networking, `network_mode: host`. Do not also publish Jellyfin's own port with
 `-p 8096:8096`, since Docker opens published ports past firewalls such as ufw.
 
 ### When every visitor looks local
@@ -291,7 +257,7 @@ requests for your public names, all from one local address and none from the int
 
 ## Recovery
 
-* **Undo** in step 5 of the Configuration tab puts Jellyfin's network settings back as they were before **Trust the Proxy**.
+* **Undo** in step 5, **Trust the Proxy**, puts Jellyfin's network settings back as they were before **Trust the Proxy**.
 * **Locked out of the dashboard?** Create an empty file named `DISABLE` in
   `plugins/configurations/Jellyfin.Plugin.DynamicDns.Proxy/` under Jellyfin's data folder, and restart
   Jellyfin. The proxy stays off and Jellyfin's network settings go back as they were. Putting them back may

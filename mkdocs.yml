@@ -42,18 +42,13 @@ markdown_extensions:
 
 nav:
   - Overview: index.md
-  - "Beginner's Guides":
-      - Free: BeginnersGuideFree.md
-      - Recommended: BeginnersGuide.md
+  - "Beginner's Guide": BeginnersGuide.md
   - Getting Started:
       - Installation: Installation.md
-      - The Plugin's Pages: Pages.md
       - The DDNS Record: Records.md
   - Features:
       - Remote Access: RemoteAccess.md
-      - Dashboard: Dashboard.md
-      - How Updates Run: HowItWorks.md
-      - Monitoring: Monitoring.md
+      - "Dashboard & Monitoring": Dashboard.md
   - Providers:
       - Overview: providers/README.md
       - 1984 Hosting: providers/Hosting1984.md
@@ -103,8 +98,7 @@ nav:
       - ZoneEdit: providers/ZoneEdit1.md
   - Reference:
       - Settings Reference: Settings.md
-      - Security: Security.md
-      - Storage: Storage.md
+      - "Security & Storage": Security.md
       - Versioning: Versioning.md
   - Contributing:
       - Contributing: contributors/CONTRIBUTING.md

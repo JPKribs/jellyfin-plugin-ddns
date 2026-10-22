@@ -11,7 +11,7 @@ A Jellyfin plugin for reaching your server from anywhere. It keeps your DNS reco
 
 Installation, record setup, every provider, and security are covered in the **[Remote Access documentation](https://jpkribs.github.io/jellyfin-plugin-remoteaccess/)**.
 
-New to domains and port forwarding? The Beginner's Guides go from nothing to watching from your phone, in one pass: **[free with Duck DNS](https://jpkribs.github.io/jellyfin-plugin-remoteaccess/BeginnersGuideFree/)**, or **[recommended with your own domain](https://jpkribs.github.io/jellyfin-plugin-remoteaccess/BeginnersGuide/)**.
+New to domains and port forwarding? The **[Beginner's Guide](https://jpkribs.github.io/jellyfin-plugin-remoteaccess/BeginnersGuide/)** goes from nothing to watching from your phone, in one pass, with a free path using Duck DNS and a recommended path using your own domain.
 
 Plugin repository URL for Jellyfin:
 
