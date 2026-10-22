@@ -1,7 +1,7 @@
 ---
 name: "Dynamic DNS"
 guid: "8150dce5-6153-4924-a985-a6927be95baa"
-version: "12.2.4.1"
+version: "12.2.4.2"
 targetAbi: "12.2.0.0"
 framework: "net10.0"
 overview: "Reach your server from anywhere: Dynamic DNS and a secure HTTPS proxy, inside Jellyfin."
@@ -22,15 +22,10 @@ artifacts:
 - "BouncyCastle.Cryptography.dll"
 - "QRCoder.dll"
 changelog:
-  added:
-  - The top of Configuration shows how many of the six steps are done, with a bar for each step and a link to the next one that needs attention.
-  - Configuration names the countries that can connect, in green, or says in yellow that the server's country is not known yet. A link goes straight to the country rule.
-  - The share card has Copy URL and Copy Image. Copy Image puts the QR code on the clipboard, or saves it as a file where the browser cannot copy images.
   changed:
-  - A server now keeps one DDNS record, and its hostname is the proxy's address. Step 2 asks only for the provider, the hostname and the credentials that provider needs. Saving with older extra records keeps only the one shown.
-  - Configuration has one Save for the whole page, and the steps use smaller buttons with the same spacing throughout.
-  - The finer settings moved to Advanced. Dynamic DNS holds the record's options and Remove Record. Addresses holds Other addresses and Automatic port forwarding. Security holds Request a New Certificate.
-  - The share card shows a Public or Home only badge, with a note pointing to step 2 when the address only works at home.
-  - On Advanced, the server's country in the country rule is shown in green, or in yellow while it is unknown.
+  - Configuration says less. Each step states where it stands in one short line, and descriptions no longer repeat it.
+  - Links to Advanced read as Advanced > Blocking, Advanced > Addresses and so on, the same way across the plugin.
+  - Step 6 no longer repeats the time of the outside check, which its card already shows.
   developer:
-  - The docs explain the defaults worth knowing, the single record and the new Advanced sections, with new screenshots.
+  - The Beginner's Guide has Free and Recommended tabs. Picking one switches every tab on the page, so only your path shows.
+  - The docs use the same Advanced > Blocking style as the plugin, with new screenshots.
