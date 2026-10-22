@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using Jellyfin.Plugin.DynamicDns.People;
 using Jellyfin.Plugin.DynamicDns.Proxy;
 using Jellyfin.Plugin.DynamicDns.Proxy.Network;
+using Jellyfin.Plugin.DynamicDns.Proxy.Router;
 using Jellyfin.Plugin.DynamicDns.Proxy.Settings;
 using Jellyfin.Plugin.DynamicDns.Utilities;
 using JPKribs.Jellyfin.Base;
@@ -210,7 +211,27 @@ public class ProxyController : ControllerBase
     /// <returns>The status.</returns>
     [HttpGet("Status")]
     [ProducesResponseType(StatusCodes.Status200OK)]
-    public ActionResult<ProxyStatus> GetStatus() => Ok(_proxy.GetStatus(_orchestrator.State));
+    public async Task<ActionResult<ProxyStatus>> GetStatus()
+        => Ok(await _proxy.GetStatusAsync(_orchestrator.State, HttpContext?.RequestAborted ?? CancellationToken.None).ConfigureAwait(false));
+
+    /// <summary>
+    /// Finds the router and opens the proxy's ports on it now, with UPnP or NAT-PMP.
+    /// </summary>
+    /// <returns>The router state afterwards.</returns>
+    [HttpPost("Router/Refresh")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public async Task<ActionResult<RouterStatus>> RefreshRouter()
+        => Ok(await _proxy.RefreshRouterAsync(HttpContext?.RequestAborted ?? CancellationToken.None).ConfigureAwait(false));
+
+    /// <summary>
+    /// Asks a few places on the internet to connect to the public name's HTTPS port. Takes up to about 20 seconds.
+    /// The result is kept, so the status shows it afterwards.
+    /// </summary>
+    /// <returns>The result.</returns>
+    [HttpPost("Reachability")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public async Task<ActionResult<ReachabilityResult>> CheckReachability()
+        => Ok(await _proxy.CheckReachabilityAsync(HttpContext?.RequestAborted ?? CancellationToken.None).ConfigureAwait(false));
 
     /// <summary>
     /// Returns the hostnames the DDNS records keep pointed at this server, for the hostname pickers.

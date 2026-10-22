@@ -17,6 +17,12 @@ public class ProxyAdvancedSettings
     /// <summary>Gets or sets the LAN address advertised to local clients. Empty detects it.</summary>
     public string LanAddress { get; set; } = string.Empty;
 
+    /// <summary>
+    /// Gets or sets a value indicating whether the proxy asks the router to forward ports 80 and 443 to this server
+    /// on its own, with UPnP or NAT-PMP.
+    /// </summary>
+    public bool? AutoPortForwarding { get; set; }
+
     /// <summary>Gets or sets a value indicating whether HTTPS responses for configured hostnames carry HSTS.</summary>
     public bool? HstsEnabled { get; set; }
 

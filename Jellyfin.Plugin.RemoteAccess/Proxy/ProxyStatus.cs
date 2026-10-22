@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Jellyfin.Plugin.DynamicDns.Proxy.Network;
+using Jellyfin.Plugin.DynamicDns.Proxy.Router;
 
 namespace Jellyfin.Plugin.DynamicDns.Proxy;
 
@@ -98,4 +99,13 @@ public sealed class ProxyStatus
     /// front of the proxy hides their addresses.
     /// </summary>
     public bool EveryoneLooksLocal { get; set; }
+
+    /// <summary>Gets or sets the ports the proxy opened on the router, and whether the provider shares its address.</summary>
+    public RouterStatus Router { get; set; } = new();
+
+    /// <summary>Gets or sets whether the public name points at this server.</summary>
+    public NameStatus Name { get; set; } = new();
+
+    /// <summary>Gets or sets the last check from outside the network, empty before any.</summary>
+    public ReachabilityResult Reachability { get; set; } = new();
 }

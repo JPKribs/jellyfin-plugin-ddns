@@ -63,6 +63,12 @@ public sealed record ProxyOptions
     /// <summary>Gets the LAN address to advertise, empty to detect it.</summary>
     public string LanAddress { get; init; } = string.Empty;
 
+    /// <summary>
+    /// Gets a value indicating whether the proxy asks the router to forward its ports with UPnP or NAT-PMP. On by
+    /// default, as in Plex: most home routers allow it, and the forwards go away when the proxy stops.
+    /// </summary>
+    public bool AutoPortForwarding { get; init; } = true;
+
     /// <summary>Gets a value indicating whether HSTS is sent.</summary>
     public bool HstsEnabled { get; init; } = true;
 
@@ -158,6 +164,7 @@ public sealed record ProxyOptions
             HttpPort = a.HttpPort ?? d.HttpPort,
             HttpsPort = a.HttpsPort ?? d.HttpsPort,
             LanAddress = (a.LanAddress ?? string.Empty).Trim(),
+            AutoPortForwarding = a.AutoPortForwarding ?? d.AutoPortForwarding,
             HstsEnabled = a.HstsEnabled ?? d.HstsEnabled,
             HstsMaxAgeDays = a.HstsMaxAgeDays ?? d.HstsMaxAgeDays,
             SameOriginFramesOnly = a.SameOriginFramesOnly ?? d.SameOriginFramesOnly,

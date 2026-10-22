@@ -10,6 +10,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Jellyfin.Plugin.DynamicDns.Proxy.Hosting;
 using Jellyfin.Plugin.DynamicDns.Proxy.Network;
+using Jellyfin.Plugin.DynamicDns.Proxy.Router;
 using Jellyfin.Plugin.DynamicDns.Proxy.Settings;
 using JPKribs.Jellyfin.Base;
 using MediaBrowser.Common.Configuration;
@@ -54,6 +55,10 @@ public sealed class ProxyManager : IAsyncDisposable
     private readonly ActivityLogger? _activity;
     private readonly LocalTrafficWatch _localTraffic;
     private readonly CancellationTokenSource _shutdown = new();
+    private readonly RouterPortMapper _router;
+    private readonly ReachabilityChecker _reachability;
+    private readonly PublicAddresses _addresses;
+    private readonly NameChecker _names;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ProxyManager"/> class.
@@ -70,6 +75,9 @@ public sealed class ProxyManager : IAsyncDisposable
     /// <param name="bans">The addresses banned for failed sign-ins.</param>
     /// <param name="geo">The location lookup, loaded when country rules need it.</param>
     /// <param name="acme">Gets and renews certificates from Let's Encrypt.</param>
+    /// <param name="router">Opens the proxy's ports on the router.</param>
+    /// <param name="reachability">Checks the HTTPS port from outside the network.</param>
+    /// <param name="addresses">This server's public addresses, for the name and shared address checks.</param>
     /// <param name="activity">The activity log writer, for start failures and recovery.</param>
     public ProxyManager(
         ILoggerFactory loggerFactory,
@@ -84,9 +92,16 @@ public sealed class ProxyManager : IAsyncDisposable
         People.BanList bans,
         People.GeoIpService geo,
         Acme.AcmeCertificateService acme,
+        RouterPortMapper router,
+        ReachabilityChecker reachability,
+        PublicAddresses addresses,
         ActivityLogger? activity = null)
     {
         _activity = activity;
+        _router = router;
+        _reachability = reachability;
+        _addresses = addresses;
+        _names = new NameChecker((name, token) => Dns.GetHostAddressesAsync(name, token), addresses.GetAsync);
         ArgumentNullException.ThrowIfNull(loggerFactory);
         ArgumentNullException.ThrowIfNull(configuration);
         ArgumentNullException.ThrowIfNull(application);
@@ -168,9 +183,26 @@ public sealed class ProxyManager : IAsyncDisposable
         await _acmeRetry.DisposeAsync().ConfigureAwait(false);
 
         await StopAsync().ConfigureAwait(false);
+
+        // The forwards point at ports nothing listens on any more. Bounded, so a router that does not answer
+        // never holds up Jellyfin's shutdown.
+        using var timeout = new CancellationTokenSource(_stopTimeout);
+        await _router.StopAsync(timeout.Token).ConfigureAwait(false);
     }
 
     private async Task ApplyCoreAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            await ApplyLockedAsync(cancellationToken).ConfigureAwait(false);
+        }
+        finally
+        {
+            SyncRouter();
+        }
+    }
+
+    private async Task ApplyLockedAsync(CancellationToken cancellationToken)
     {
         await _lifecycle.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
@@ -237,6 +269,91 @@ public sealed class ProxyManager : IAsyncDisposable
         {
             _lifecycle.Release();
         }
+
+        SyncRouter();
+    }
+
+    /// <summary>
+    /// Finds the router and opens the proxy's ports on it now, for the button on the page.
+    /// </summary>
+    /// <param name="cancellationToken">Cancels the wait.</param>
+    /// <returns>The router state afterwards.</returns>
+    public async Task<RouterStatus> RefreshRouterAsync(CancellationToken cancellationToken)
+    {
+        if (!_shutdown.IsCancellationRequested)
+        {
+            _router.Desire(RouterRequestFor(ReadSettings(), Volatile.Read(ref _host)?.Listener, NetworkTakeover.DetectLanAddress()));
+        }
+
+        var status = await _router.RefreshAsync(cancellationToken).ConfigureAwait(false);
+        await _addresses.GetAsync(cancellationToken).ConfigureAwait(false);
+        return WithCgnat(status);
+    }
+
+    /// <summary>
+    /// Asks a few places on the internet to connect to the public name's HTTPS port, and keeps the answer for the
+    /// status. Takes up to about 20 seconds.
+    /// </summary>
+    /// <param name="cancellationToken">Cancels the wait, not the check.</param>
+    /// <returns>The result.</returns>
+    public Task<ReachabilityResult> CheckReachabilityAsync(CancellationToken cancellationToken)
+        => _reachability.CheckAsync(PublicHostname(ReadSettings()), cancellationToken);
+
+    /// <summary>
+    /// What the router should forward for these settings and the listener the proxy runs with.
+    /// </summary>
+    /// <param name="settings">The proxy settings.</param>
+    /// <param name="listener">The running listener, null while the proxy is stopped.</param>
+    /// <param name="detectedLan">The LAN address found on this machine, used when none is set.</param>
+    /// <returns>The request.</returns>
+    internal static RouterRequest RouterRequestFor(ProxySettings settings, ListenerOptions? listener, IPAddress? detectedLan)
+    {
+        var options = ProxyOptions.From(settings.Advanced);
+        if (!settings.Enabled || !options.AutoPortForwarding)
+        {
+            return RouterRequest.Off;
+        }
+
+        var lan = IPAddress.TryParse(options.LanAddress, out var given) && given.AddressFamily == AddressFamily.InterNetwork ? given : detectedLan;
+
+        // Only ports the proxy listens on are forwarded: HTTPS waits for a certificate, and a proxy bound to this
+        // machine alone cannot be reached through the router at all.
+        var ports = new List<(int External, int Internal)>();
+        if (listener is { LoopbackOnly: false })
+        {
+            ports.Add((ProxyOptions.PublicHttpPort, listener.HttpPort));
+            if (listener.HttpsPort is { } https)
+            {
+                ports.Add((ProxyOptions.PublicHttpsPort, https));
+            }
+        }
+
+        return new RouterRequest(true, lan, ports);
+    }
+
+    /// <summary>
+    /// The name people use from the internet, the one the name and outside checks look at.
+    /// </summary>
+    /// <param name="settings">The proxy settings.</param>
+    /// <returns>The first exact public hostname, empty when there is none.</returns>
+    internal static string PublicHostname(ProxySettings settings)
+        => settings.Hostnames.FirstOrDefault(h => !h.StartsWith('*') && HostnameMatcher.IsPublicName(h)) ?? string.Empty;
+
+    // The router follows the proxy: its ports are forwarded while it listens, and not otherwise.
+    private void SyncRouter()
+    {
+        if (_shutdown.IsCancellationRequested)
+        {
+            return;
+        }
+
+        _router.Apply(RouterRequestFor(ReadSettings(), Volatile.Read(ref _host)?.Listener, NetworkTakeover.DetectLanAddress()));
+    }
+
+    private RouterStatus WithCgnat(RouterStatus status)
+    {
+        (status.BehindCgnat, status.CgnatReason) = CgnatCheck.Evaluate(status.ExternalAddress, _addresses.Current.V4);
+        return status;
     }
 
     /// <summary>
@@ -443,7 +560,22 @@ public sealed class ProxyManager : IAsyncDisposable
     /// </summary>
     /// <param name="takeover">The port takeover state.</param>
     /// <returns>The status.</returns>
-    public ProxyStatus GetStatus(TakeoverState takeover)
+    public ProxyStatus GetStatus(TakeoverState takeover) => GetStatus(takeover, null);
+
+    /// <summary>
+    /// Describes the proxy for the dashboard, with the public name looked up again when the last answer is more
+    /// than a minute old.
+    /// </summary>
+    /// <param name="takeover">The port takeover state.</param>
+    /// <param name="cancellationToken">Cancels the lookup.</param>
+    /// <returns>The status.</returns>
+    public async Task<ProxyStatus> GetStatusAsync(TakeoverState takeover, CancellationToken cancellationToken)
+    {
+        var name = await _names.GetAsync(PublicHostname(ReadSettings()), cancellationToken).ConfigureAwait(false);
+        return GetStatus(takeover, name);
+    }
+
+    private ProxyStatus GetStatus(TakeoverState takeover, NameStatus? name)
     {
         ArgumentNullException.ThrowIfNull(takeover);
         var host = Volatile.Read(ref _host);
@@ -480,6 +612,9 @@ public sealed class ProxyManager : IAsyncDisposable
             FolderProblem = FolderAccess.Problem,
             EveryoneLooksLocal = _localTraffic.Suspected,
             CountryRule = DescribeCountryRule(options, _blocks.ServerCountry.Country),
+            Router = WithCgnat(_router.Status),
+            Name = name ?? _names.Cached(PublicHostname(settings)),
+            Reachability = _reachability.Last,
         };
     }
 
@@ -531,6 +666,7 @@ public sealed class ProxyManager : IAsyncDisposable
     public async ValueTask DisposeAsync()
     {
         await ShutdownAsync().ConfigureAwait(false);
+        _names.Dispose();
         _lifecycle.Dispose();
         _shutdown.Dispose();
     }

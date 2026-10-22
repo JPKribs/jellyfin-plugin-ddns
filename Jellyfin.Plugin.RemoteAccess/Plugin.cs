@@ -287,6 +287,10 @@ public class Plugin : PluginBase<Plugin, PluginConfiguration>
             }
         }
 
+        // The router would otherwise keep forwarding to this server until the lease ran out. Best effort and
+        // bounded: it never throws and waits a few seconds at most.
+        Proxy.Router.RouterPortMapper.RemoveForUninstall();
+
         base.OnUninstalling();
     }
 

@@ -47,6 +47,10 @@ public class PluginServiceRegistrator : IPluginServiceRegistrator
         serviceCollection.AddSingleton<CertificateStore>();
         serviceCollection.AddSingleton<Http01ChallengeStore>();
         serviceCollection.AddSingleton<Proxy.Acme.AcmeCertificateService>();
+        // Plex-style remote access: forwards on the router, and checks that the name and port work from outside.
+        serviceCollection.AddSingleton<Proxy.Router.RouterPortMapper>();
+        serviceCollection.AddSingleton<Proxy.Router.ReachabilityChecker>();
+        serviceCollection.AddSingleton<Proxy.Router.PublicAddresses>();
         serviceCollection.AddSingleton<ProxyManager>();
         serviceCollection.AddSingleton<JellyfinNetworkOrchestrator>();
         serviceCollection.AddHostedService<ProxyHostedService>();
