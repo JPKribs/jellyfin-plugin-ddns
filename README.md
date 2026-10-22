@@ -18,7 +18,7 @@ https://raw.githubusercontent.com/JPKribs/jellyfin-plugin-remoteaccess/master/ma
 
 ## Considerations Before Using
 
-This plugin exists to simplify some of the networking around Jellyfin and to minimize the number of external applications that you need to run this. Please keep in mind that **this centralizes your setup around Jellyfin**. If you run into issues with Jellyfin, your DDNS will be offline as well. If you rely on your DDNS for administrative access to your system, I would recommend an external solution so your access isn't lost if Jellyfin goes down.
+This plugin exists to simplify external networking for Jellyfin with no additional programs to manage. Please keep in mind that **this centralizes your setup around Jellyfin**. If you run into issues with Jellyfin, your DDNS will be offline as well. If you rely on your DDNS for administrative access to your system, I would recommend an external solution so your access isn't lost if Jellyfin goes down.
 
 ## AI Disclaimer
 
