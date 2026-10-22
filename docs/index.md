@@ -10,17 +10,6 @@ Jellyfin:
 * **The proxy** puts a secure HTTPS address in front of Jellyfin, with a free certificate from Let's Encrypt and
   protection against people trying to break in. See [Remote Access](RemoteAccess.md).
 
-You can use Dynamic DNS on its own, or both together. There is no separate reverse proxy or updater to run.
-
-!!! danger "Actively being tested"
-    The proxy, certificates and blocking are new and still changing between releases. Keep another way into your
-    server while you try them, and report anything that looks wrong in
-    [Issues](https://github.com/JPKribs/jellyfin-plugin-remoteaccess/issues).
-
-!!! warning "Everything depends on Jellyfin"
-    If Jellyfin is down, so are your DNS updates and your remote access. If you rely on this address to manage the
-    server itself, keep another way in as well.
-
 ## Where to start
 
 * **New to all of this?** Follow the [Beginner's Guide](BeginnersGuide.md). It goes from nothing to watching from
