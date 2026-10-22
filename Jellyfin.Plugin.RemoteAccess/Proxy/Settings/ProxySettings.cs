@@ -20,9 +20,6 @@ public class ProxySettings
     /// <summary>Gets or sets where the TLS certificate comes from.</summary>
     public ProxyCertificateSettings Certificate { get; set; } = new();
 
-    /// <summary>Gets or sets the routes to other services behind the same port and certificate.</summary>
-    public List<ProxyRoute> Routes { get; set; } = new();
-
     /// <summary>
     /// Gets or sets the advanced values the administrator changed. Anything left empty follows the built-in
     /// default in <see cref="ProxyOptions.Defaults"/>, so better defaults in a later version apply on their own.

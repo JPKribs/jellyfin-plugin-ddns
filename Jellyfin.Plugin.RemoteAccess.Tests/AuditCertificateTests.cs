@@ -479,53 +479,14 @@ public sealed class AuditCertificateTests : IDisposable
         Assert.Null(CertificateStore.PemLoadError(path));
     }
 
-    [Fact]
-    public async Task SelfTarget_FindsServicesThatAnswerAsThisJellyfin()
-    {
-        const string Id = "0f1e2d3c4b5a69788796a5b4c3d2e1f0";
-        var routes = new List<ProxyRoute>
-        {
-            Route("self", "http://192.168.1.50:8096/jellyfin"),
-            Route("other", "http://192.168.1.51:8096"),
-            Route("down", "http://192.168.1.52:5055"),
-            Route("slow", "https://192.168.1.53"),
-            Route("off", "http://192.168.1.50:8096", enabled: false)
-        };
-        var asked = new List<Uri>();
-        Task<HttpResponseMessage> Send(ProxyRoute route, HttpRequestMessage request, CancellationToken token)
-        {
-            lock (asked)
-            {
-                asked.Add(request.RequestUri!);
-            }
-
-            return route.Name switch
-            {
-                "self" => Json("{\"Id\":\"0f1e2d3c-4b5a-6978-8796-a5b4c3d2e1f0\",\"ServerName\":\"home\"}"),
-                "other" => Json("{\"Id\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\"}"),
-                "down" => Task.FromException<HttpResponseMessage>(new HttpRequestException("refused")),
-                _ => HangAsync(token)
-            };
-        }
-
-        static async Task<HttpResponseMessage> HangAsync(CancellationToken token)
-        {
-            await Task.Delay(Timeout.Infinite, token);
-            return new HttpResponseMessage(HttpStatusCode.OK);
-        }
-
-        var found = await SelfTarget.FindJellyfinTargetsAsync(routes, Id, Send, TimeSpan.FromMilliseconds(200), CancellationToken.None);
-
-        Assert.Equal("self", Assert.Single(found).Name);
-        Assert.Contains(new Uri("http://192.168.1.50:8096/jellyfin/System/Info/Public"), asked);
-        Assert.Equal(4, asked.Count);
-    }
-
-    private static ProxyRoute Route(string name, string target, bool enabled = true)
-        => new() { Name = name, Target = target, Enabled = enabled, Hostnames = new List<string> { name + ".example.com" } };
-
-    private static Task<HttpResponseMessage> Json(string body)
-        => Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent(body) });
+    [Theory]
+    [InlineData("0f1e2d3c4b5a69788796a5b4c3d2e1f0", "0f1e2d3c-4b5a-6978-8796-a5b4c3d2e1f0", true)]
+    [InlineData("0F1E2D3C4B5A69788796A5B4C3D2E1F0", "0f1e2d3c4b5a69788796a5b4c3d2e1f0", true)]
+    [InlineData("0f1e2d3c4b5a69788796a5b4c3d2e1f0", "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", false)]
+    [InlineData("", "", false)]
+    [InlineData(null, "0f1e2d3c4b5a69788796a5b4c3d2e1f0", false)]
+    public void SameId_IgnoresDashesAndCase(string? a, string? b, bool same)
+        => Assert.Equal(same, ProxyManager.SameId(a, b));
 
     private static bool CanRead(string path)
     {

@@ -1,9 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Net;
-using System.Net.Http;
-using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
 using Jellyfin.Plugin.DynamicDns.People;
@@ -21,7 +18,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace Jellyfin.Plugin.DynamicDns.Api;
 
 /// <summary>
-/// Administrative endpoints backing the Proxy, Services and Advanced tabs.
+/// Administrative endpoints backing the Remote Access and Advanced tabs.
 /// </summary>
 [ApiController]
 [Authorize(Policy = "RequiresElevation")]
@@ -115,8 +112,7 @@ public class ProxyController : ControllerBase
         ProxySettingsValidator.Normalize(incoming);
 
         var options = ProxyOptions.From(incoming.Advanced);
-        var reserved = new[] { _proxy.Jellyfin.HttpPort, _proxy.Jellyfin.HttpsPort, options.HttpPort, options.HttpsPort };
-        var errors = ProxySettingsValidator.Validate(incoming, rawHostnames, reserved);
+        var errors = ProxySettingsValidator.Validate(incoming, rawHostnames);
         if (!incoming.Enabled && _orchestrator.State.Snapshot is not null)
         {
             errors.Add("Undo Trust the Proxy before turning the proxy off, so Jellyfin's remote access goes back to how it was.");
@@ -131,11 +127,6 @@ public class ProxyController : ControllerBase
         if (errors.Count > 0)
         {
             return BadRequest(new { Errors = errors });
-        }
-
-        if (await SelfPointingServices(stored, incoming).ConfigureAwait(false) is { } self)
-        {
-            return BadRequest(new { Errors = new List<string> { self } });
         }
 
         // Binding Jellyfin to this machine is part of trusting the proxy, so while it is trusted a change to it is
@@ -352,75 +343,6 @@ public class ProxyController : ControllerBase
         await _proxy.ApplyAsync(CancellationToken.None).ConfigureAwait(false);
     }
 
-    // A Service whose target answers as this Jellyfin server would serve Jellyfin past the rules meant for it.
-    // Only targets new or changed in this save are asked, so saving another tab never waits on a Service that
-    // is down. A target that does not answer is allowed.
-    private async Task<string?> SelfPointingServices(ProxySettings stored, ProxySettings incoming)
-    {
-        var before = stored.Routes.Where(r => r.Enabled).Select(r => r.Id + "\n" + r.Target).ToHashSet(StringComparer.Ordinal);
-        var asked = incoming.Routes.Where(r => r.Enabled && !before.Contains(r.Id + "\n" + r.Target)).ToList();
-        if (asked.Count == 0)
-        {
-            return null;
-        }
-
-        using var strict = new HttpClient(ProbeHandler(acceptAnyCertificate: false)) { MaxResponseContentBufferSize = 64 * 1024 };
-        using var lenient = new HttpClient(ProbeHandler(acceptAnyCertificate: true)) { MaxResponseContentBufferSize = 64 * 1024 };
-        var found = await SelfTarget.FindJellyfinTargetsAsync(
-            asked,
-            _proxy.SystemId,
-            (route, request, token) => (route.BackendTls == BackendTlsMode.Verify ? strict : lenient).SendAsync(request, token),
-            TimeSpan.FromSeconds(3),
-            HttpContext?.RequestAborted ?? CancellationToken.None).ConfigureAwait(false);
-        return found.Count == 0
-            ? null
-            : string.Join(" ", found.Select(r => (r.Name.Length > 0 ? r.Name : "This Service") + " points at Jellyfin itself."));
-    }
-
-    // Never follows a redirect or a system proxy, and never connects to a cloud metadata address, whatever the
-    // name resolves to. A Service set to skip or pin its certificate is asked without checking the certificate,
-    // since only the answer's server id is read.
-    private static SocketsHttpHandler ProbeHandler(bool acceptAnyCertificate)
-    {
-        var handler = new SocketsHttpHandler
-        {
-            UseProxy = false,
-            AllowAutoRedirect = false,
-            ConnectTimeout = TimeSpan.FromSeconds(3),
-            ConnectCallback = async (context, token) =>
-            {
-                var host = context.DnsEndPoint.Host;
-                var addresses = IPAddress.TryParse(host.Trim('[', ']'), out var literal)
-                    ? new[] { literal }
-                    : await Dns.GetHostAddressesAsync(host, token).ConfigureAwait(false);
-                var allowed = addresses.Where(a => !ProxySettingsValidator.IsMetadataAddress(a)).ToArray();
-                if (allowed.Length == 0)
-                {
-                    throw new HttpRequestException(host + " is not an address a Service may reach.");
-                }
-
-                var socket = new Socket(SocketType.Stream, ProtocolType.Tcp) { NoDelay = true };
-                try
-                {
-                    await socket.ConnectAsync(allowed, context.DnsEndPoint.Port, token).ConfigureAwait(false);
-                    return new NetworkStream(socket, ownsSocket: true);
-                }
-                catch
-                {
-                    socket.Dispose();
-                    throw;
-                }
-            }
-        };
-
-        if (acceptAnyCertificate)
-        {
-            handler.SslOptions.RemoteCertificateValidationCallback = (_, certificate, _, _) => certificate is not null;
-        }
-
-        return handler;
-    }
-
     // What a save changed, in the page's own words, for the activity entry. Unchanged saves log nothing.
     private static List<string> ChangedSections(ProxySettings before, ProxySettings after)
     {
@@ -441,11 +363,6 @@ public class ProxyController : ControllerBase
         if (a.Mode != b.Mode || a.Path != b.Path || a.KeyPath != b.KeyPath || a.AcceptTerms != b.AcceptTerms || a.Password != b.Password)
         {
             changed.Add("certificate");
-        }
-
-        if (Json(before.Routes) != Json(after.Routes))
-        {
-            changed.Add("Services");
         }
 
         if (Json(before.Advanced) != Json(after.Advanced))

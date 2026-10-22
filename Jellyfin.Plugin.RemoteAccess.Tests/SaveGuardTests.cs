@@ -55,24 +55,13 @@ public class SaveGuardTests
     }
 
     [Fact]
-    public void Validator_TrailingDotOnAMetadataAddress_IsStillRefused()
-    {
-        var s = new ProxySettings();
-        s.Routes.Add(new ProxyRoute { Name = "R", Hostnames = new List<string> { "r.example.com" }, Target = "http://169.254.169.254./latest" });
-        ProxySettingsValidator.Normalize(s);
-        Assert.Contains(ProxySettingsValidator.Validate(s), e => e.Contains("metadata", System.StringComparison.Ordinal));
-    }
-
-    [Fact]
-    public void Validator_NullListEntriesAndRoutes_AreDropped()
+    public void Validator_NullListEntries_AreDropped()
     {
         var s = new ProxySettings();
         s.Advanced.TrustedNetworks = new List<string> { null!, "10.0.0.0/8" };
         s.Advanced.BlockedAddresses = new List<string> { null!, "203.0.113.5" };
-        s.Routes.Add(null!);
         ProxySettingsValidator.Normalize(s);
         Assert.Equal(new[] { "10.0.0.0/8" }, s.Advanced.TrustedNetworks);
         Assert.Equal(new[] { "203.0.113.5" }, s.Advanced.BlockedAddresses);
-        Assert.Empty(s.Routes);
     }
 }

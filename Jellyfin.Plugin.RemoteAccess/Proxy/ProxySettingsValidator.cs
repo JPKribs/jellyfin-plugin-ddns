@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Net;
-using System.Net.Sockets;
 using Jellyfin.Plugin.DynamicDns.Proxy.Settings;
 
 namespace Jellyfin.Plugin.DynamicDns.Proxy;
@@ -14,25 +13,6 @@ namespace Jellyfin.Plugin.DynamicDns.Proxy;
 /// </summary>
 public static class ProxySettingsValidator
 {
-    // Cloud metadata services. A route pointing here would let anyone who reaches the route read the host's
-    // cloud credentials, so these are refused even though only administrators configure routes.
-    private static readonly IPNetwork[] _metadataNetworks =
-    {
-        IPNetwork.Parse("169.254.0.0/16"),
-        IPNetwork.Parse("fe80::/10"),
-        IPNetwork.Parse("fd00:ec2::/32"),
-        IPNetwork.Parse("fd20:ce::254/128"),
-        IPNetwork.Parse("100.100.100.200/32"),
-        IPNetwork.Parse("192.0.0.192/32"),
-        IPNetwork.Parse("168.63.129.16/32")
-    };
-
-    // Cloud metadata services reached by name, which would hand a service route the machine's credentials.
-    private static readonly HashSet<string> _metadataHosts = new(StringComparer.OrdinalIgnoreCase)
-    {
-        "metadata.google.internal", "metadata", "instance-data", "instance-data.ec2.internal", "metadata.azure.com"
-    };
-
     /// <summary>
     /// Cleans the settings in place: normalizes hostnames and networks and clamps numbers to sane ranges.
     /// Empty advanced values stay empty, so they keep following the defaults.
@@ -68,29 +48,6 @@ public static class ProxySettingsValidator
         a.MaxRequestBodyMbLan = ClampOptional(a.MaxRequestBodyMbLan, 0, int.MaxValue);
         a.MinResponseBytesPerSecond = ClampOptional(a.MinResponseBytesPerSecond, 0, int.MaxValue);
         a.BackendActivityTimeoutSeconds = ClampOptional(a.BackendActivityTimeoutSeconds, 61, 86400);
-
-        settings.Routes ??= new List<ProxyRoute>();
-        settings.Routes.RemoveAll(r => r is null);
-
-        // Route ids name YARP routes, which compare them ignoring case: a repeat, or one of Jellyfin's own,
-        // would make YARP refuse the whole configuration, so such an id is replaced.
-        var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { ProxyRuntime.JellyfinId, ProxyRuntime.JellyfinMediaId };
-        foreach (var route in settings.Routes)
-        {
-            var id = (route.Id ?? string.Empty).Trim();
-            route.Id = id.Length == 0 || !ids.Add(id) ? Guid.NewGuid().ToString("N") : id;
-            route.Name = (route.Name ?? string.Empty).Trim();
-            route.Hostnames = HostnameMatcher.NormalizeAll(route.Hostnames);
-            route.Target = (route.Target ?? string.Empty).Trim();
-            route.PinnedThumbprint = new string((route.PinnedThumbprint ?? string.Empty).Where(Uri.IsHexDigit).ToArray()).ToUpperInvariant();
-
-            var o = route.Overrides ??= new RouteOverrides();
-            o.MaxRequestBodyMbWan = ClampOptional(o.MaxRequestBodyMbWan, 0, int.MaxValue);
-            o.MaxRequestBodyMbLan = ClampOptional(o.MaxRequestBodyMbLan, 0, int.MaxValue);
-            o.BackendActivityTimeoutSeconds = ClampOptional(o.BackendActivityTimeoutSeconds, 61, 86400);
-            o.MinResponseBytesPerSecond = ClampOptional(o.MinResponseBytesPerSecond, 0, int.MaxValue);
-            o.HstsMaxAgeDays = ClampOptional(o.HstsMaxAgeDays, 1, 730);
-        }
     }
 
     /// <summary>
@@ -98,9 +55,8 @@ public static class ProxySettingsValidator
     /// </summary>
     /// <param name="settings">The normalized settings.</param>
     /// <param name="rawHostnames">The hostnames as entered, to report ones normalization dropped.</param>
-    /// <param name="reservedPorts">Jellyfin's and the proxy's ports, which a Service on this machine must not use.</param>
     /// <returns>Human-readable problems.</returns>
-    public static List<string> Validate(ProxySettings settings, IEnumerable<string>? rawHostnames = null, IReadOnlyCollection<int>? reservedPorts = null)
+    public static List<string> Validate(ProxySettings settings, IEnumerable<string>? rawHostnames = null)
     {
         ArgumentNullException.ThrowIfNull(settings);
         var errors = new List<string>();
@@ -109,11 +65,6 @@ public static class ProxySettingsValidator
         // leave Jellyfin unable to store the plugin's settings at all, so it is refused here.
         CheckEnum(errors, "Certificate source", settings.Certificate.Mode);
         CheckEnum(errors, "Country rule", settings.Advanced.CountryMode ?? CountryRuleMode.Off);
-        foreach (var route in settings.Routes)
-        {
-            CheckEnum(errors, "Service exposure", route.Exposure);
-            CheckEnum(errors, "Service certificate check", route.BackendTls);
-        }
 
         var o = ProxyOptions.From(settings.Advanced);
         CheckPort(errors, "HTTP port", o.HttpPort);
@@ -158,7 +109,6 @@ public static class ProxySettingsValidator
         }
 
         CheckCertificate(errors, settings.Certificate);
-        CheckRoutes(errors, settings, reservedPorts);
         return errors;
     }
 
@@ -200,77 +150,5 @@ public static class ProxySettingsValidator
                 errors.Add("Choose both the certificate and the private key file.");
                 break;
         }
-    }
-
-    private static void CheckRoutes(List<string> errors, ProxySettings settings, IReadOnlyCollection<int>? reservedPorts)
-    {
-        var claimed = new Dictionary<string, string>(StringComparer.Ordinal);
-        foreach (var name in settings.Hostnames)
-        {
-            claimed[name] = "Jellyfin";
-        }
-
-        foreach (var route in settings.Routes)
-        {
-            var label = route.Name.Length > 0 ? route.Name : "A route";
-            if (route.Hostnames.Count == 0)
-            {
-                errors.Add($"{label} needs at least one hostname.");
-            }
-
-            foreach (var name in route.Hostnames)
-            {
-                if (claimed.TryGetValue(name, out var owner))
-                {
-                    errors.Add($"{name} is used by both {owner} and {label}.");
-                }
-                else
-                {
-                    claimed[name] = label;
-                }
-            }
-
-            if (!Uri.TryCreate(route.Target, UriKind.Absolute, out var target)
-                || (target.Scheme != Uri.UriSchemeHttp && target.Scheme != Uri.UriSchemeHttps)
-                || target.Host.Length == 0)
-            {
-                errors.Add($"{label} needs a target address, for example http://192.168.1.20:5055.");
-                continue;
-            }
-
-            // A trailing dot still resolves, to the address itself for one written as digits.
-            var host = target.Host.Trim('[', ']').TrimEnd('.');
-            if ((IPAddress.TryParse(host, out var ip) && IsMetadataAddress(ip)) || _metadataHosts.Contains(host))
-            {
-                errors.Add($"{label} points at a cloud metadata address, which is not allowed.");
-            }
-
-            if (reservedPorts is not null && SelfTarget.IsReserved(target, reservedPorts))
-            {
-                errors.Add($"{label} points at Jellyfin or this proxy on this server. Jellyfin is already served on your address, and a Service is for other apps.");
-            }
-
-            if (route.BackendTls == BackendTlsMode.Pinned && route.PinnedThumbprint.Length != 64)
-            {
-                errors.Add($"{label} needs the service certificate's SHA-256 thumbprint, 64 hexadecimal characters.");
-            }
-        }
-    }
-
-    /// <summary>
-    /// Whether an address is a cloud metadata service or link-local, which a Service must never reach.
-    /// </summary>
-    /// <param name="ip">The address.</param>
-    /// <returns>True when it must not be connected to.</returns>
-    internal static bool IsMetadataAddress(IPAddress ip)
-    {
-        var normalized = NetworkClassifier.Normalize(ip);
-        if (Models.IPAddressClassifier.EmbeddedIPv4(normalized) is { } inside && IsMetadataAddress(inside))
-        {
-            return true;
-        }
-
-        return _metadataNetworks.Any(n => n.BaseAddress.AddressFamily == normalized.AddressFamily && n.Contains(normalized))
-            || (normalized.AddressFamily == AddressFamily.InterNetworkV6 && normalized.IsIPv6LinkLocal);
     }
 }

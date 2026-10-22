@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.IO.Compression;
 using System.Linq;
 using System.Net;
 using System.Net.Http.Headers;
@@ -14,7 +13,6 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Hosting.Server;
 using Microsoft.AspNetCore.Hosting.Server.Features;
 using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.ResponseCompression;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Microsoft.AspNetCore.Server.Kestrel.Https;
 using Microsoft.Extensions.Configuration;
@@ -36,8 +34,6 @@ public sealed class ProxyHost : IAsyncDisposable
 {
     /// <summary>How many HTTP/2 requests one connection may have in flight at once.</summary>
     public const int MaxStreamsPerConnection = 32;
-
-    private static readonly string[] _extraCompressedTypes = { "image/svg+xml", "application/manifest+json" };
 
     private readonly WebApplication _app;
     private readonly ProxyConfigProvider _config;
@@ -103,15 +99,6 @@ public sealed class ProxyHost : IAsyncDisposable
         builder.Services.AddSingleton<IProxyConfigProvider>(config);
         builder.Services.AddSingleton<IForwarderHttpClientFactory, ProxyHttpClientFactory>();
         builder.Services.AddReverseProxy().AddTransforms(ConfigureTransforms);
-        builder.Services.AddResponseCompression(o =>
-        {
-            o.EnableForHttps = true;
-            o.Providers.Add<BrotliCompressionProvider>();
-            o.Providers.Add<GzipCompressionProvider>();
-            o.MimeTypes = ResponseCompressionDefaults.MimeTypes.Concat(_extraCompressedTypes);
-        });
-        builder.Services.Configure<BrotliCompressionProviderOptions>(o => o.Level = CompressionLevel.Fastest);
-        builder.Services.Configure<GzipCompressionProviderOptions>(o => o.Level = CompressionLevel.Fastest);
 
         builder.WebHost.UseKestrelHttpsConfiguration();
         builder.WebHost.ConfigureKestrel(k => ConfigureKestrel(k, listener, gate, options.Certificates, holder));
@@ -119,7 +106,6 @@ public sealed class ProxyHost : IAsyncDisposable
         var app = builder.Build();
         app.UseMiddleware<ProxyPolicyMiddleware>();
         app.UseRouting();
-        app.UseWhen(ctx => ProxyPolicyMiddleware.ShouldCompress(ctx, holder.Current), b => b.UseResponseCompression());
         app.MapReverseProxy();
 
         try
@@ -176,46 +162,6 @@ public sealed class ProxyHost : IAsyncDisposable
         "X-Cluster-Client-IP", "True-Client-IP", "CF-Connecting-IP", "Fastly-Client-IP", "X-ProxyUser-Ip"
     };
 
-    // Identity headers that forward-auth setups (Authelia, Authentik, oauth2-proxy, Grafana's auth proxy and the
-    // like) put on requests once a user has signed in. An app behind such a setup trusts its proxy to set them,
-    // so a copy sent by an internet client would sign it in as anyone. This proxy never sets them, so none is
-    // passed on to a Service.
-    private static readonly string[] _identityClaims =
-    {
-        "Remote-User", "Remote-Email", "Remote-Groups", "Remote-Name", "X-Remote-User", "X-Forwarded-User",
-        "X-Forwarded-Email", "X-Forwarded-Groups", "X-Forwarded-Preferred-Username", "X-WEBAUTH-USER"
-    };
-
-    // Whole families of identity headers, matched by prefix.
-    private static readonly string[] _identityPrefixes = { "X-Auth-Request-", "X-Authentik-" };
-
-    /// <summary>
-    /// Whether a request header claims a signed-in identity, which only a forward-auth proxy may set.
-    /// </summary>
-    /// <param name="name">The header name.</param>
-    /// <returns>True for an identity header.</returns>
-    public static bool IsIdentityClaim(string name)
-    {
-        ArgumentNullException.ThrowIfNull(name);
-        foreach (var header in _identityClaims)
-        {
-            if (string.Equals(header, name, StringComparison.OrdinalIgnoreCase))
-            {
-                return true;
-            }
-        }
-
-        foreach (var prefix in _identityPrefixes)
-        {
-            if (name.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
-            {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
     private static void ConfigureTransforms(Yarp.ReverseProxy.Transforms.Builder.TransformBuilderContext context)
     {
         // Our own forwarding headers replace anything the client sent, so a client cannot claim a LAN address.
@@ -231,44 +177,8 @@ public sealed class ProxyHost : IAsyncDisposable
         {
             context.AddRequestHeaderRemove(header);
         }
+
         context.AddRequestHeaderRemove(ProxyPolicyMiddleware.RouteHeader);
-        // Services only: Jellyfin is never a hop back to this proxy, so it never sees the marker. No response
-        // carries it back out, so a backend that echoes headers cannot show it to clients.
-        if (context.Route.ClusterId is not (ProxyRuntime.JellyfinId or ProxyRuntime.JellyfinMediaId))
-        {
-            context.AddRequestTransform(t =>
-            {
-                // The prefixed families have no fixed names, so the client's headers are searched. Most requests
-                // carry none, and then nothing more is allocated.
-                List<string>? found = null;
-                foreach (var header in t.HttpContext.Request.Headers)
-                {
-                    if (IsIdentityClaim(header.Key))
-                    {
-                        (found ??= new List<string>()).Add(header.Key);
-                    }
-                }
-
-                if (found is not null)
-                {
-                    foreach (var name in found)
-                    {
-                        t.ProxyRequest.Headers.Remove(name);
-                    }
-                }
-
-                var incoming = t.HttpContext.Request.Headers[ProxyPolicyMiddleware.HopHeader].ToString();
-                t.ProxyRequest.Headers.Remove(ProxyPolicyMiddleware.HopHeader);
-                t.ProxyRequest.Headers.TryAddWithoutValidation(ProxyPolicyMiddleware.HopHeader, ProxyPolicyMiddleware.NextHop(incoming));
-                return ValueTask.CompletedTask;
-            });
-        }
-        else
-        {
-            context.AddRequestHeaderRemove(ProxyPolicyMiddleware.HopHeader);
-        }
-
-        context.AddResponseHeaderRemove(ProxyPolicyMiddleware.HopHeader, ResponseCondition.Always);
         context.AddRequestTransform(t =>
         {
             var headers = t.ProxyRequest.Headers;
@@ -284,11 +194,8 @@ public sealed class ProxyHost : IAsyncDisposable
         context.AddResponseHeaderRemove("Server", ResponseCondition.Always);
         context.AddResponseHeaderRemove("X-Powered-By", ResponseCondition.Always);
 
-        if (context.Route.Metadata?.TryGetValue(ProxyConfigProvider.PreserveHostKey, out var preserve) == true
-            && string.Equals(preserve, "true", StringComparison.Ordinal))
-        {
-            context.AddOriginalHost(true);
-        }
+        // Jellyfin builds its links from the name the client asked for.
+        context.AddOriginalHost(true);
     }
 
     private static void ConfigureKestrel(

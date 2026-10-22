@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Net;
 
 namespace Jellyfin.Plugin.DynamicDns.Proxy;
@@ -23,9 +22,6 @@ public sealed class ProxyRuntime
     /// <summary>Gets the public hostnames that reach Jellyfin.</summary>
     public required IReadOnlyList<string> JellyfinHostnames { get; init; }
 
-    /// <summary>Gets the enabled external routes.</summary>
-    public required IReadOnlyList<RuntimeRoute> Routes { get; init; }
-
     /// <summary>Gets Jellyfin's address on this machine.</summary>
     public required Uri JellyfinBackend { get; init; }
 
@@ -47,44 +43,11 @@ public sealed class ProxyRuntime
     /// <summary>Gets the internet addresses that are always refused.</summary>
     public IReadOnlyList<IPNetwork> BlockedNetworks { get; init; } = Array.Empty<IPNetwork>();
 
-    /// <summary>Gets Jellyfin's and the proxy's ports, which no Service may reach on this machine.</summary>
-    public IReadOnlyList<int> ReservedPorts { get; init; } = Array.Empty<int>();
-
     /// <summary>
-    /// Whether a host is one the proxy was configured to serve, either for Jellyfin or a route.
+    /// Whether a host is one the proxy was configured to serve.
     /// </summary>
     /// <param name="host">The request host, without port.</param>
     /// <returns>True for configured hostnames.</returns>
     public bool IsConfiguredHost(string? host)
-        => HostnameMatcher.MatchesAny(host, JellyfinHostnames) || Routes.Any(r => HostnameMatcher.MatchesAny(host, r.Hostnames));
-
-    /// <summary>
-    /// Finds the external route a host belongs to. Null means the request goes to Jellyfin.
-    /// </summary>
-    /// <param name="host">The request host, without port.</param>
-    /// <returns>The route, or null for Jellyfin.</returns>
-    public RuntimeRoute? MatchRoute(string? host)
-    {
-        // Exact names win over wildcards, Jellyfin's included, so a route's *.example.com never captures
-        // Jellyfin's own media.example.com.
-        var exact = Routes.FirstOrDefault(r => r.Hostnames.Any(h => !h.StartsWith('*') && HostnameMatcher.Matches(host, h)));
-        if (exact is not null)
-        {
-            return exact;
-        }
-
-        if (JellyfinHostnames.Any(h => !h.StartsWith('*') && HostnameMatcher.Matches(host, h)))
-        {
-            return null;
-        }
-
-        return Routes.FirstOrDefault(r => HostnameMatcher.MatchesAny(host, r.Hostnames));
-    }
-
-    /// <summary>
-    /// Every hostname the proxy serves, for the certificate and the status page.
-    /// </summary>
-    /// <returns>The distinct hostnames.</returns>
-    public IReadOnlyList<string> AllHostnames()
-        => JellyfinHostnames.Concat(Routes.SelectMany(r => r.Hostnames)).Distinct(StringComparer.Ordinal).ToList();
+        => HostnameMatcher.MatchesAny(host, JellyfinHostnames);
 }

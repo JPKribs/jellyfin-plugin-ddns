@@ -1,5 +1,4 @@
 using System;
-using Jellyfin.Plugin.DynamicDns.Proxy.Settings;
 using Microsoft.AspNetCore.Http;
 
 namespace Jellyfin.Plugin.DynamicDns.Proxy;
@@ -40,14 +39,6 @@ public static class RequestPolicy
         if (!facts.Local && !runtime.IsConfiguredHost(facts.Host))
         {
             return new RequestDecision(RequestAction.Drop);
-        }
-
-        var route = runtime.MatchRoute(facts.Host);
-        if (route is not null)
-        {
-            return route.Exposure == RouteExposure.LanOnly && !facts.Local
-                ? new RequestDecision(RequestAction.Drop)
-                : new RequestDecision(RequestAction.Forward, route);
         }
 
         // Without forwarding headers honoured, Jellyfin would treat this client as local: no remote

@@ -51,30 +51,16 @@ public static class ProxyRuntimeFactory
             options.MaxRequestHeadersKb,
             options.MaxConnections);
 
-        // A route back to Jellyfin or to the proxy is never served, however it was saved: it would skip every rule
-        // meant for Jellyfin, or loop.
-        var reserved = new[] { jellyfin.HttpPort, jellyfin.HttpsPort, options.HttpPort, options.HttpsPort };
-        var routes = settings.Routes
-            .Where(r => r.Enabled && r.Hostnames.Count > 0)
-            .Select(r => Uri.TryCreate(r.Target, UriKind.Absolute, out var target) && !SelfTarget.IsReserved(target, reserved)
-                ? new RuntimeRoute(r.Id, r.Name, r.Hostnames.ToList(), target, r.Exposure, r.PreserveHost, r.BackendTls, r.PinnedThumbprint, r.Overrides ?? new RouteOverrides())
-                : null)
-            .Where(r => r is not null)
-            .Cast<RuntimeRoute>()
-            .ToList();
-
         return new ProxyRuntime
         {
             Listener = listener,
             JellyfinHostnames = settings.Hostnames.ToList(),
-            Routes = routes,
             JellyfinBackend = jellyfin.Backend,
             BaseUrl = jellyfin.BaseUrl,
             JellyfinTrustsForwarding = jellyfin.TrustsForwarding,
             Options = options,
             Classifier = new NetworkClassifier(isLan, NetworkClassifier.ParseNetworks(options.TrustedNetworks)),
-            BlockedNetworks = NetworkClassifier.ParseNetworks(options.BlockedAddresses),
-            ReservedPorts = reserved.Where(p => p > 0).Distinct().ToList()
+            BlockedNetworks = NetworkClassifier.ParseNetworks(options.BlockedAddresses)
         };
     }
 }

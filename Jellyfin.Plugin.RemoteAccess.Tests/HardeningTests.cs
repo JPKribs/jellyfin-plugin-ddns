@@ -245,46 +245,6 @@ public sealed class HardeningTests : IDisposable
         never.SetResult();
     }
 
-    [Theory]
-    [InlineData("http://127.0.0.1:8096", true)]
-    [InlineData("http://localhost:8096/web", true)]
-    [InlineData("https://[::1]:443", true)]
-    [InlineData("http://127.0.0.1:5055", false)]
-    [InlineData("http://192.0.2.10:8096", false)]
-    public void SelfTarget_JellyfinAndProxyPortsOnThisMachine(string target, bool reserved)
-        => Assert.Equal(reserved, SelfTarget.IsReserved(new Uri(target), new[] { 8096, 0, 80, 443 }));
-
-    [Fact]
-    public void SelfTarget_RefusedAtSave_AndNeverServed()
-    {
-        void Route(ProxySettings s) => s.Routes.Add(new ProxyRoute { Name = "Loop", Hostnames = new List<string> { "loop.example.com" }, Target = "http://127.0.0.1:8096" });
-        var settings = new ProxySettings { Enabled = true, Hostnames = new List<string> { "media.example.com" } };
-        Route(settings);
-        ProxySettingsValidator.Normalize(settings);
-        Assert.Contains(ProxySettingsValidator.Validate(settings, null, new[] { 8096, 80, 443 }), e => e.Contains("points at Jellyfin", StringComparison.Ordinal));
-        Assert.Empty(Runtime(Route).Routes);
-    }
-
-    [Fact]
-    public void Compression_ServicesOffUnlessAsked_JellyfinNever()
-    {
-        var runtime = Runtime(s =>
-        {
-            s.Routes.Add(new ProxyRoute { Name = "App", Hostnames = new List<string> { "app.example.com" }, Target = "http://192.168.1.20:5055" });
-            s.Routes.Add(new ProxyRoute { Name = "Packed", Hostnames = new List<string> { "packed.example.com" }, Target = "http://192.168.1.21:5055", Overrides = new RouteOverrides { Compress = true } });
-        });
-        var app = new Microsoft.AspNetCore.Http.DefaultHttpContext();
-        app.Items["ddns.proxy.route"] = runtime.Routes[0];
-        Assert.False(ProxyPolicyMiddleware.ShouldCompress(app, runtime));
-
-        var packed = new Microsoft.AspNetCore.Http.DefaultHttpContext();
-        packed.Items["ddns.proxy.route"] = runtime.Routes[1];
-        Assert.True(ProxyPolicyMiddleware.ShouldCompress(packed, runtime));
-
-        // Jellyfin compresses its own replies.
-        Assert.False(ProxyPolicyMiddleware.ShouldCompress(new Microsoft.AspNetCore.Http.DefaultHttpContext(), runtime));
-    }
-
     [Fact]
     public void KeptSecrets_DoNotFollowARecordToANewServer()
     {
@@ -422,27 +382,8 @@ public sealed class HardeningTests : IDisposable
         config.Records.Add(new DNSRecord { Hostname = "bad\u0001.example.com" });
         Assert.Equal("Records[1].Hostname", XmlText.FindInvalid(config));
         config.Records.RemoveAt(1);
-        config.Proxy.Routes.Add(new ProxyRoute { Name = "x\uFFFE" });
-        Assert.Equal("Proxy.Routes[0].Name", XmlText.FindInvalid(config));
-    }
-
-    [Theory]
-    [InlineData("64:ff9b::a9fe:a9fe")]
-    [InlineData("64:ff9b:1::a9fe:a9fe")]
-    [InlineData("::a9fe:a9fe")]
-    [InlineData("2002:a9fe:a9fe::1")]
-    [InlineData("fd20:ce::254")]
-    [InlineData("168.63.129.16")]
-    public void Metadata_TranslatedAndCloudForms_AreRefused(string address)
-        => Assert.True(ProxySettingsValidator.IsMetadataAddress(IPAddress.Parse(address)));
-
-    [Fact]
-    public void HopMarker_CountsPassesAndKeepsOtherInstances()
-    {
-        Assert.Equal(0, ProxyPolicyMiddleware.HopsOf(null));
-        var twice = ProxyPolicyMiddleware.NextHop(ProxyPolicyMiddleware.NextHop("other:5"));
-        Assert.Equal(2, ProxyPolicyMiddleware.HopsOf(twice));
-        Assert.Contains("other:5", twice, StringComparison.Ordinal);
+        config.Proxy.Certificate.Path = "x\uFFFE";
+        Assert.Equal("Proxy.Certificate.Path", XmlText.FindInvalid(config));
     }
 
     [Fact]

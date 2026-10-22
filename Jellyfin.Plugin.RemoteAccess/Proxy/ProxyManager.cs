@@ -135,9 +135,6 @@ public sealed class ProxyManager : IAsyncDisposable
     /// <summary>Gets Jellyfin's running network setup.</summary>
     public JellyfinNetworkView Jellyfin => _jellyfin;
 
-    /// <summary>Gets this Jellyfin server's id, as its public system info reports it.</summary>
-    public string SystemId => _systemId;
-
     /// <summary>Gets a value indicating whether the proxy is listening.</summary>
     public bool IsRunning => Volatile.Read(ref _host) is not null;
 
@@ -544,13 +541,12 @@ public sealed class ProxyManager : IAsyncDisposable
     }
 
     private static List<string> ServedHostnames(ProxySettings settings)
-        => settings.Hostnames.Concat(settings.Routes.Where(r => r.Enabled).SelectMany(r => r.Hostnames)).Distinct(StringComparer.Ordinal).ToList();
+        => settings.Hostnames.Distinct(StringComparer.Ordinal).ToList();
 
-    // The names Let's Encrypt is asked for: Jellyfin's and internet-facing services', leaving out names it can
-    // never check, such as a LAN-only service at nas.lan. One unverifiable name would fail the whole order.
+    // The names Let's Encrypt is asked for, leaving out names it can never check, such as nas.lan. One
+    // unverifiable name would fail the whole order.
     private static List<string> CertificateHostnames(ProxySettings settings)
         => settings.Hostnames
-            .Concat(settings.Routes.Where(r => r.Enabled && r.Exposure != RouteExposure.LanOnly).SelectMany(r => r.Hostnames))
             .Where(HostnameMatcher.IsPublicName)
             .Distinct(StringComparer.Ordinal)
             .ToList();
@@ -864,11 +860,21 @@ public sealed class ProxyManager : IAsyncDisposable
             var body = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
             using var json = JsonDocument.Parse(body);
             var id = json.RootElement.TryGetProperty("Id", out var value) ? value.GetString() : null;
-            return SelfTarget.SameId(id, _systemId) ? null : "Something other than this Jellyfin server answered through the proxy.";
+            return SameId(id, _systemId) ? null : "Something other than this Jellyfin server answered through the proxy.";
         }
         catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or JsonException)
         {
             return "Jellyfin could not be reached through the proxy: " + CredentialRedactor.Redact(ex.Message);
         }
     }
+
+    /// <summary>
+    /// Whether two Jellyfin server ids are the same, with or without dashes.
+    /// </summary>
+    /// <param name="a">One id.</param>
+    /// <param name="b">The other.</param>
+    /// <returns>True when both are set and equal.</returns>
+    internal static bool SameId(string? a, string? b)
+        => !string.IsNullOrEmpty(a) && !string.IsNullOrEmpty(b)
+            && string.Equals(a.Replace("-", string.Empty, StringComparison.Ordinal), b.Replace("-", string.Empty, StringComparison.Ordinal), StringComparison.OrdinalIgnoreCase);
 }

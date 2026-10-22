@@ -116,40 +116,53 @@ public class ProxySettingsTests
         Assert.NotEmpty(Errors(pem));
     }
 
-    [Theory]
-    [InlineData("http://192.168.1.20:5055", true)]
-    [InlineData("https://nas.local:8443", true)]
-    [InlineData("ftp://192.168.1.20", false)]
-    [InlineData("192.168.1.20:5055", false)]
-    [InlineData("http://169.254.169.254/latest", false)]
-    [InlineData("http://[fe80::1]:80", false)]
-    [InlineData("http://100.100.100.200/", false)]
-    [InlineData("http://metadata.google.internal/computeMetadata", false)]
-    [InlineData("http://Metadata.Azure.com.", false)]
-    public void Validate_RouteTargets(string target, bool valid)
-    {
-        var s = new ProxySettings();
-        s.Routes.Add(new ProxyRoute { Name = "R", Hostnames = new List<string> { "r.example.com" }, Target = target });
-        Assert.Equal(valid, Errors(s).Count == 0);
-    }
-
     [Fact]
-    public void Validate_HostnameUsedTwice()
+    public void SavedSettings_WithServicesFromAnOlderVersion_StillLoad()
     {
-        var s = new ProxySettings { Hostnames = new List<string> { "media.example.com" } };
-        s.Routes.Add(new ProxyRoute { Name = "R", Hostnames = new List<string> { "media.example.com" }, Target = "http://10.0.0.2" });
-        Assert.Contains(Errors(s), e => e.Contains("used by both", System.StringComparison.Ordinal));
-    }
+        // Services were removed. A settings file written before that still carries them, and must load as before.
+        const string Xml = """
+            <?xml version="1.0" encoding="utf-8"?>
+            <PluginConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+              <Proxy>
+                <Enabled>true</Enabled>
+                <Hostnames>
+                  <string>media.example.com</string>
+                </Hostnames>
+                <Routes>
+                  <ProxyRoute>
+                    <Id>req</Id>
+                    <Name>Requests</Name>
+                    <Enabled>true</Enabled>
+                    <Hostnames>
+                      <string>requests.example.com</string>
+                    </Hostnames>
+                    <Target>http://192.168.1.20:5055</Target>
+                    <Exposure>LanOnly</Exposure>
+                    <BackendTls>Pinned</BackendTls>
+                    <Overrides>
+                      <MaxRequestBodyMbWan>1</MaxRequestBodyMbWan>
+                      <Compress>true</Compress>
+                    </Overrides>
+                  </ProxyRoute>
+                </Routes>
+                <Advanced>
+                  <HttpsPort>8443</HttpsPort>
+                </Advanced>
+              </Proxy>
+            </PluginConfiguration>
+            """;
+        var serializer = new System.Xml.Serialization.XmlSerializer(typeof(Jellyfin.Plugin.DynamicDns.Configuration.PluginConfiguration));
+        using var reader = new System.IO.StringReader(Xml);
+        var config = (Jellyfin.Plugin.DynamicDns.Configuration.PluginConfiguration)serializer.Deserialize(reader)!;
+        Assert.True(config.Proxy.Enabled);
+        Assert.Equal(new[] { "media.example.com" }, config.Proxy.Hostnames);
+        Assert.Equal(8443, config.Proxy.Advanced.HttpsPort);
 
-    [Fact]
-    public void Validate_PinnedNeedsThumbprint()
-    {
-        var s = new ProxySettings();
-        s.Routes.Add(new ProxyRoute { Name = "R", Hostnames = new List<string> { "r.example.com" }, Target = "https://10.0.0.2", BackendTls = BackendTlsMode.Pinned, PinnedThumbprint = "ab:cd" });
-        Assert.NotEmpty(Errors(s));
-        s.Routes[0].PinnedThumbprint = new string('a', 64);
-        Assert.Empty(Errors(s));
-        Assert.Equal(new string('A', 64), s.Routes[0].PinnedThumbprint);
+        // The dashboard's save body is JSON, and an older page may still send them there too.
+        var json = """{"Enabled":true,"Hostnames":["media.example.com"],"Routes":[{"Id":"req","Hostnames":["requests.example.com"],"Target":"http://192.168.1.20:5055"}]}""";
+        var saved = System.Text.Json.JsonSerializer.Deserialize<ProxySettings>(json)!;
+        Assert.Equal(new[] { "media.example.com" }, saved.Hostnames);
+        Assert.Empty(Errors(saved));
     }
 
     [Fact]

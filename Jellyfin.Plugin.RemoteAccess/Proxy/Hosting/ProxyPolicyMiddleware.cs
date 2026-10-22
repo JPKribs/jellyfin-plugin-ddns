@@ -15,33 +15,15 @@ namespace Jellyfin.Plugin.DynamicDns.Proxy.Hosting;
 
 /// <summary>
 /// The first stop for every request: classifies the client, applies <see cref="RequestPolicy"/>, sets
-/// per-request limits, tags the request with its route, and adds security headers to the response.
+/// per-request limits, tags the request with its YARP route, and adds security headers to the response.
 /// </summary>
 public sealed class ProxyPolicyMiddleware
 {
     /// <summary>
-    /// The internal header that tells YARP which route a request belongs to. Any copy sent by a client is
-    /// removed first, and the transforms remove it again before forwarding.
+    /// The internal header that tells YARP which Jellyfin route, media or not, a request belongs to. Any copy
+    /// sent by a client is removed first, and the transforms remove it again before forwarding.
     /// </summary>
     public const string RouteHeader = "X-Ddns-Proxy-Route";
-
-    /// <summary>
-    /// Added to every request forwarded to a Service, as this process's value and a hop count. It coming back in
-    /// means a Service leads back to this proxy. A few such hops are a legitimate chain, such as a Service that is
-    /// itself a proxy forwarding to another name here; past that it is a loop, which would use every connection.
-    /// </summary>
-    public const string HopHeader = "X-Remote-Access-Hop";
-
-    /// <summary>How many times a request may come back through this proxy before it is refused as a loop.</summary>
-    public const int MaxHops = 3;
-
-    /// <summary>
-    /// Gets this process's value for <see cref="HopHeader"/>. Another server running this plugin uses its own, so a
-    /// Service pointing at another instance still works.
-    /// </summary>
-    public static string HopValue { get; } = Guid.NewGuid().ToString("N");
-
-    private const string RouteItem = "ddns.proxy.route";
 
     // The most a sign-in request may send, and how long it may take to send it.
     private const int SignInBodyLimit = 16 * 1024;
@@ -98,36 +80,6 @@ public sealed class ProxyPolicyMiddleware
     }
 
     /// <summary>
-    /// Gets the external route a request was matched to, or null for Jellyfin.
-    /// </summary>
-    /// <param name="context">The request.</param>
-    /// <returns>The route.</returns>
-    public static RuntimeRoute? RouteOf(HttpContext context)
-        => context?.Items.TryGetValue(RouteItem, out var value) == true ? value as RuntimeRoute : null;
-
-    /// <summary>
-    /// Whether the proxy should compress this response: only a Service's, when its own option is on. Jellyfin
-    /// compresses its own responses, through the proxy too, so compressing them again only costs time. Range
-    /// requests never are.
-    /// </summary>
-    /// <param name="context">The request.</param>
-    /// <param name="runtime">The runtime.</param>
-    /// <returns>True to compress.</returns>
-    public static bool ShouldCompress(HttpContext context, ProxyRuntime runtime)
-    {
-        ArgumentNullException.ThrowIfNull(context);
-        ArgumentNullException.ThrowIfNull(runtime);
-        if (context.Request.Headers.ContainsKey(HeaderNames.Range))
-        {
-            return false;
-        }
-
-        // A Service is compressed only when asked: compressing pages that mix a secret with reflected input over
-        // HTTPS can leak the secret (BREACH).
-        return RouteOf(context) is { } route && (route.Overrides.Compress ?? false);
-    }
-
-    /// <summary>
     /// Runs the middleware.
     /// </summary>
     /// <param name="context">The request.</param>
@@ -137,13 +89,6 @@ public sealed class ProxyPolicyMiddleware
         ArgumentNullException.ThrowIfNull(context);
         var runtime = _holder.Current;
         var request = context.Request;
-        var hops = HopsOf(request.Headers[HopHeader].ToString());
-        if (hops >= MaxHops)
-        {
-            context.Response.StatusCode = StatusCodes.Status508LoopDetected;
-            return;
-        }
-
         var client = context.Connection.RemoteIpAddress;
         var clientAddress = client is null ? null : NetworkClassifier.Normalize(client);
         var local = runtime.Classifier.IsLocal(client);
@@ -181,38 +126,27 @@ public sealed class ProxyPolicyMiddleware
                 return;
         }
 
-        var route = decision.Route;
-
-        // Jellyfin is never reached through one of this proxy's own Services. A Service pointed back at the proxy
-        // would hand Jellyfin an internet visitor from this machine's address, past every internet rule.
-        if (route is null && hops > 0)
-        {
-            context.Response.StatusCode = StatusCodes.Status508LoopDetected;
-            return;
-        }
-
         var path = PathRules.StripBase(request.Path, runtime.BaseUrl);
-        context.Items[RouteItem] = route;
         request.Headers.Remove(RouteHeader);
-        request.Headers[RouteHeader] = route?.Id ?? (PathRules.IsMedia(path) ? ProxyRuntime.JellyfinMediaId : ProxyRuntime.JellyfinId);
+        request.Headers[RouteHeader] = PathRules.IsMedia(path) ? ProxyRuntime.JellyfinMediaId : ProxyRuntime.JellyfinId;
 
         // An upload that declares a size over the limit is refused before the backend hears about it; without
         // a declared size the limit still stops the body mid-stream.
-        var limitMb = EffectiveSettings.MaxRequestBodyMb(runtime, route, local);
+        var limitMb = EffectiveSettings.MaxRequestBodyMb(runtime, local);
         if (limitMb > 0 && request.ContentLength > limitMb * 1024L * 1024L)
         {
             context.Response.StatusCode = StatusCodes.Status413PayloadTooLarge;
             return;
         }
 
-        ApplyLimits(context, runtime, route, local);
+        ApplyLimits(context, runtime, local);
         context.Response.OnStarting(() =>
         {
-            ApplySecurityHeaders(context, runtime, route);
+            ApplySecurityHeaders(context, runtime);
             return Task.CompletedTask;
         });
 
-        if (route is null && clientAddress is not null)
+        if (clientAddress is not null)
         {
             _recorder.RecordRequest(clientAddress, AccessUrl(request), request.Headers.UserAgent.ToString(), local);
         }
@@ -233,7 +167,7 @@ public sealed class ProxyPolicyMiddleware
 
         try
         {
-            await ForwardAsync(context, runtime, route, path, clientAddress, local).ConfigureAwait(false);
+            await ForwardAsync(context, runtime, path, clientAddress, local).ConfigureAwait(false);
         }
         finally
         {
@@ -244,10 +178,10 @@ public sealed class ProxyPolicyMiddleware
         }
     }
 
-    private async Task ForwardAsync(HttpContext context, ProxyRuntime runtime, RuntimeRoute? route, PathString path, IPAddress? clientAddress, bool local)
+    private async Task ForwardAsync(HttpContext context, ProxyRuntime runtime, PathString path, IPAddress? clientAddress, bool local)
     {
         var request = context.Request;
-        var signIn = route is null && clientAddress is not null && PathRules.IsSignIn(path);
+        var signIn = clientAddress is not null && PathRules.IsSignIn(path);
         var internetSignIn = signIn && !local;
         if (internetSignIn && !await ReadSignInBodyAsync(context).ConfigureAwait(false))
         {
@@ -283,39 +217,6 @@ public sealed class ProxyPolicyMiddleware
                 _gate.Recheck();
             }
         }
-    }
-
-    /// <summary>
-    /// How many times a request has already passed through this proxy, from its <see cref="HopHeader"/>.
-    /// </summary>
-    /// <param name="header">The header's value, which other instances may have added to.</param>
-    /// <returns>The count; zero when this proxy has not seen it.</returns>
-    public static int HopsOf(string? header)
-    {
-        foreach (var part in (header ?? string.Empty).Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries))
-        {
-            var split = part.IndexOf(':', StringComparison.Ordinal);
-            if (split > 0 && string.Equals(part[..split], HopValue, StringComparison.Ordinal)
-                && int.TryParse(part[(split + 1)..], NumberStyles.None, CultureInfo.InvariantCulture, out var hops))
-            {
-                return hops;
-            }
-        }
-
-        return 0;
-    }
-
-    /// <summary>
-    /// The <see cref="HopHeader"/> value to send on: other instances' entries kept, this one's count raised.
-    /// </summary>
-    /// <param name="header">The value the request came in with.</param>
-    /// <returns>The value to forward.</returns>
-    public static string NextHop(string? header)
-    {
-        var others = (header ?? string.Empty)
-            .Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)
-            .Where(p => !p.StartsWith(HopValue + ":", StringComparison.Ordinal));
-        return string.Join(", ", others.Append(HopValue + ":" + (HopsOf(header) + 1).ToString(CultureInfo.InvariantCulture)));
     }
 
     // A sign-in is a few hundred bytes. It is read in full, quickly, before it takes a sign-in slot, so a client
@@ -366,12 +267,12 @@ public sealed class ProxyPolicyMiddleware
         => status == StatusCodes.Status401Unauthorized
             || (status == StatusCodes.Status404NotFound && PathRules.IsQuickConnectSignIn(path));
 
-    private static void ApplyLimits(HttpContext context, ProxyRuntime runtime, RuntimeRoute? route, bool local)
+    private static void ApplyLimits(HttpContext context, ProxyRuntime runtime, bool local)
     {
         var bodyFeature = context.Features.Get<IHttpMaxRequestBodySizeFeature>();
         if (bodyFeature is { IsReadOnly: false })
         {
-            var mb = EffectiveSettings.MaxRequestBodyMb(runtime, route, local);
+            var mb = EffectiveSettings.MaxRequestBodyMb(runtime, local);
             bodyFeature.MaxRequestBodySize = mb <= 0 ? null : mb * 1024L * 1024L;
         }
 
@@ -386,12 +287,12 @@ public sealed class ProxyPolicyMiddleware
         var rateFeature = context.Features.Get<IHttpMinResponseDataRateFeature>();
         if (rateFeature is not null)
         {
-            var rate = EffectiveSettings.MinResponseBytesPerSecond(runtime, route, context.Request.Path);
+            var rate = EffectiveSettings.MinResponseBytesPerSecond(runtime, context.Request.Path);
             rateFeature.MinDataRate = rate is { } bytes ? new MinDataRate(bytes, TimeSpan.FromSeconds(5)) : null;
         }
     }
 
-    private static void ApplySecurityHeaders(HttpContext context, ProxyRuntime runtime, RuntimeRoute? route)
+    private static void ApplySecurityHeaders(HttpContext context, ProxyRuntime runtime)
     {
         var headers = context.Response.Headers;
         headers.Remove(HeaderNames.Server);
@@ -407,7 +308,7 @@ public sealed class ProxyPolicyMiddleware
             headers["Referrer-Policy"] = "same-origin";
         }
 
-        if (EffectiveSettings.SameOriginFramesOnly(runtime, route)
+        if (EffectiveSettings.SameOriginFramesOnly(runtime)
             && !headers.ContainsKey(HeaderNames.XFrameOptions)
             && !headers.ContentSecurityPolicy.ToString().Contains("frame-ancestors", StringComparison.OrdinalIgnoreCase))
         {
@@ -416,7 +317,7 @@ public sealed class ProxyPolicyMiddleware
 
         // HSTS only on HTTPS and only for configured names: sending it for a bare IP or a LAN name would pin
         // HTTPS onto names that have no valid certificate.
-        if (EffectiveSettings.HstsMaxAgeDays(runtime, route) is { } days
+        if (EffectiveSettings.HstsMaxAgeDays(runtime) is { } days
             && context.Request.IsHttps
             && runtime.IsConfiguredHost(context.Request.Host.Host)
             && !headers.ContainsKey(HeaderNames.StrictTransportSecurity))

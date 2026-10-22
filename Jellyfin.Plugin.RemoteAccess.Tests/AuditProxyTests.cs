@@ -32,19 +32,16 @@ namespace Jellyfin.Plugin.DynamicDns.Tests;
 
 /// <summary>
 /// Fixes from the proxy audit: request and stream limits, fair connection sharing, partial masking, wide ban
-/// escalation, forward-auth headers, rechecks on locality changes and path folding.
+/// escalation, rechecks on locality changes and path folding.
 /// </summary>
 public sealed class AuditProxyTests : IAsyncLifetime
 {
     private const string Host = "media.example.com";
-    private const string RouteHost = "requests.example.com";
 
     private readonly string _dir = Path.Join(Path.GetTempPath(), "ddns-audit-tests-" + Guid.NewGuid().ToString("N"));
     private readonly TaskCompletionSource _release = new(TaskCreationOptions.RunContinuationsAsynchronously);
     private WebApplication? _jellyfin;
-    private WebApplication? _service;
     private Uri _jellyfinUri = null!;
-    private Uri _serviceUri = null!;
     private int _slowHits;
 
     public async Task InitializeAsync()
@@ -60,8 +57,6 @@ public sealed class AuditProxyTests : IAsyncLifetime
             });
             app.Map("/{**rest}", () => Results.Text("jellyfin"));
         }).ConfigureAwait(false);
-        (_service, _serviceUri) = await StartBackendAsync(app =>
-            app.Map("/{**rest}", (HttpContext ctx) => Results.Json(ctx.Request.Headers.ToDictionary(h => h.Key, h => h.Value.ToString(), StringComparer.OrdinalIgnoreCase)))).ConfigureAwait(false);
     }
 
     public async Task DisposeAsync()
@@ -70,11 +65,6 @@ public sealed class AuditProxyTests : IAsyncLifetime
         if (_jellyfin is not null)
         {
             await _jellyfin.DisposeAsync().ConfigureAwait(false);
-        }
-
-        if (_service is not null)
-        {
-            await _service.DisposeAsync().ConfigureAwait(false);
         }
 
         try
@@ -395,42 +385,6 @@ public sealed class AuditProxyTests : IAsyncLifetime
         Assert.Equal("/a/b/", PathRules.Collapse(new PathString("//a///b//")).Value);
     }
 
-    [Theory]
-    [InlineData("Remote-User", true)]
-    [InlineData("x-remote-user", true)]
-    [InlineData("X-Forwarded-User", true)]
-    [InlineData("X-WEBAUTH-USER", true)]
-    [InlineData("X-Auth-Request-Email", true)]
-    [InlineData("X-Authentik-Username", true)]
-    [InlineData("Remote-Email", true)]
-    [InlineData("Remote-Groups", true)]
-    [InlineData("Remote-Name", true)]
-    [InlineData("Authorization", false)]
-    [InlineData("X-Forwarded-For", false)]
-    public void IdentityHeaders_AreRecognised(string name, bool identity)
-        => Assert.Equal(identity, ProxyHost.IsIdentityClaim(name));
-
-    [Fact]
-    public async Task IdentityHeaders_AreNotPassedToServices()
-    {
-        await using var proxy = await StartProxyAsync(s =>
-            s.Routes.Add(new ProxyRoute { Id = "req", Hostnames = new List<string> { RouteHost }, Target = _serviceUri.ToString() })).ConfigureAwait(false);
-        using var client = Client(proxy.HttpsPort);
-        using var request = new HttpRequestMessage(HttpMethod.Get, new Uri($"https://{RouteHost}:{proxy.HttpsPort}/whoami"));
-        request.Headers.TryAddWithoutValidation("Remote-User", "admin");
-        request.Headers.TryAddWithoutValidation("X-Forwarded-User", "admin");
-        request.Headers.TryAddWithoutValidation("X-WEBAUTH-USER", "admin");
-        request.Headers.TryAddWithoutValidation("X-Auth-Request-Email", "admin@example.com");
-        request.Headers.TryAddWithoutValidation("X-Authentik-Username", "admin");
-        request.Headers.TryAddWithoutValidation("X-Kept", "yes");
-        using var response = await client.SendAsync(request).ConfigureAwait(false);
-        response.EnsureSuccessStatusCode();
-        var headers = JsonSerializer.Deserialize<Dictionary<string, string>>(await response.Content.ReadAsStringAsync().ConfigureAwait(false))!;
-        var seen = new HashSet<string>(headers.Keys, StringComparer.OrdinalIgnoreCase);
-        Assert.Contains("X-Kept", seen);
-        Assert.DoesNotContain(seen, ProxyHost.IsIdentityClaim);
-    }
-
     [Fact]
     public void Unclaimed_PairsEachReportedFailureOnce()
     {
@@ -472,7 +426,6 @@ public sealed class AuditProxyTests : IAsyncLifetime
         {
             Listener = runtime.Listener with { HttpPort = 0, HttpsPort = 0, LoopbackOnly = true },
             JellyfinHostnames = runtime.JellyfinHostnames,
-            Routes = runtime.Routes,
             JellyfinBackend = runtime.JellyfinBackend,
             BaseUrl = runtime.BaseUrl,
             JellyfinTrustsForwarding = runtime.JellyfinTrustsForwarding,
@@ -489,7 +442,7 @@ public sealed class AuditProxyTests : IAsyncLifetime
         settings.Certificate.Mode = CertificateMode.SelfSigned;
         var runtime = HostRuntime(settings);
         var certificates = new CertificateStore(new ProxyPaths(_dir), new SecretProtector("test", NullLogger.Instance), NullLogger<CertificateStore>.Instance);
-        certificates.Configure(settings.Certificate, runtime.AllHostnames());
+        certificates.Configure(settings.Certificate, runtime.JellyfinHostnames);
         var host = await ProxyHost.StartAsync(
             new ProxyHostOptions
             {

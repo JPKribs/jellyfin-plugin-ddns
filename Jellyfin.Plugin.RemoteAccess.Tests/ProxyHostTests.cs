@@ -26,21 +26,18 @@ using Xunit;
 namespace Jellyfin.Plugin.DynamicDns.Tests;
 
 /// <summary>
-/// Runs the real proxy host on loopback in front of a fake Jellyfin and a fake second service. Loopback is
+/// Runs the real proxy host on loopback in front of a fake Jellyfin. Loopback is
 /// classified as the internet here (unless a test says otherwise), so every internet rule is exercised over
 /// real sockets and real TLS.
 /// </summary>
 public sealed class ProxyHostTests : IAsyncLifetime
 {
     private const string Host = "media.example.com";
-    private const string RouteHost = "requests.example.com";
 
     private readonly string _dir = Path.Join(Path.GetTempPath(), "ddns-proxy-tests-" + Guid.NewGuid().ToString("N"));
     private readonly CapturingLoggerFactory _logs = new();
     private WebApplication? _jellyfin;
-    private WebApplication? _service;
     private Uri _jellyfinUri = null!;
-    private Uri _serviceUri = null!;
     private int _webAssetHits;
     private int _uploads;
 
@@ -57,10 +54,6 @@ public sealed class ProxyHostTests : IAsyncLifetime
                 Interlocked.Increment(ref _webAssetHits);
                 return Results.Text("console.log('x');".PadRight(4000, ' '), "application/javascript");
             });
-            app.Map("/{**rest}", (HttpContext ctx) => Results.Json(Echo(ctx, "jellyfin")));
-        }).ConfigureAwait(false);
-        (_service, _serviceUri) = await StartBackendAsync(app =>
-        {
             app.MapPost("/upload", async (HttpContext ctx) =>
             {
                 Interlocked.Increment(ref _uploads);
@@ -68,7 +61,7 @@ public sealed class ProxyHostTests : IAsyncLifetime
                 await ctx.Request.Body.CopyToAsync(sink).ConfigureAwait(false);
                 return Results.Text(sink.Length.ToString(System.Globalization.CultureInfo.InvariantCulture));
             });
-            app.Map("/{**rest}", (HttpContext ctx) => Results.Json(Echo(ctx, "service")));
+            app.Map("/{**rest}", (HttpContext ctx) => Results.Json(Echo(ctx, "jellyfin")));
         }).ConfigureAwait(false);
     }
 
@@ -77,11 +70,6 @@ public sealed class ProxyHostTests : IAsyncLifetime
         if (_jellyfin is not null)
         {
             await _jellyfin.DisposeAsync().ConfigureAwait(false);
-        }
-
-        if (_service is not null)
-        {
-            await _service.DisposeAsync().ConfigureAwait(false);
         }
 
         try
@@ -216,24 +204,6 @@ public sealed class ProxyHostTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task Routes_GoToTheirServiceAndRespectLanOnly()
-    {
-        await using var proxy = await StartProxyAsync(edit: s =>
-        {
-            s.Routes.Add(new ProxyRoute { Id = "req", Hostnames = new List<string> { RouteHost }, Target = _serviceUri.ToString() });
-            s.Routes.Add(new ProxyRoute { Id = "lan", Hostnames = new List<string> { "lan.example.com" }, Target = _serviceUri.ToString(), Exposure = RouteExposure.LanOnly });
-        }).ConfigureAwait(false);
-        using var client = Client(proxy.HttpsPort);
-
-        using var response = await client.GetAsync(new Uri($"https://{RouteHost}:{proxy.HttpsPort}/api/v1/status")).ConfigureAwait(false);
-        var echo = await ReadEcho(response).ConfigureAwait(false);
-        Assert.Equal("service", echo["backend"]);
-        Assert.Equal("/api/v1/status", echo["path"]);
-
-        await Assert.ThrowsAsync<HttpRequestException>(() => client.GetAsync(new Uri($"https://lan.example.com:{proxy.HttpsPort}/"))).ConfigureAwait(false);
-    }
-
-    [Fact]
     public async Task Recorder_GetsTheAddressUsedAndRefusedSignIns()
     {
         var recorder = new Jellyfin.Plugin.DynamicDns.People.AccessRecorder();
@@ -293,24 +263,6 @@ public sealed class ProxyHostTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task Jellyfin_ARequestThatAlreadyPassedThisProxy_IsRefused()
-    {
-        // A Service pointed back at this proxy would bring an internet visitor to Jellyfin from this machine.
-        await using var proxy = await StartProxyAsync().ConfigureAwait(false);
-        using var client = Client(proxy.HttpsPort);
-        using var looped = new HttpRequestMessage(HttpMethod.Get, $"https://{Host}:{proxy.HttpsPort}/System/Info/Public");
-        looped.Headers.TryAddWithoutValidation(ProxyPolicyMiddleware.HopHeader, ProxyPolicyMiddleware.NextHop(null));
-        using var refused = await client.SendAsync(looped).ConfigureAwait(false);
-        Assert.Equal(HttpStatusCode.LoopDetected, refused.StatusCode);
-
-        // Another server's count is not this one's.
-        using var other = new HttpRequestMessage(HttpMethod.Get, $"https://{Host}:{proxy.HttpsPort}/System/Info/Public");
-        other.Headers.TryAddWithoutValidation(ProxyPolicyMiddleware.HopHeader, "elsewhere:1");
-        using var allowed = await client.SendAsync(other).ConfigureAwait(false);
-        Assert.Equal(HttpStatusCode.OK, allowed.StatusCode);
-    }
-
-    [Fact]
     public async Task NoCaching_JellyfinAnswersEveryRequest()
     {
         // Jellyfin keeps resized images on disk and tells clients to cache them, so the proxy keeps no copy.
@@ -335,18 +287,15 @@ public sealed class ProxyHostTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task RouteOverrides_UploadLimitAndHsts()
+    public async Task Advanced_UploadLimitAndHsts()
     {
         await using var proxy = await StartProxyAsync(edit: s =>
-            s.Routes.Add(new ProxyRoute
-            {
-                Id = "small",
-                Hostnames = new List<string> { RouteHost },
-                Target = _serviceUri.ToString(),
-                Overrides = new RouteOverrides { MaxRequestBodyMbWan = 1, HstsEnabled = false }
-            })).ConfigureAwait(false);
+        {
+            s.Advanced.MaxRequestBodyMbWan = 1;
+            s.Advanced.HstsEnabled = false;
+        }).ConfigureAwait(false);
         using var client = Client(proxy.HttpsPort);
-        var upload = new Uri($"https://{RouteHost}:{proxy.HttpsPort}/upload");
+        var upload = new Uri($"https://{Host}:{proxy.HttpsPort}/upload");
 
         using var smallBody = new ByteArrayContent(new byte[512 * 1024]);
         using var small = await client.PostAsync(upload, smallBody).ConfigureAwait(false);
@@ -354,7 +303,7 @@ public sealed class ProxyHostTests : IAsyncLifetime
         Assert.False(small.Headers.Contains("Strict-Transport-Security"));
 
         // Refused either as a 413, or by the connection closing while the client is still sending; which one
-        // the client sees is a race. Either way the upload must never reach the service.
+        // the client sees is a race. Either way the upload must never reach Jellyfin.
         var uploadsBefore = _uploads;
         try
         {
@@ -373,12 +322,11 @@ public sealed class ProxyHostTests : IAsyncLifetime
     [Fact]
     public async Task Logs_NeverContainTokens()
     {
-        await using var proxy = await StartProxyAsync(edit: s =>
-            s.Routes.Add(new ProxyRoute { Id = "dead", Hostnames = new List<string> { "dead.example.com" }, Target = "http://127.0.0.1:" + FreePort() })).ConfigureAwait(false);
+        await using var proxy = await StartProxyAsync(backend: new Uri("http://127.0.0.1:" + FreePort())).ConfigureAwait(false);
         using var client = Client(proxy.HttpsPort);
 
-        // A route whose backend is down makes YARP log a forwarding error for a URL carrying a token.
-        using var response = await client.GetAsync(new Uri($"https://dead.example.com:{proxy.HttpsPort}/Videos/1/stream?api_key=SUPERSECRET")).ConfigureAwait(false);
+        // A Jellyfin that is down makes YARP log a forwarding error for a URL carrying a token.
+        using var response = await client.GetAsync(new Uri($"https://{Host}:{proxy.HttpsPort}/Videos/1/stream?api_key=SUPERSECRET")).ConfigureAwait(false);
         Assert.Equal(HttpStatusCode.BadGateway, response.StatusCode);
         Assert.DoesNotContain(_logs.Messages, m => m.Contains("SUPERSECRET", StringComparison.Ordinal));
     }
@@ -451,16 +399,15 @@ public sealed class ProxyHostTests : IAsyncLifetime
         return s;
     }
 
-    private ProxyRuntime Runtime(ProxySettings settings, bool loopbackIsLocal)
+    private ProxyRuntime Runtime(ProxySettings settings, bool loopbackIsLocal, Uri? backend = null)
     {
-        var view = new JellyfinNetworkView(_jellyfinUri ?? new Uri("http://127.0.0.1:1/"), string.Empty, true, 8097, 0);
+        var view = new JellyfinNetworkView(backend ?? _jellyfinUri ?? new Uri("http://127.0.0.1:1/"), string.Empty, true, 8097, 0);
         var runtime = ProxyRuntimeFactory.Build(settings, view, _ => false, httpsAvailable: true);
         var listener = runtime.Listener with { HttpPort = 0, HttpsPort = 0, LoopbackOnly = true };
         return new ProxyRuntime
         {
             Listener = listener,
             JellyfinHostnames = runtime.JellyfinHostnames,
-            Routes = runtime.Routes,
             JellyfinBackend = runtime.JellyfinBackend,
             BaseUrl = runtime.BaseUrl,
             JellyfinTrustsForwarding = runtime.JellyfinTrustsForwarding,
@@ -469,13 +416,13 @@ public sealed class ProxyHostTests : IAsyncLifetime
         };
     }
 
-    private async Task<RunningProxy> StartProxyAsync(Action<ProxySettings>? edit = null, bool loopbackIsLocal = false, IAccessRecorder? recorder = null, IConnectionFilter? filter = null)
+    private async Task<RunningProxy> StartProxyAsync(Action<ProxySettings>? edit = null, bool loopbackIsLocal = false, IAccessRecorder? recorder = null, IConnectionFilter? filter = null, Uri? backend = null)
     {
         var settings = Settings(edit);
         settings.Certificate.Mode = CertificateMode.SelfSigned;
-        var runtime = Runtime(settings, loopbackIsLocal);
+        var runtime = Runtime(settings, loopbackIsLocal, backend);
         var certificates = new CertificateStore(new ProxyPaths(_dir), new SecretProtector("test", NullLogger.Instance), NullLogger<CertificateStore>.Instance);
-        certificates.Configure(settings.Certificate, runtime.AllHostnames());
+        certificates.Configure(settings.Certificate, runtime.JellyfinHostnames);
         var host = await ProxyHost.StartAsync(
             new ProxyHostOptions
             {

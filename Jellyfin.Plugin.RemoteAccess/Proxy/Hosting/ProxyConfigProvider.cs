@@ -1,10 +1,8 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Threading;
-using Jellyfin.Plugin.DynamicDns.Proxy.Settings;
 using Microsoft.Extensions.Primitives;
 using Yarp.ReverseProxy.Configuration;
 using Yarp.ReverseProxy.Forwarder;
@@ -16,18 +14,12 @@ namespace Jellyfin.Plugin.DynamicDns.Proxy.Hosting;
 /// </summary>
 /// <remarks>
 /// Routes are selected by an internal header the policy middleware sets, not by YARP's own host matching,
-/// so the route the policy checked is exactly the route that serves the request.
+/// so media and everything else reach Jellyfin through the cluster the policy picked.
 /// </remarks>
 public sealed class ProxyConfigProvider : IProxyConfigProvider
 {
-    /// <summary>The route metadata key carrying whether the client's Host header is forwarded.</summary>
-    public const string PreserveHostKey = "PreserveHost";
-
     /// <summary>How long a media stream may sit idle, long enough for a paused film.</summary>
     public static readonly TimeSpan MediaActivityTimeout = TimeSpan.FromHours(6);
-
-    /// <summary>The cluster metadata key carrying a pinned backend certificate thumbprint.</summary>
-    public const string PinnedThumbprintKey = "PinnedThumbprint";
 
     /// <summary>
     /// The most connections each Jellyfin cluster opens to Jellyfin. YARP otherwise opens one per request in
@@ -69,12 +61,7 @@ public sealed class ProxyConfigProvider : IProxyConfigProvider
     public static IReadOnlyList<RouteConfig> BuildRoutes(ProxyRuntime runtime)
     {
         ArgumentNullException.ThrowIfNull(runtime);
-        var routes = runtime.Routes
-            .Select(r => Route(r.Id, r.ClusterId, r.PreserveHost))
-            .ToList();
-        routes.Add(Route(ProxyRuntime.JellyfinId, ProxyRuntime.JellyfinId, preserveHost: true));
-        routes.Add(Route(ProxyRuntime.JellyfinMediaId, ProxyRuntime.JellyfinMediaId, preserveHost: true));
-        return routes;
+        return new List<RouteConfig> { Route(ProxyRuntime.JellyfinId), Route(ProxyRuntime.JellyfinMediaId) };
     }
 
     /// <summary>
@@ -85,28 +72,15 @@ public sealed class ProxyConfigProvider : IProxyConfigProvider
     public static IReadOnlyList<ClusterConfig> BuildClusters(ProxyRuntime runtime)
     {
         ArgumentNullException.ThrowIfNull(runtime);
-        ForwarderRequestConfig Request(RuntimeRoute? route) => new()
+        var request = new ForwarderRequestConfig
         {
-            ActivityTimeout = TimeSpan.FromSeconds(EffectiveSettings.BackendActivityTimeoutSeconds(runtime, route)),
+            ActivityTimeout = TimeSpan.FromSeconds(EffectiveSettings.BackendActivityTimeoutSeconds(runtime)),
             AllowResponseBuffering = false,
             Version = HttpVersion.Version11,
             VersionPolicy = HttpVersionPolicy.RequestVersionOrLower
         };
 
-        var clusters = runtime.Routes.Select(r => new ClusterConfig
-        {
-            ClusterId = r.ClusterId,
-            Destinations = new Dictionary<string, DestinationConfig>(StringComparer.Ordinal)
-            {
-                ["backend"] = new() { Address = r.Target.ToString() }
-            },
-            HttpRequest = Request(r),
-            HttpClient = new HttpClientConfig { DangerousAcceptAnyServerCertificate = r.BackendTls == BackendTlsMode.Skip },
-            Metadata = r.BackendTls == BackendTlsMode.Pinned
-                ? new Dictionary<string, string>(StringComparer.Ordinal) { [PinnedThumbprintKey] = r.PinnedThumbprint }
-                : null
-        }).ToList();
-
+        var clusters = new List<ClusterConfig>();
         clusters.Add(new ClusterConfig
         {
             ClusterId = ProxyRuntime.JellyfinId,
@@ -114,7 +88,7 @@ public sealed class ProxyConfigProvider : IProxyConfigProvider
             {
                 [ProxyRuntime.JellyfinId] = new() { Address = runtime.JellyfinBackend.ToString() }
             },
-            HttpRequest = Request(null),
+            HttpRequest = request,
             HttpClient = new HttpClientConfig { MaxConnectionsPerServer = JellyfinConnections }
         });
 
@@ -127,17 +101,17 @@ public sealed class ProxyConfigProvider : IProxyConfigProvider
             {
                 [ProxyRuntime.JellyfinMediaId] = new() { Address = runtime.JellyfinBackend.ToString() }
             },
-            HttpRequest = Request(null) with { ActivityTimeout = MediaActivityTimeout },
+            HttpRequest = request with { ActivityTimeout = MediaActivityTimeout },
             HttpClient = new HttpClientConfig { MaxConnectionsPerServer = JellyfinConnections }
         });
 
         return clusters;
     }
 
-    private static RouteConfig Route(string id, string clusterId, bool preserveHost) => new()
+    private static RouteConfig Route(string id) => new()
     {
         RouteId = id,
-        ClusterId = clusterId,
+        ClusterId = id,
         Match = new RouteMatch
         {
             Path = "{**catch-all}",
@@ -145,8 +119,7 @@ public sealed class ProxyConfigProvider : IProxyConfigProvider
             {
                 new RouteHeader { Name = ProxyPolicyMiddleware.RouteHeader, Values = new[] { id }, Mode = HeaderMatchMode.ExactHeader, IsCaseSensitive = true }
             }
-        },
-        Metadata = new Dictionary<string, string>(StringComparer.Ordinal) { [PreserveHostKey] = preserveHost ? "true" : "false" }
+        }
     };
 
     private static Snapshot Create(ProxyRuntime runtime) => new(BuildRoutes(runtime), BuildClusters(runtime));
