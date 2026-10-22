@@ -151,6 +151,12 @@ public class DynamicDNSController : ControllerBase
             return BadRequest(new { Errors = new List<string> { "Encrypted values cannot be entered as credentials." } });
         }
 
+        // Without the key store a typed credential could only be stored in the clear, which is never done.
+        if (!_secrets.IsAvailable && incoming.Records.Any(r => IsTyped(r.Login) || IsTyped(r.Password)))
+        {
+            return BadRequest(new { Errors = new List<string> { CredentialEncryption.KeyStoreUnavailable } });
+        }
+
         incoming.IPv4DetectionUrl ??= string.Empty;
         incoming.IPv6DetectionUrl ??= string.Empty;
         ClampSettings(incoming);
@@ -312,6 +318,12 @@ public class DynamicDNSController : ControllerBase
 
         return string.Equals(submitted, SecretClearSentinel, StringComparison.Ordinal) ? string.Empty : submitted ?? string.Empty;
     }
+
+    // A value the person typed, as opposed to the kept or cleared placeholder or an empty field.
+    private static bool IsTyped(string? submitted)
+        => !string.IsNullOrEmpty(submitted)
+            && !string.Equals(submitted, SecretSentinel, StringComparison.Ordinal)
+            && !string.Equals(submitted, SecretClearSentinel, StringComparison.Ordinal);
 
     internal string ResolveSecret(string? submitted, string? stored)
     {

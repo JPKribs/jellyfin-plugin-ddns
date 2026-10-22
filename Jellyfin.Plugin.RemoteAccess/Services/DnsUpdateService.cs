@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Jellyfin.Plugin.DynamicDns.Configuration;
 using Jellyfin.Plugin.DynamicDns.Models;
 using Jellyfin.Plugin.DynamicDns.Providers;
+using Jellyfin.Plugin.DynamicDns.Proxy;
 using Jellyfin.Plugin.DynamicDns.Utilities;
 using JPKribs.Jellyfin.Base;
 using Microsoft.Extensions.Logging;
@@ -107,7 +108,16 @@ public sealed class DNSUpdateService : IDisposable
         // Backstop only. Every save path encrypts (the dashboard endpoint and the OnConfigurationSaving
         // hook on the generic endpoint), but a config written before those hooks existed, or edited
         // directly on disk, is still caught here so a plaintext secret is never left bare.
-        plugin.MutateConfiguration(c => CredentialEncryption.ProtectAll(c.Records, _secrets));
+        // Without the key store nothing can be encrypted, so a credential in the clear is removed from disk
+        // instead of being used. The person enters it again once the plugin is reinstalled.
+        var dropped = false;
+        plugin.MutateConfiguration(c => _secrets.IsAvailable
+            ? CredentialEncryption.ProtectAll(c.Records, _secrets)
+            : dropped = CredentialEncryption.DropPlaintext(c.Records));
+        if (dropped)
+        {
+            _logger.LogError("Removed DNS credentials that were stored unencrypted, because the encryption keys are unavailable. {Advice}", CredentialEncryption.KeyStoreUnavailable);
+        }
 
         // Snapshot the configuration under the lock so a save during the run cannot swap or mutate what
         // this pass iterates. Status written during the run lands on the clones, never on live config.
@@ -117,19 +127,17 @@ public sealed class DNSUpdateService : IDisposable
 
         if (plugin.SecretsPlaintext)
         {
-            outcome.Warnings.Add(
-                "Credential encryption is unavailable on this host, so provider credentials are stored "
-                + "in plaintext. Check the server log for details.");
+            outcome.Warnings.Add(CredentialEncryption.KeyStoreUnavailable);
 
             // One activity log warning per encryption outage, not one per run.
             if (!status.PlaintextWarningLogged)
             {
                 status.PlaintextWarningLogged = true;
                 _activity.Log(
-                    "Dynamic DNS is storing credentials in plaintext",
+                    "Dynamic DNS cannot encrypt credentials",
                     "DynamicDNS.PlaintextCredentials",
-                    "Credential encryption is unavailable on this host. Check the server log for details.",
-                    LogLevel.Warning);
+                    "The plugin could not set up its encryption keys, so no credential can be saved. Reinstall the plugin and try again, then check the permissions on its folders.",
+                    LogLevel.Error);
             }
         }
         else
@@ -281,7 +289,9 @@ public sealed class DNSUpdateService : IDisposable
             {
                 result.Success = false;
                 result.Action = "Failed";
-                result.Message = "Stored credentials could not be decrypted. Please re-enter them in step 2, Address, on the Configuration tab.";
+                result.Message = _secrets.IsAvailable
+                    ? "Stored credentials could not be decrypted. Please re-enter them in step 2, Address, on the Configuration tab."
+                    : CredentialEncryption.KeyStoreUnavailable;
                 statusUpdates[record.Id] = result;
                 outcome.Records.Add(result);
                 continue;
@@ -297,11 +307,12 @@ public sealed class DNSUpdateService : IDisposable
             result.Success = providerResult.Success;
             result.Action = providerResult.Success ? "Updated" : "Failed";
 
-            // Provider replies are echoed into the status and activity log, so strip control characters
-            // (no forged log lines) and cap the length (no flooding from an error page).
+            // Provider replies are echoed into the status, the server log and the activity log. The credentials this
+            // record sends, and anything that looks like a credential, are masked, control characters are stripped
+            // so no log line can be forged, and the length is capped against flooding from an error page.
             result.Message = string.IsNullOrEmpty(providerResult.Message)
                 ? string.Empty
-                : FormatUtilities.SanitizeForLog(providerResult.Message, MaxMessageLength);
+                : FormatUtilities.SanitizeForLog(CredentialRedactor.Redact(providerResult.Message, new[] { login, password }), MaxMessageLength);
             result.IPv4Applied = providerResult.IPv4Applied;
             result.IPv6Applied = providerResult.IPv6Applied;
             result.IPv4Held = heldV4;
@@ -501,8 +512,10 @@ public sealed class DNSUpdateService : IDisposable
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            _logger.LogError(ex, "Unexpected error updating {Host}", record.Hostname);
-            return (DNSUpdateResult.Fail("Unexpected error: " + ex.Message), false, attempt.IPv4Held, attempt.IPv6Held);
+            // Logged without the exception itself: its message and stack can quote the request, credentials and all.
+            var detail = CredentialRedactor.Redact(ex.Message, new[] { login, password });
+            _logger.LogError("Unexpected error updating {Host}: {Error}: {Message}", record.Hostname, ex.GetType().Name, detail);
+            return (DNSUpdateResult.Fail("Unexpected error: " + detail), false, attempt.IPv4Held, attempt.IPv6Held);
         }
     }
 

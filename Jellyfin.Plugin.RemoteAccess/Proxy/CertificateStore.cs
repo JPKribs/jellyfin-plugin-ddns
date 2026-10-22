@@ -352,21 +352,24 @@ public sealed class CertificateStore : IDisposable
     private Loaded LoadSelfSigned()
     {
         Directory.CreateDirectory(_paths.DataDirectory);
-        var root = LocalAuthority.LoadOrCreateRoot(_paths.SelfSignedRootFile, out var created);
+        var wanted = _hostnames.Append("localhost").Distinct(StringComparer.Ordinal).ToList();
+        var root = LocalAuthority.LoadOrCreateRoot(_paths.SelfSignedRootFile, wanted, out var created);
         Interlocked.Exchange(ref _root, new RootCertificate(root.ExportCertificatePem(), LocalAuthority.Fingerprint(root), root.NotAfter.ToUniversalTime()));
         if (created)
         {
-            _logger.LogInformation("Created the root certificate for self-signed HTTPS; install it on each device from step 3, Certificate, on the Configuration tab");
+            // A new root is also made when a name is added, or when the root predates name limits, so devices
+            // that installed the old one have to install this one.
+            var limits = string.Join(", ", LocalAuthority.ConstraintNames(wanted));
+            _logger.LogInformation("Created a root certificate for self-signed HTTPS that only vouches for {Names} and private addresses. Install it on each device from step 3, Certificate, on the Configuration tab", limits);
             _activity?.Log(
                 "Remote Access created a root certificate",
                 "DynamicDNS.RootCertificateCreated",
-                "Devices that should trust the self-signed certificate need this root installed once. Download it from step 3, Certificate, on the Configuration tab.");
+                "It only vouches for " + limits + " and private addresses. Devices that should trust the self-signed certificate need this root installed, replacing any earlier one. Download it from step 3, Certificate, on the Configuration tab.");
         }
 
         using (root)
         {
             var path = _paths.SelfSignedFile;
-            var wanted = _hostnames.Append("localhost").Distinct(StringComparer.Ordinal).ToList();
             if (File.Exists(path) && ReuseSelfSigned(path, wanted, root) is { } reused)
             {
                 return reused;

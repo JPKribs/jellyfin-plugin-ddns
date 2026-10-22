@@ -51,6 +51,7 @@ public sealed class RouterPortMapper : IAsyncDisposable
     private RouterRequest _desired = RouterRequest.Off;
     private RouterStatus _status = new();
     private IRouterClient? _client;
+    private readonly Func<IPAddress, IPAddress?> _findGateway;
     private List<PortMapping> _mapped = new();
 
     // What the activity log was last told, so a forward that keeps working or keeps failing the same way is one
@@ -78,9 +79,11 @@ public sealed class RouterPortMapper : IAsyncDisposable
     /// <param name="clients">The ways to ask the router, tried in order.</param>
     /// <param name="logger">The logger.</param>
     /// <param name="activity">The activity log writer, or null for none.</param>
-    internal RouterPortMapper(IReadOnlyList<IRouterClient> clients, ILogger logger, ActivityLogger? activity)
+    /// <param name="findGateway">Finds this server's default gateway for a LAN address, for telling the router from another device.</param>
+    internal RouterPortMapper(IReadOnlyList<IRouterClient> clients, ILogger logger, ActivityLogger? activity, Func<IPAddress, IPAddress?>? findGateway = null)
     {
         _clients = clients;
+        _findGateway = findGateway ?? NatPmpClient.FindGateway;
         _logger = logger;
         _activity = activity;
         _renew = new Timer(_ => _ = RunAsync(force: true), null, Timeout.InfiniteTimeSpan, Timeout.InfiniteTimeSpan);
@@ -303,6 +306,8 @@ public sealed class RouterPortMapper : IAsyncDisposable
         {
             Enabled = true,
             Method = outcome.Client?.Method ?? string.Empty,
+            Device = outcome.Client?.Device?.ToString() ?? string.Empty,
+            DeviceIsGateway = outcome.Client?.Device is { } device && device.Equals(_findGateway(lan!)),
             Mapped = outcome.Mapped.Count == wanted.Count,
             Ports = outcome.Mapped.Select(m => m.ExternalPort).ToList(),
             LanAddress = lan!.ToString(),
@@ -440,7 +445,7 @@ public sealed class RouterPortMapper : IAsyncDisposable
 
     private void ReportOpened(RouterStatus status)
     {
-        var key = status.Method + " " + status.LanAddress + " " + string.Join(',', status.Ports);
+        var key = status.Method + " " + status.Device + " " + status.LanAddress + " " + string.Join(',', status.Ports);
         if (string.Equals(key, _reportedOpen, StringComparison.Ordinal))
         {
             return;
@@ -448,11 +453,19 @@ public sealed class RouterPortMapper : IAsyncDisposable
 
         _reportedOpen = key;
         var ports = Ports(status.Ports);
-        _logger.LogInformation("The router forwards port {Ports} to {Address} using {Method}", ports, status.LanAddress, status.Method);
+        var device = status.Device.Length > 0 ? status.Device : "the router";
+        _logger.LogInformation("The device at {Device} answered through {Method} and says it forwards port {Ports} to {Address}", device, status.Method, ports, status.LanAddress);
+        if (status.Device.Length > 0 && !status.DeviceIsGateway)
+        {
+            _logger.LogWarning("The device at {Device} that forwarded the ports is not this server's default gateway. Check it is your router", device);
+        }
+
         _activity?.Log(
             $"Remote Access opened {(status.Ports.Count == 1 ? "port" : "ports")} {ports} on your router",
             "DynamicDNS.RouterPortsOpened",
-            $"They forward to {status.LanAddress} using {status.Method}. The router keeps them while Jellyfin runs.");
+            $"The device at {device} answered through {status.Method} and says they forward to {status.LanAddress}. "
+            + (status.Device.Length > 0 && !status.DeviceIsGateway ? "It is not this server's default gateway, so check it is your router. " : string.Empty)
+            + "Confirm the rule on your router's port forwarding page.");
     }
 
     // "80", "80 and 443".

@@ -10,6 +10,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Jellyfin.Plugin.DynamicDns.Configuration;
 using Jellyfin.Plugin.DynamicDns.Models;
+using Jellyfin.Plugin.DynamicDns.Proxy;
 using Jellyfin.Plugin.DynamicDns.Utilities;
 using MediaBrowser.Common.Net;
 using Microsoft.Extensions.Logging;
@@ -258,14 +259,14 @@ public sealed class IPDetectionService
         {
             // A plain http reply could be tampered with, which would point your DNS at an attacker. Refuse it.
             // A setting, the same every run: warned once.
-            _logger.Log(WarnOnce(url), "Refusing the non-https IP detection endpoint {Url}", url);
+            _logger.Log(WarnOnce(url), "Refusing the non-https IP detection endpoint at {Host}", EndpointHost(url));
             return (null, false);
         }
 
         // A malformed endpoint fails on its own rather than aborting detection for every other endpoint.
         if (!Uri.TryCreate(url, UriKind.Absolute, out var uri) || uri.Scheme != Uri.UriSchemeHttps || string.IsNullOrEmpty(uri.Host))
         {
-            _logger.Log(WarnOnce(url), "Skipping the malformed IP detection endpoint {Url}", url);
+            _logger.Log(WarnOnce(url), "Skipping a malformed IP detection endpoint");
             return (null, false);
         }
 
@@ -279,7 +280,7 @@ public sealed class IPDetectionService
 
             if (!IsPlainAddress(body, expected) || !IPAddress.TryParse(body, out var parsed) || parsed.AddressFamily != expected || parsed.IsIPv4MappedToIPv6)
             {
-                _logger.LogDebug("IP detection endpoint {Url} returned an unexpected value", url);
+                _logger.LogDebug("IP detection endpoint at {Host} returned an unexpected value", uri.Host);
                 return (null, false);
             }
 
@@ -287,7 +288,7 @@ public sealed class IPDetectionService
             // or CGNAT address is accepted and published as is.
             if (requirePublic && !IPAddressClassifier.IsPublic(parsed))
             {
-                _logger.LogDebug("IP detection endpoint {Url} returned a non-public address {Address}", url, parsed);
+                _logger.LogDebug("IP detection endpoint at {Host} returned a non-public address {Address}", uri.Host, parsed);
                 return (null, true);
             }
 
@@ -295,16 +296,20 @@ public sealed class IPDetectionService
         }
         catch (Exception ex) when (ex is HttpRequestException or InvalidOperationException or UriFormatException or IOException)
         {
-            _logger.LogDebug(ex, "IP detection request to {Url} failed", url);
+            _logger.LogDebug("IP detection request to {Host} failed: {Error}: {Message}", uri.Host, ex.GetType().Name, CredentialRedactor.Redact(ex.Message));
             return (null, false);
         }
         catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
         {
             // The per probe timeout fired rather than an outer cancellation. Fail this endpoint and move on.
-            _logger.LogDebug("IP detection request to {Url} timed out", url);
+            _logger.LogDebug("IP detection request to {Host} timed out", uri.Host);
             return (null, false);
         }
     }
+
+    // Only the host of an endpoint is logged: a custom one can carry a token in its path or query.
+    private static string EndpointHost(string url)
+        => Uri.TryCreate(url, UriKind.Absolute, out var parsed) && !string.IsNullOrEmpty(parsed.Host) ? parsed.Host : "an unreadable address";
 
     // Reads at most MaxResponseChars of a successful response body. A non success status throws, so the
     // endpoint is failed over like any other error.

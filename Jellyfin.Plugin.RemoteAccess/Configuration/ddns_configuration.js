@@ -494,7 +494,7 @@ export default function (view) {
         Shared.setStatus('routerStatus', 'Asking the router...', false, { timeout: 0 });
         Shared.apiRequest('Proxy/Router/Refresh', 'POST').then(function (r) {
             var text = !r ? 'Done.'
-                : r.Mapped ? 'The router opened the ports.'
+                : r.Mapped ? routerStateText(r)
                     : r.BehindCgnat ? 'Your internet provider shares your public address, so the router cannot open the ports.'
                         : r.Error || 'The router did not open the ports.';
             Shared.setStatus('routerStatus', text, !(r && r.Mapped), { timeout: 0 });

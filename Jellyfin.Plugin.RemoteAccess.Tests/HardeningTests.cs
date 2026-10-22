@@ -686,26 +686,81 @@ public sealed class HardeningTests : IDisposable
     public void SelfSigned_IsIssuedFromAStableRoot()
     {
         var rootPath = Path.Join(_dir, "root.pfx");
-        using var root = LocalAuthority.LoadOrCreateRoot(rootPath, out var created);
+        var names = new[] { "media.example.com", "localhost" };
+        using var root = LocalAuthority.LoadOrCreateRoot(rootPath, names, out var created);
         Assert.True(created);
         var constraints = root.Extensions.OfType<System.Security.Cryptography.X509Certificates.X509BasicConstraintsExtension>().Single();
         Assert.True(constraints.CertificateAuthority);
 
         // Loaded again, it is the same root, so devices that installed it keep trusting what it issues.
-        using var again = LocalAuthority.LoadOrCreateRoot(rootPath, out var createdAgain);
+        using var again = LocalAuthority.LoadOrCreateRoot(rootPath, names, out var createdAgain);
         Assert.False(createdAgain);
         Assert.Equal(root.Thumbprint, again.Thumbprint);
         Assert.Equal(LocalAuthority.Fingerprint(root), LocalAuthority.Fingerprint(again));
 
-        using var leaf = System.Security.Cryptography.X509Certificates.X509CertificateLoader.LoadPkcs12(LocalAuthority.Issue(root, new[] { "media.example.com", "localhost" }), null);
+        using var leaf = System.Security.Cryptography.X509Certificates.X509CertificateLoader.LoadPkcs12(LocalAuthority.Issue(root, names), null);
         Assert.True(leaf.HasPrivateKey);
         Assert.True(LocalAuthority.IssuedBy(leaf, again));
         Assert.True((leaf.NotAfter - leaf.NotBefore).TotalDays <= 399);
         Assert.False(leaf.Extensions.OfType<System.Security.Cryptography.X509Certificates.X509BasicConstraintsExtension>().Single().CertificateAuthority);
 
         // A certificate from some other root is not taken for one of ours.
-        using var other = LocalAuthority.LoadOrCreateRoot(Path.Join(_dir, "other.pfx"), out _);
+        using var other = LocalAuthority.LoadOrCreateRoot(Path.Join(_dir, "other.pfx"), names, out _);
         Assert.False(LocalAuthority.IssuedBy(leaf, other));
+    }
+
+    [Fact]
+    public void SelfSigned_RootOnlyVouchesForItsOwnNames()
+    {
+        using var root = LocalAuthority.LoadOrCreateRoot(Path.Join(_dir, "root.pfx"), new[] { "media.example.com", "*.home.example.org" }, out _);
+
+        // Critical, as RFC 5280 requires, and limited to the names, localhost and nothing else.
+        var extension = root.Extensions["2.5.29.30"];
+        Assert.NotNull(extension);
+        Assert.True(extension!.Critical);
+        Assert.Equal(new[] { "media.example.com", "home.example.org", "localhost" }, LocalAuthority.PermittedDnsNames(root));
+        Assert.True((root.NotAfter - root.NotBefore).TotalDays <= 1097);
+
+        // Its own names and names under them chain to it. Another site does not, even though the root signed it.
+        using var own = System.Security.Cryptography.X509Certificates.X509CertificateLoader.LoadPkcs12(LocalAuthority.Issue(root, new[] { "media.example.com", "tv.home.example.org", "localhost" }), null);
+        Assert.True(LocalAuthority.IssuedBy(own, root));
+        using var bank = System.Security.Cryptography.X509Certificates.X509CertificateLoader.LoadPkcs12(LocalAuthority.Issue(root, new[] { "bank.example.net" }), null);
+        Assert.False(LocalAuthority.IssuedBy(bank, root));
+        using var lookalike = System.Security.Cryptography.X509Certificates.X509CertificateLoader.LoadPkcs12(LocalAuthority.Issue(root, new[] { "evilmedia.example.com" }), null);
+        Assert.False(LocalAuthority.IssuedBy(lookalike, root));
+    }
+
+    [Fact]
+    public void SelfSigned_RootIsReplacedForANewName_AndKeptForASubset()
+    {
+        var rootPath = Path.Join(_dir, "root.pfx");
+        using var first = LocalAuthority.LoadOrCreateRoot(rootPath, new[] { "media.example.com", "tv.example.com" }, out _);
+
+        using var subset = LocalAuthority.LoadOrCreateRoot(rootPath, new[] { "media.example.com" }, out var createdForSubset);
+        Assert.False(createdForSubset);
+        Assert.Equal(first.Thumbprint, subset.Thumbprint);
+
+        using var wider = LocalAuthority.LoadOrCreateRoot(rootPath, new[] { "media.example.com", "music.example.com" }, out var createdForNewName);
+        Assert.True(createdForNewName);
+        Assert.NotEqual(first.Thumbprint, wider.Thumbprint);
+    }
+
+    [Fact]
+    public void SelfSigned_UnconstrainedRootFromAnOlderVersionIsReplaced()
+    {
+        // The root earlier versions made: ten years and no name constraints, so its key could vouch for any site.
+        var rootPath = Path.Join(_dir, "root.pfx");
+        using (var key = System.Security.Cryptography.ECDsa.Create(System.Security.Cryptography.ECCurve.NamedCurves.nistP256))
+        {
+            var request = new System.Security.Cryptography.X509Certificates.CertificateRequest("CN=old root", key, System.Security.Cryptography.HashAlgorithmName.SHA256);
+            request.CertificateExtensions.Add(new System.Security.Cryptography.X509Certificates.X509BasicConstraintsExtension(true, true, 0, true));
+            using var old = request.CreateSelfSigned(DateTimeOffset.UtcNow.AddDays(-1), DateTimeOffset.UtcNow.AddDays(3650));
+            File.WriteAllBytes(rootPath, old.Export(System.Security.Cryptography.X509Certificates.X509ContentType.Pkcs12));
+        }
+
+        using var root = LocalAuthority.LoadOrCreateRoot(rootPath, new[] { "media.example.com" }, out var created);
+        Assert.True(created);
+        Assert.NotNull(LocalAuthority.PermittedDnsNames(root));
     }
 
     [Fact]

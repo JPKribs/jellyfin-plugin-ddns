@@ -20,6 +20,12 @@ public sealed class RouterStatus
     /// <summary>Gets or sets the external ports currently forwarded to this server.</summary>
     public List<int> Ports { get; set; } = new();
 
+    /// <summary>Gets or sets the address of the device that answered and says it forwards the ports, empty when none did.</summary>
+    public string Device { get; set; } = string.Empty;
+
+    /// <summary>Gets or sets a value indicating whether that device is this server's default gateway, the usual router.</summary>
+    public bool DeviceIsGateway { get; set; }
+
     /// <summary>Gets or sets the LAN address the ports are forwarded to.</summary>
     public string LanAddress { get; set; } = string.Empty;
 

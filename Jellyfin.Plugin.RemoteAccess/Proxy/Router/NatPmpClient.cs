@@ -49,6 +49,9 @@ public sealed class NatPmpClient : IRouterClient
     public string Method => "NAT-PMP";
 
     /// <inheritdoc />
+    public IPAddress? Device => _external is null ? null : _gateway;
+
+    /// <inheritdoc />
     public async Task<bool> DiscoverAsync(IPAddress lanAddress, CancellationToken cancellationToken)
     {
         _gateway = _findGateway(lanAddress);
@@ -126,7 +129,7 @@ public sealed class NatPmpClient : IRouterClient
     }
 
     // The gateway of the interface that holds the LAN address, which is the router NAT-PMP talks to.
-    private static IPAddress? FindGateway(IPAddress lanAddress)
+    internal static IPAddress? FindGateway(IPAddress lanAddress)
     {
         try
         {

@@ -154,4 +154,51 @@ public class ControllerSaveTests
         var method = typeof(DynamicDNSController).GetMethod(nameof(DynamicDNSController.RunNow), BindingFlags.Public | BindingFlags.Instance)!;
         Assert.DoesNotContain(method.GetParameters(), p => p.ParameterType == typeof(System.Threading.CancellationToken));
     }
+    [Fact]
+    public void Save_WithoutTheKeyStore_RefusesATypedCredential_AndStoresNothing()
+    {
+        using var h = new OrchestratorHarness();
+        h.SetRecords(OrchestratorHarness.DynDnsRecord());
+        var before = h.Plugin.Configuration.Records.Single().Password;
+
+        // A protector with no Data Protection, as when the key store could not be set up.
+        var broken = new JPKribs.Jellyfin.Base.SecretProtector("broken", Microsoft.Extensions.Logging.Abstractions.NullLogger.Instance);
+        var controller = new DynamicDNSController(h.Service, h.Status, broken, h.ActivityLog, h.Providers);
+        var posted = Posted(controller, r => r.Password = "typed-in-the-clear");
+
+        var refused = Assert.IsType<BadRequestObjectResult>(controller.SaveConfiguration(posted).Result);
+        Assert.Contains("Reinstall the plugin", System.Text.Json.JsonSerializer.Serialize(refused.Value), StringComparison.Ordinal);
+        Assert.Equal(before, h.Plugin.Configuration.Records.Single().Password);
+        Assert.DoesNotContain(h.Plugin.Configuration.Records, r => r.Password == "typed-in-the-clear");
+    }
+
+    [Fact]
+    public void Save_WithoutTheKeyStore_StillSavesWhenNoCredentialIsTyped()
+    {
+        using var h = new OrchestratorHarness();
+        h.SetRecords(OrchestratorHarness.DynDnsRecord());
+        var broken = new JPKribs.Jellyfin.Base.SecretProtector("broken", Microsoft.Extensions.Logging.Abstractions.NullLogger.Instance);
+        var controller = new DynamicDNSController(h.Service, h.Status, broken, h.ActivityLog, h.Providers);
+
+        var posted = Posted(controller, r => r.Name = "renamed");
+
+        Assert.IsType<OkObjectResult>(controller.SaveConfiguration(posted).Result);
+        Assert.Equal("renamed", h.Plugin.Configuration.Records.Single().Name);
+    }
+
+    [Fact]
+    public void DropPlaintext_ClearsOnlyUnencryptedCredentials()
+    {
+        var records = new List<DNSRecord>
+        {
+            new() { Login = "user", Password = "enc:v1:abc" },
+            new() { Login = string.Empty, Password = "plain" }
+        };
+
+        Assert.True(Utilities.CredentialEncryption.DropPlaintext(records));
+        Assert.Equal(string.Empty, records[0].Login);
+        Assert.Equal("enc:v1:abc", records[0].Password);
+        Assert.Equal(string.Empty, records[1].Password);
+        Assert.False(Utilities.CredentialEncryption.DropPlaintext(records));
+    }
 }

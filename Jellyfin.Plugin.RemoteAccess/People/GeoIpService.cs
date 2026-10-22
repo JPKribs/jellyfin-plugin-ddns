@@ -122,6 +122,14 @@ public sealed class GeoIpService : IDisposable
             return;
         }
 
+        // A database that is missing or will not open, such as after a crash partway through replacing it, falls
+        // back to the one it replaced before anything is downloaded.
+        if (TryRestorePrevious(detail, out var previous))
+        {
+            Swap(previous, detail);
+            return;
+        }
+
         await UpdateCoreAsync(detail, onlyIfMissing: true, cancellationToken).ConfigureAwait(false);
     }
 
@@ -214,6 +222,14 @@ public sealed class GeoIpService : IDisposable
 
             if (!TryOpen(target, out var reader))
             {
+                // The new file checked out but will not open in place. The one it replaced comes back, and the
+                // database already loaded stays in use.
+                _error = "The new location database could not be opened, so the previous one is kept.";
+                if (Volatile.Read(ref _reader) is null && TryRestorePrevious(detail, out var previous))
+                {
+                    Swap(previous, detail);
+                }
+
                 return false;
             }
 
@@ -341,6 +357,15 @@ public sealed class GeoIpService : IDisposable
     {
         try
         {
+            // The reader keeps a file it fails to open mapped until it is collected, which locks the file on
+            // Windows and macOS. A file without the database marker is turned down before the reader sees it.
+            if (!HasMetadataMarker(path))
+            {
+                _logger.LogWarning("Location database {Path} is not a database file", path);
+                reader = null!;
+                return false;
+            }
+
             reader = new Reader(path, FileAccessMode.MemoryMapped);
             return true;
         }
@@ -350,6 +375,57 @@ public sealed class GeoIpService : IDisposable
             reader = null!;
             return false;
         }
+    }
+
+    // Puts the database a download replaced back in place and opens it. The copy is kept, so it stays the fallback.
+    private bool TryRestorePrevious(LocationDetail detail, out Reader reader)
+    {
+        var target = FilePath(detail);
+        var previous = target + ".previous";
+        reader = null!;
+        if (!File.Exists(previous))
+        {
+            return false;
+        }
+
+        if (!TryOpen(previous, out var probe))
+        {
+            return false;
+        }
+
+        try
+        {
+            probe.Dispose();
+            File.Copy(previous, target, overwrite: true);
+            if (!TryOpen(target, out reader))
+            {
+                return false;
+            }
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            // The damaged file cannot be replaced while something holds it, so the previous one is used in place.
+            _logger.LogWarning("The previous location database could not be put back, so it is used where it is: {Message}", ex.Message);
+            if (!TryOpen(previous, out reader))
+            {
+                return false;
+            }
+        }
+
+        _logger.LogInformation("Using the previous location database, built {Built:yyyy-MM-dd}", reader.Metadata.BuildDate);
+        return true;
+    }
+
+    // MaxMind databases end with this marker before their metadata, within the last 128 KiB.
+    private static bool HasMetadataMarker(string path)
+    {
+        ReadOnlySpan<byte> marker = [0xAB, 0xCD, 0xEF, (byte)'M', (byte)'a', (byte)'x', (byte)'M', (byte)'i', (byte)'n', (byte)'d', (byte)'.', (byte)'c', (byte)'o', (byte)'m'];
+        using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
+        var length = (int)Math.Min(stream.Length, 128 * 1024);
+        var tail = new byte[length];
+        stream.Seek(-length, SeekOrigin.End);
+        stream.ReadExactly(tail);
+        return tail.AsSpan().LastIndexOf(marker) >= 0;
     }
 
     private void Swap(Reader? reader, LocationDetail detail)

@@ -25,6 +25,7 @@ public sealed class UpnpClient : IRouterClient, IDisposable
     private readonly HttpClient _http;
     private readonly Func<IPAddress, CancellationToken, Task<IReadOnlyList<(IPAddress From, string Reply)>>> _search;
     private (string ServiceType, Uri ControlUrl)? _service;
+    private IPAddress? _device;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="UpnpClient"/> class that searches the real network.
@@ -51,9 +52,13 @@ public sealed class UpnpClient : IRouterClient, IDisposable
     public string Method => "UPnP";
 
     /// <inheritdoc />
+    public IPAddress? Device => _device;
+
+    /// <inheritdoc />
     public async Task<bool> DiscoverAsync(IPAddress lanAddress, CancellationToken cancellationToken)
     {
         _service = null;
+        _device = null;
         IReadOnlyList<(IPAddress From, string Reply)> replies;
         try
         {
@@ -80,6 +85,7 @@ public sealed class UpnpClient : IRouterClient, IDisposable
             if (xml is not null && UpnpProtocol.FindControl(xml, location) is { } service)
             {
                 _service = service;
+                _device = IPAddress.Parse(location.Host);
                 return true;
             }
         }

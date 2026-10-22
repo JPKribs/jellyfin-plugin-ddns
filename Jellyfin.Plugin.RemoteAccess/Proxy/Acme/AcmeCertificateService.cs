@@ -203,7 +203,7 @@ public sealed class AcmeCertificateService : IDisposable
             }
             catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
             {
-                var error = Explain(ex);
+                var error = CredentialRedactor.Redact(Explain(ex));
                 var failed = state.Failed(started, error, names, IsRateLimit(ex));
                 _store.Save(failed);
                 var next = started + AcmePlanner.Backoff(failed.ConsecutiveFailures);
@@ -369,7 +369,9 @@ public sealed class AcmeCertificateService : IDisposable
         var (ok, message) = await provider.SetTxtAsync(live, txtName, value, cancellationToken).ConfigureAwait(false);
         if (!ok)
         {
-            throw new InvalidOperationException(message);
+            // The provider's reply goes on to the log, the activity log and the page, so the credentials it was
+            // sent with are masked in it first.
+            throw new InvalidOperationException(CredentialRedactor.Redact(message, new[] { live.Login, live.Password }));
         }
 
         try
@@ -449,7 +451,7 @@ public sealed class AcmeCertificateService : IDisposable
         }
         catch (Exception ex) when (ex is HttpRequestException or OperationCanceledException or InvalidOperationException or IOException)
         {
-            _logger.LogDebug("Removing the TXT record {Name} failed: {Message}", item.Name, ex.Message);
+            _logger.LogDebug("Removing the TXT record {Name} failed: {Message}", item.Name, CredentialRedactor.Redact(ex.Message, new[] { live.Login, live.Password }));
             return false;
         }
     }
@@ -474,7 +476,7 @@ public sealed class AcmeCertificateService : IDisposable
         }
         catch (InvalidOperationException ex)
         {
-            _logger.LogDebug("Cannot remove a leftover TXT record for {Record} yet: {Message}", record.Name, ex.Message);
+            _logger.LogDebug("Cannot remove a leftover TXT record for {Record} yet: {Message}", record.Name, CredentialRedactor.Redact(ex.Message));
             return null;
         }
     }
@@ -516,7 +518,7 @@ public sealed class AcmeCertificateService : IDisposable
             }
             catch (HttpRequestException ex)
             {
-                _logger.LogDebug("Checking the TXT record {Name} failed: {Message}", name, ex.Message);
+                _logger.LogDebug("Checking the TXT record {Name} failed: {Message}", name, CredentialRedactor.Redact(ex.Message));
             }
             catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
             {

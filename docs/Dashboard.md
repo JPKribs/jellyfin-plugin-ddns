@@ -119,7 +119,8 @@ record is already current writes nothing.
 * **Updates paused**: a record was paused after repeated failures, once per streak.
 * **Detection unhealthy**: no public IP was found for about an hour, with an entry when it is found again.
 * **Configuration changes**: the record was added, changed or removed, or the settings under **Advanced > Dynamic DNS** changed.
-* **Plaintext credentials**: credentials cannot be encrypted on this server, once per outage.
+* **Credentials cannot be encrypted**: an error when the plugin could not set up its encryption keys, once per
+  outage. No credential can be saved until it can. Reinstall the plugin, then check the permissions on its folders.
 * **Remote Access cannot use its own files**: an error when Jellyfin runs as an account that cannot open the
   plugin's folders, naming the command that fixes it. See [Recovery](RemoteAccess.md#recovery).
 
@@ -127,20 +128,22 @@ record is already current writes nothing.
 
 * **Settings changed**: a tab was saved with a change, naming what changed.
 * **Proxy could not start**: once per reason, such as a port in use, with an entry when it starts. With
-  **Only through the proxy** on, the plugin also puts Jellyfin's own addresses back, so Jellyfin stays reachable,
-  and says why.
+  **Only through the proxy** on, Jellyfin stays on this server alone, and the entry says how to turn the proxy off
+  by hand. See [If the proxy stops working](RemoteAccess.md#if-the-proxy-stops-working).
 * **Trust the Proxy**: Jellyfin was set to trust the proxy, answered through it after the restart or did not,
   or **Undo** put its settings back.
 * **Router ports**: written once when something changes, not on every hourly renewal.
-    * **Remote Access opened ports 80 and 443 on your router**: names the address they go to and whether UPnP or
-      NAT-PMP was used. Before a certificate is ready, only port 80 is opened.
+    * **Remote Access opened ports 80 and 443 on your router**: names the device that answered, the address the
+      ports go to and whether UPnP or NAT-PMP was used, and says when that device is not this server's default
+      gateway. Before a certificate is ready, only port 80 is opened. See
+      [Checking the forward](RemoteAccess.md#checking-the-forward).
     * **Remote Access could not open ports on your router**: a warning with the router's reason, such as a port
       another device already holds.
     * **Remote Access found no router that opens ports**: a warning that no router answered over UPnP or NAT-PMP.
 * **Certificates**: a certificate was issued, renewed, could not be, could not be loaded, or expires soon. Asking
   for a new one is logged with who asked.
-* **Root certificate created**: the plugin made a new self-signed root. Every device that should trust the
-  self-signed certificate needs it installed. See [Self-signed certificates](RemoteAccess.md#self-signed-certificates).
+* **Root certificate created**: the plugin made a new self-signed root, naming what it may vouch for. Every device
+  that should trust the self-signed certificate needs it installed, in place of any earlier one. See [Self-signed certificates](RemoteAccess.md#self-signed-certificates).
 * **TXT record left over**: a Let's Encrypt TXT record could not be removed from the provider. It is a warning. The
   record does no harm, but you can delete it there.
 * **Bans**: an address or network was banned. Past five bans in a minute, the rest are summed up in one entry.

@@ -464,6 +464,8 @@ public class RouterAndReachabilityTests
 
         public string Method { get; }
 
+        public IPAddress? Device { get; set; } = IPAddress.Parse("192.168.1.1");
+
         public bool Answers { get; set; } = true;
 
         public IPAddress? External { get; set; } = IPAddress.Parse("203.0.113.7");
@@ -505,7 +507,36 @@ public class RouterAndReachabilityTests
         var manager = Substitute.For<IActivityManager>();
         manager.CreateAsync(Arg.Do<ActivityLog>(entries.Add));
         var activity = new ActivityLogger(manager, Substitute.For<ILogger<ActivityLogger>>());
-        return (new RouterPortMapper(clients, NullLogger.Instance, activity), entries);
+        return (new RouterPortMapper(clients, NullLogger.Instance, activity, _ => IPAddress.Parse("192.168.1.1")), entries);
+    }
+
+    [Fact]
+    public async Task Mapped_NamesTheDeviceThatAnswered_AndWhetherItIsTheGateway()
+    {
+        var (mapper, entries) = Mapper(new FakeRouter("UPnP"));
+        await using var _ = mapper;
+        await Sync(mapper, _both);
+
+        Assert.Equal("192.168.1.1", mapper.Status.Device);
+        Assert.True(mapper.Status.DeviceIsGateway);
+        var opened = Assert.Single(entries, e => e.Type == "DynamicDNS.RouterPortsOpened");
+        Assert.Contains("192.168.1.1", opened.ShortOverview, StringComparison.Ordinal);
+        Assert.Contains("port forwarding page", opened.ShortOverview, StringComparison.Ordinal);
+        Assert.DoesNotContain("default gateway", opened.ShortOverview, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Mapped_ByADeviceThatIsNotTheGateway_SaysToCheckIt()
+    {
+        // Any device on the network can answer a UPnP search and claim the ports are forwarded.
+        var (mapper, entries) = Mapper(new FakeRouter("UPnP") { Device = IPAddress.Parse("192.168.1.66") });
+        await using var _ = mapper;
+        await Sync(mapper, _both);
+
+        Assert.Equal("192.168.1.66", mapper.Status.Device);
+        Assert.False(mapper.Status.DeviceIsGateway);
+        var opened = Assert.Single(entries, e => e.Type == "DynamicDNS.RouterPortsOpened");
+        Assert.Contains("not this server's default gateway", opened.ShortOverview, StringComparison.Ordinal);
     }
 
     private static async Task Sync(RouterPortMapper mapper, RouterRequest request, bool force = false)

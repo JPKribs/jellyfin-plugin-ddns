@@ -59,6 +59,8 @@ on by default. Step 4, **Router**, shows how it went.
   rule on the router, or forward by hand.
 * It only covers IPv4. For visitors over IPv6, allow ports 80 and 443 to this server in the router's firewall.
 * **Try Again** in step 4 asks the router once more straight away.
+* Step 4 names the device that answered and says it forwards the ports. Any device on your network can answer a
+  UPnP search, so step 4 also says when that device is not this server's default gateway, the usual router.
 * Each change is written to the activity log. See [Remote Access entries](Dashboard.md#remote-access-entries).
 
 When the router does not open the ports, or the setting is off, step 4 shows **Forward by hand** with the rule to
@@ -66,6 +68,19 @@ add: TCP ports **80** and **443** to the address it shows. The server cannot see
 turns green once **Test from Outside** reaches the server.
 
 ![Step 4, Router](screenshots/Router%20Step.png)
+
+### Checking the forward
+
+Step 4 reports what the device that answered says. To check the forward really is on your router:
+
+1. Note the device address step 4 names. On most home networks it is the router, such as `192.168.1.1`.
+2. Open your router's admin page, then its port forwarding, NAT or UPnP page.
+3. Look for two rules named **Jellyfin Remote Access**, TCP ports 80 and 443, going to the address step 4 shows.
+4. In step 6, select **Test from Outside**. It shows **Reachable** once a place outside your network gets through.
+
+If the router lists no such rules, or step 4 says the device is not this server's default gateway, another device
+answered for the router. Turn off **Automatic port forwarding** under **Advanced > Addresses**, forward the ports by
+hand, and look up the device at that address in the router's list of connected devices.
 
 ### Shared addresses and CGNAT
 
@@ -146,9 +161,12 @@ To replace a certificate now, for example if its key may have leaked, select **R
 
 ### Self-signed certificates
 
-The plugin makes its own root certificate once, valid for ten years, and issues the proxy's certificate from it.
+The plugin makes its own root certificate, valid for three years, and issues the proxy's certificate from it.
 That certificate renews itself about every 13 months, and whenever your addresses change. A device that trusts
 the root trusts every renewal, so you only install the root once per device.
+
+The root can only vouch for your proxy's names, the names under them, `localhost` and private addresses. A
+device that installed it never trusts it for any other site.
 
 1. In the Certificate step, select **Download Root Certificate**. It saves `remote-access-root.crt`, which
    holds no private key.
@@ -164,8 +182,14 @@ the root trusts every renewal, so you only install the root once per device.
 | Firefox | Firefox can keep its own list: **Settings > Privacy & Security > Certificates > View Certificates > Authorities > Import**. |
 | TVs and streaming boxes | Roku, Fire TV, Android TV and most smart TVs cannot install a certificate, so their Jellyfin apps refuse the connection. Use Let's Encrypt for them. |
 
-The root is only replaced if its file is lost or damaged, or within a year of its end. The activity log says when
-that happens, and every device then needs the new root.
+The root is replaced when its file is lost or damaged, within a year of its end, and when you add a name it does
+not cover. A root made by an older version, which could vouch for any site, is replaced once. The activity log says
+when that happens, and every device then needs the new root. Remove the old one from each device too.
+
+!!! warning "Keep the root's file private"
+    The root's private key is in `selfsigned-root.pfx`, readable only by Jellyfin's account. Anyone with a copy
+    of that file, from a backup for example, could make certificates for your names that your devices trust. Keep
+    backups of Jellyfin's data folder private, and remove the root from your devices if you stop using it.
 
 ## Protection
 
@@ -174,7 +198,10 @@ These are on by default, and each can be changed under **Advanced**.
 * **Your own network is never blocked.** Bans, the block list and country rules only apply to the internet.
 * **Country rule**: only visitors from the country this server is in can connect, which blocks you abroad too.
   See [Defaults worth knowing](Settings.md#defaults-worth-knowing) for how to add countries. Unblocking a country
-  from the Dashboard also adds it.
+  from the Dashboard also adds it. Country rules need the location database. While it is missing, everyone can
+  connect, or nobody can with **Without the location database** set to **Block**, and **Advanced > Blocking** says
+  so under **Country rule**. A refresh only replaces the database with a new one that works, and a database that
+  will not open falls back to the one it replaced.
 * **Bans**: 5 failed sign-ins within 10 minutes bans the address for 60 minutes. An IPv6 visitor is banned with
   its whole /64, since it can pick any address in it. Failures spread over many /64s ban the wider /56 after 3 times
   **Failed sign-ins before a ban**, or the /48 after 6 times, which is 15 and 30 at the default. Those wider bans last at most 15 minutes, since they shut out others in that network too.
@@ -227,6 +254,22 @@ Visitors at home still count as local, so bans, the block list and country rules
 
 It needs at least one address that is not a wildcard. Turning it on or off while Jellyfin trusts the proxy
 restarts Jellyfin once, and a change that cannot be applied is refused rather than saved.
+
+### If the proxy stops working
+
+Jellyfin stays on this server alone. It is never opened up on its own, since on a VPS or a server with a public
+address that would put it on the internet with none of the proxy's protection. The server log and the activity
+log say what failed and how to turn the proxy off by hand:
+
+1. Create an empty file named `DISABLE` in `plugins/configurations/Jellyfin.Plugin.DynamicDns.Proxy/` under
+   Jellyfin's data folder.
+2. Restart Jellyfin. The proxy stays off and Jellyfin's network settings go back to how they were before **Trust
+   the Proxy**. Jellyfin may restart once more on its own.
+3. Once the proxy is fixed, delete the file and restart Jellyfin to turn the proxy on again.
+
+!!! danger "Close the router first"
+    Until the proxy is on again, make sure your router forwards no ports to this server, including 80, 443, 8096
+    and 8920. With the proxy off, a forwarded port reaches Jellyfin directly with none of the proxy's protection.
 
 If the proxy fails to start while this is on, nothing could reach Jellyfin. The plugin then puts Jellyfin's own
 addresses back by itself, and Jellyfin's activity log says why, such as a port in use.

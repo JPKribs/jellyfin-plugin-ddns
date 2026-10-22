@@ -11,14 +11,26 @@
   keep backups of Jellyfin's data folder private.
 * **Keep the key with the settings**: the credentials can only be read with the key beside them. If the key
   folder is lost or reset, enter your tokens and passwords again.
-* **Never logged**: credentials, and tokens inside addresses, are removed from everything written to the logs.
+* **Never stored unencrypted**: if the plugin cannot set up its encryption keys, it refuses to save credentials
+  and asks you to reinstall it and check the permissions on its folders. A credential it finds unencrypted while
+  the keys are missing is removed rather than used.
+* **Never logged**: credentials, and anything that looks like one in an address, a provider's reply or an error,
+  are masked in the server log, the activity log and the status the plugin keeps. A provider's reply is also
+  checked for the very credentials it was sent with. IP detection endpoints are logged by their host alone.
 * **Keys stay here**: certificate keys are made on this server and never leave it.
+* **Self-signed root**: it can only vouch for your proxy's names, `localhost` and private addresses, and lasts
+  three years. Its key is in `selfsigned-root.pfx`, readable only by Jellyfin's account. A copy of that file could
+  make certificates for your names that your devices trust, so keep backups private. See
+  [Self-signed certificates](RemoteAccess.md#self-signed-certificates).
 
 ## Network
 
 * **Dynamic DNS only connects out**, to your DNS provider and the IP detection services. It uses HTTPS unless
   you set a **Server override** that starts with `http://`. Record names are looked up with the server's own DNS
   settings.
+* **Credentials stay with their server**: a request to a provider follows a redirect only on the same server. A
+  redirect to another server, or from HTTPS to HTTP, is never followed, so a key is only ever sent where you
+  entered it for.
 * **Ports open only with Remote Access**: nothing listens until the proxy is turned on. Then it refuses names you
   did not add before encrypting anything, keeps the setup wizard off the internet, and never blocks your own
   network. See [Protection](RemoteAccess.md#protection).
@@ -46,7 +58,7 @@ The Remote Access folder holds:
 | `acme/` | The Let's Encrypt account, certificate and key |
 | `selfsigned-root.pfx`, `selfsigned.pfx` | The self-signed root and the certificate issued from it |
 | `people.db` | Visitor history, bans and refusals |
-| `GeoIP/` | The DB-IP location database |
+| `GeoIP/` | The DB-IP location database, and the one it last replaced |
 | `network-state.json` | What **Trust the Proxy** changed, for **Undo** |
 | `DISABLE` | Only when you create it, to turn the proxy off. See [Recovery](RemoteAccess.md#recovery). |
 

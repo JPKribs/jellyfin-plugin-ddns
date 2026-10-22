@@ -431,7 +431,7 @@ public sealed class JellyfinNetworkOrchestrator : IDisposable
     /// Runs once per startup after the proxy has been started: honours the recovery flag, and in managed
     /// mode checks that Jellyfin answers through the proxy. A failed check is reported. Jellyfin keeps its own
     /// ports, so it stays reachable, and a restart would not fix a busy port. With Only through the proxy,
-    /// Jellyfin listens on this machine alone, so a failed check also gives it its own addresses back.
+    /// Jellyfin keeps listening on this machine alone, and the log says how to turn the proxy off by hand.
     /// </summary>
     /// <param name="proxy">The proxy manager.</param>
     /// <param name="cancellationToken">Cancelled when Jellyfin shuts down.</param>
@@ -439,20 +439,18 @@ public sealed class JellyfinNetworkOrchestrator : IDisposable
     public Task OnStartupAsync(ProxyManager proxy, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(proxy);
-        return OnStartupCoreAsync(token => VerifyAsync(proxy, token), ReadSettings, cancellationToken);
+        return OnStartupCoreAsync(token => VerifyAsync(proxy, token), cancellationToken);
     }
 
     /// <summary>
     /// The startup check, with the check through the proxy passed in so it can be tested without one.
     /// </summary>
     /// <param name="verify">Checks Jellyfin answers through the proxy: null when it does, otherwise why not.</param>
-    /// <param name="settings">Reads the saved proxy settings.</param>
     /// <param name="cancellationToken">Cancelled when Jellyfin shuts down.</param>
     /// <returns>A task.</returns>
-    internal async Task OnStartupCoreAsync(Func<CancellationToken, Task<string?>> verify, Func<ProxySettings> settings, CancellationToken cancellationToken)
+    internal async Task OnStartupCoreAsync(Func<CancellationToken, Task<string?>> verify, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(verify);
-        ArgumentNullException.ThrowIfNull(settings);
         var state = _store.Load();
         if (File.Exists(_paths.DisableFlag))
         {
@@ -496,7 +494,7 @@ public sealed class JellyfinNetworkOrchestrator : IDisposable
                 _activity?.Log("Remote Access could not reach Jellyfin through the proxy", "DynamicDNS.TakeoverCheckFailed", problem, LogLevel.Error);
                 if (state.Snapshot is { BoundToLoopback: true })
                 {
-                    ReleaseLoopbackCore(settings(), state, problem);
+                    ReportStillClosed(problem);
                 }
             }
             else if (wasPending)
@@ -510,61 +508,31 @@ public sealed class JellyfinNetworkOrchestrator : IDisposable
         }
     }
 
-    // Jellyfin listens on this machine only and the proxy, its only way in, is not working: its own addresses
-    // come back and the setting is turned off, so the server can be reached again after one restart. Trusting the
-    // proxy otherwise stays as it was, so fixing the proxy and turning the setting back on is all it takes.
-    // Caller holds _gate, and the state is saved with the binding still recorded.
-    private void ReleaseLoopbackCore(ProxySettings settings, TakeoverState state, string problem)
+    // Jellyfin listens on this machine only and the proxy, its only way in, is not working. It stays that way:
+    // giving Jellyfin its own addresses back would put it on the internet with none of the proxy's protection,
+    // on a VPS or a server with a public IPv6 address, the very setups this setting is for. The log says how to
+    // turn the proxy off by hand instead.
+    private void ReportStillClosed(string problem)
     {
-        var snapshot = state.Snapshot!;
-        var unbound = ProxyRuntimeFactory.Clone(settings);
-        unbound.Advanced ??= new ProxyAdvancedSettings();
-        unbound.Advanced.JellyfinLoopbackOnly = false;
-
-        var network = _configuration.GetNetworkConfiguration();
-        NetworkTakeover.ApplyManaged(network, unbound, snapshot, wasBound: true, snapshot.AllWrittenLocal.ToList());
-        _configuration.SaveConfiguration(NetworkKey, network);
-
-        var written = NetworkTakeover.ExternalEntry(unbound);
-        if (written.Length > 0 || string.IsNullOrEmpty(snapshot.WrittenExternal))
-        {
-            snapshot.WrittenExternal = written;
-        }
-
-        snapshot.BoundToLoopback = false;
-        snapshot.WrittenInternal = string.Empty;
-        snapshot.WrittenLocal = new List<string>();
-        const string Released = "Only through the proxy was turned off, so Jellyfin listens on its own addresses again.";
-        state.LastError = problem + " " + Released;
-        state.LastErrorUtc = DateTime.UtcNow;
-        _store.Save(state);
-
-        // The setting follows, so it never claims what Jellyfin is not doing.
-        Plugin.Instance?.MutateConfiguration(c =>
-        {
-            if (c.Proxy?.Advanced is not { JellyfinLoopbackOnly: true } advanced)
-            {
-                return false;
-            }
-
-            advanced.JellyfinLoopbackOnly = false;
-            return true;
-        });
-
-        _logger.LogError("The proxy is not working and Jellyfin only listened on this machine, so Jellyfin's own addresses were put back. Restarting Jellyfin");
+        var network = Path.Join(_configuration.CommonApplicationPaths?.ConfigurationDirectoryPath ?? string.Empty, NetworkKey + ".xml");
+        var backup = Path.Join(_configuration.CommonApplicationPaths?.ConfigurationDirectoryPath ?? string.Empty, BackupFileName);
+        _logger.LogError(
+            "Only through the proxy is on and the proxy is not working, so Jellyfin still listens on this machine only. It stays closed to your network and the internet until the proxy works again. "
+            + "To turn the proxy off by hand: 1. Create an empty file named DISABLE at {DisableFlag} 2. Restart Jellyfin. The proxy stays off and Jellyfin's network settings go back to how they were before Trust the Proxy. Jellyfin may restart once more on its own. "
+            + "3. Once the proxy is fixed, delete the DISABLE file and restart Jellyfin to turn the proxy on again. If Jellyfin cannot be reached after that, stop Jellyfin and copy {Backup} over {Network}. "
+            + "WARNING: until the proxy is on again, make sure your router forwards no ports to this server. Remove every port forwarding rule for this server, including ports 80, 443, 8096 and 8920. With the proxy off, a forwarded port reaches Jellyfin directly with none of the proxy's protection. "
+            + "The proxy failed because: {Problem}",
+            _paths.DisableFlag,
+            backup,
+            network,
+            problem);
         _activity?.Log(
-            "Remote Access gave Jellyfin its own addresses back",
-            "DynamicDNS.TakeoverLoopbackReleased",
-            "Jellyfin could not be reached through the proxy. " + Released + " Jellyfin is restarting. Fix the proxy, then turn the setting on again.",
+            "Remote Access kept Jellyfin on this machine only",
+            "DynamicDNS.TakeoverLoopbackKept",
+            "Jellyfin could not be reached through the proxy, so it stays closed until the proxy works. To turn the proxy off by hand, create an empty file named DISABLE at "
+            + _paths.DisableFlag
+            + " and restart Jellyfin. Until the proxy is on again, make sure your router forwards no ports to this server. The server log has every step.",
             LogLevel.Error);
-        ScheduleRestart();
-    }
-
-    private static ProxySettings ReadSettings()
-    {
-        var settings = Plugin.Instance?.ReadConfiguration(c => ProxyRuntimeFactory.Clone(c.Proxy)) ?? new ProxySettings();
-        ProxySettingsValidator.Normalize(settings);
-        return settings;
     }
 
     private static async Task<string?> VerifyAsync(ProxyManager proxy, CancellationToken cancellationToken)

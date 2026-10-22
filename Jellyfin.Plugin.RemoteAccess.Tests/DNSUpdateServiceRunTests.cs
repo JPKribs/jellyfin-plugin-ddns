@@ -214,6 +214,25 @@ public class DNSUpdateServiceRunTests
     }
 
     [Fact]
+    public async Task ProviderReply_EchoingTheCredentials_NeverReachesTheStatus()
+    {
+        using var h = new OrchestratorHarness();
+        var record = OrchestratorHarness.DynDnsRecord();
+        record.Login = "media-user";
+        record.Password = "Sup3r-Secret-Pa55";
+        h.SetRecords(record);
+        h.DdnsReply = (HttpStatusCode.OK, "badauth for media-user with Sup3r-Secret-Pa55 token=abc123");
+
+        var outcome = await h.RunAsync();
+
+        var message = Assert.Single(outcome.Records).Message;
+        Assert.DoesNotContain("Sup3r-Secret-Pa55", message, StringComparison.Ordinal);
+        Assert.DoesNotContain("media-user", message, StringComparison.Ordinal);
+        Assert.DoesNotContain("abc123", message, StringComparison.Ordinal);
+        Assert.DoesNotContain("Sup3r-Secret-Pa55", h.StatusOf("rec1").LastStatus, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task LiveDnsCheck_ResolvesTheZoneCompletedName()
     {
         var provider = new FakeProvider(DNSProviderKind.Cloudflare, (_, _, _) => Task.FromResult(DNSUpdateResult.Ok("ok")));

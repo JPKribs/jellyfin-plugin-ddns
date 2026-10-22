@@ -14,6 +14,12 @@ public interface IRouterClient
     string Method { get; }
 
     /// <summary>
+    /// Gets the address of the device that answered <see cref="DiscoverAsync"/>, null before one did. Any device on
+    /// the network can answer a UPnP search, so the dashboard names it for the person to check.
+    /// </summary>
+    IPAddress? Device { get; }
+
+    /// <summary>
     /// Looks for a router that speaks this protocol on the network the LAN address is on.
     /// </summary>
     /// <param name="lanAddress">This machine's LAN address.</param>

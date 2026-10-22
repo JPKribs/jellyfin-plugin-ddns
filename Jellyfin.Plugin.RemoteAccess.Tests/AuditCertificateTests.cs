@@ -63,7 +63,7 @@ public sealed class AuditCertificateTests : IDisposable
     }
 
     [Fact]
-    public async Task Startup_BoundToLoopbackAndProxyDown_GivesJellyfinItsAddressesBack()
+    public async Task Startup_BoundToLoopbackAndProxyDown_StaysClosed()
     {
         var network = Network();
         Serve(network);
@@ -74,26 +74,28 @@ public sealed class AuditCertificateTests : IDisposable
 
         Assert.Equal(new[] { "127.0.0.1" }, network.LocalNetworkAddresses);
 
-        // After the restart, the proxy could not bind its port.
+        // After the restart, the proxy could not bind its port. Jellyfin is not handed its own addresses back:
+        // on a VPS that would put it on the internet with none of the proxy's protection.
         using var orchestrator = Orchestrator(started: true);
-        await orchestrator.OnStartupCoreAsync(_ => Task.FromResult<string?>("Port 443 is already in use by another program."), () => Settings(true), CancellationToken.None);
+        await orchestrator.OnStartupCoreAsync(_ => Task.FromResult<string?>("Port 443 is already in use by another program."), CancellationToken.None);
 
-        Assert.Contains("192.168.1.10", network.LocalNetworkAddresses);
-        Assert.DoesNotContain(network.PublishedServerUriBySubnet, e => e.StartsWith("0.0.0.0/0=", StringComparison.Ordinal));
-        Assert.Contains("external=https://media.example.com", network.PublishedServerUriBySubnet);
+        Assert.Equal(new[] { "127.0.0.1" }, network.LocalNetworkAddresses);
         var state = orchestrator.State;
         Assert.Equal(TakeoverPhase.Managed, state.Phase);
-        Assert.False(state.Snapshot!.BoundToLoopback);
-        Assert.Empty(state.Snapshot.WrittenLocal);
+        Assert.True(state.Snapshot!.BoundToLoopback);
         Assert.Contains("already in use", state.LastError, StringComparison.Ordinal);
-        Assert.False(orchestrator.IsBoundToLoopback);
+        Assert.True(orchestrator.IsBoundToLoopback);
 
-        await Eventually(() => _system.ReceivedCalls().Any(c => c.GetMethodInfo().Name == nameof(ISystemManager.Restart)));
-        await Eventually(() => Activity().Any(a => a.Type == "DynamicDNS.TakeoverLoopbackReleased"));
-        var entry = Activity().First(a => a.Type == "DynamicDNS.TakeoverLoopbackReleased");
+        // The activity log says how to turn the proxy off by hand, and to close the router first.
+        await Eventually(() => Activity().Any(a => a.Type == "DynamicDNS.TakeoverLoopbackKept"));
+        var entry = Activity().First(a => a.Type == "DynamicDNS.TakeoverLoopbackKept");
         Assert.Equal(LogLevel.Error, entry.LogSeverity);
+        Assert.Contains("DISABLE", entry.ShortOverview, StringComparison.Ordinal);
+        Assert.Contains("forwards no ports", entry.ShortOverview, StringComparison.Ordinal);
         AssertPlain(entry.Name);
         AssertPlain(entry.ShortOverview);
+        await Task.Delay(200);
+        Assert.DoesNotContain(_system.ReceivedCalls(), c => c.GetMethodInfo().Name == nameof(ISystemManager.Restart));
 
         // Undo still puts the original settings back, the trust included.
         orchestrator.Restore("test", restart: false);
@@ -113,7 +115,7 @@ public sealed class AuditCertificateTests : IDisposable
 
         var bound = network.LocalNetworkAddresses.ToArray();
         using var orchestrator = Orchestrator(started: true);
-        await orchestrator.OnStartupCoreAsync(_ => Task.FromResult<string?>("The proxy is not running."), () => Settings(false), CancellationToken.None);
+        await orchestrator.OnStartupCoreAsync(_ => Task.FromResult<string?>("The proxy is not running."), CancellationToken.None);
 
         Assert.Equal(bound, network.LocalNetworkAddresses);
         Assert.Equal("The proxy is not running.", orchestrator.State.LastError);
@@ -132,7 +134,7 @@ public sealed class AuditCertificateTests : IDisposable
         }
 
         using var orchestrator = Orchestrator(started: true);
-        await orchestrator.OnStartupCoreAsync(_ => Task.FromResult<string?>(null), () => Settings(true), CancellationToken.None);
+        await orchestrator.OnStartupCoreAsync(_ => Task.FromResult<string?>(null), CancellationToken.None);
 
         Assert.Equal(new[] { "127.0.0.1" }, network.LocalNetworkAddresses);
         Assert.True(orchestrator.IsBoundToLoopback);
@@ -233,7 +235,7 @@ public sealed class AuditCertificateTests : IDisposable
         Serve(network);
         using var orchestrator = Orchestrator(started: false);
         orchestrator.Commit(Settings(false), network);
-        await orchestrator.OnStartupCoreAsync(_ => Task.FromResult<string?>(null), () => Settings(false), CancellationToken.None);
+        await orchestrator.OnStartupCoreAsync(_ => Task.FromResult<string?>(null), CancellationToken.None);
         Assert.Contains("external=https://media.example.com", network.PublishedServerUriBySubnet);
 
         var renamed = Settings(false);
@@ -262,7 +264,7 @@ public sealed class AuditCertificateTests : IDisposable
         Serve(network);
         using var orchestrator = Orchestrator(started: false);
         orchestrator.Commit(Settings(true), network);
-        await orchestrator.OnStartupCoreAsync(_ => Task.FromResult<string?>(null), () => Settings(true), CancellationToken.None);
+        await orchestrator.OnStartupCoreAsync(_ => Task.FromResult<string?>(null), CancellationToken.None);
 
         var renamed = Settings(true);
         renamed.Hostnames = new List<string> { "watch.example.com" };

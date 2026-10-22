@@ -57,8 +57,35 @@ public class ProxyRulesTests
     [InlineData("GET http://host/x?token=t0k&access_token=a1 failed", "GET http://host/x?token=***&access_token=*** failed")]
     [InlineData("MediaBrowser Client=\"web\", Token=\"deadbeef\"", "MediaBrowser Client=\"web\", Token=\"***\"")]
     [InlineData("/Users/Public?tokenize=1", "/Users/Public?tokenize=1")]
+    [InlineData("https://www.duckdns.org/update?domains=home&token=abc&ip=1.2.3.4", "https://www.duckdns.org/update?domains=home&token=***&ip=1.2.3.4")]
+    [InlineData("https://ddnss.de/upd.php?key=K3Y&host=x", "https://ddnss.de/upd.php?key=***&host=x")]
+    [InlineData("https://njal.la/update/?h=x&k=s3cret&auto", "https://njal.la/update/?h=x&k=***&auto")]
+    [InlineData("https://cp.dnsmadeeasy.com/servlet/updateip?username=u&password=p4ss&id=1", "https://cp.dnsmadeeasy.com/servlet/updateip?username=u&password=***&id=1")]
+    [InlineData("https://www.sitelutions.com/dnsup?id=1&user=u&pass=p4ss", "https://www.sitelutions.com/dnsup?id=1&user=u&pass=***")]
+    [InlineData("https://api.dynadot.com/api3.xml?key=1&pwd=p4ss", "https://api.dynadot.com/api3.xml?key=***&pwd=***")]
+    [InlineData("https://dynamic.name-services.com/interface.asp?DomainPassword=p4ss", "https://dynamic.name-services.com/interface.asp?DomainPassword=***")]
+    [InlineData("https://freedns.afraid.org/api/?action=getdyndns&sha=0123abcd", "https://freedns.afraid.org/api/?action=getdyndns&sha=***")]
+    [InlineData("https://user:p4ss@members.dyndns.org/nic/update", "https://***@members.dyndns.org/nic/update")]
+    [InlineData("Authorization: Basic dXNlcjpwYXNz", "Authorization: Basic ***")]
+    [InlineData("Authorization: Bearer abcdef123456", "Authorization: Bearer ***")]
+    [InlineData("Authorization: sso-key KEY123:SECRET456", "Authorization: sso-key ***")]
+    [InlineData("{\"error\":\"bad\",\"password\":\"p4ss\",\"apiKey\":\"k3y\"}", "{\"error\":\"bad\",\"password\":\"***\",\"apiKey\":\"***\"}")]
+    [InlineData("<response><token>abc</token><code>1</code></response>", "<response><token>***</token><code>1</code></response>")]
+    [InlineData("good 203.0.113.7", "good 203.0.113.7")]
+    [InlineData("no 'A' record at Cloudflare", "no 'A' record at Cloudflare")]
     public void Redactor_MasksEveryTokenForm(string input, string expected)
         => Assert.Equal(expected, CredentialRedactor.Redact(input));
+
+    [Fact]
+    public void Redactor_MasksTheCredentialsInUseWherever_TheyAppear()
+    {
+        // A provider echoing the token back in free text, or URL encoded, never gets it logged.
+        var text = "Invalid token Abc/123+xyz for home, sent as Abc%2F123%2Bxyz";
+        Assert.Equal("Invalid token *** for home, sent as ***", CredentialRedactor.Redact(text, new[] { "Abc/123+xyz", null, "" }));
+
+        // Very short values are left alone, so the text stays readable.
+        Assert.Equal("ok on", CredentialRedactor.Redact("ok on", new[] { "on" }));
+    }
 
     [Theory]
     [InlineData("/Startup/Configuration", true)]

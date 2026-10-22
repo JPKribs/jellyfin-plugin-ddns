@@ -81,7 +81,8 @@ internal sealed class OrchestratorHarness : IDisposable
         var http = Substitute.For<IHttpClientFactory>();
         http.CreateClient(Arg.Any<string>()).Returns(_ => new HttpClient(new HarnessHandler(this)));
         Status = new StatusStoreService(paths, NullLogger<StatusStoreService>.Instance);
-        Secrets = new SecretProtector("ddns-test", NullLogger.Instance);
+        // The plugin's own key ring, as on a real server, so credentials are encrypted the way they are in use.
+        Secrets = Plugin.Secrets;
         var manager = Substitute.For<IActivityManager>();
         manager.CreateAsync(Arg.Do<ActivityLog>(e => { lock (Activity) { Activity.Add(e); } }));
         ActivityLog = new ActivityLogger(manager, Substitute.For<ILogger<ActivityLogger>>());

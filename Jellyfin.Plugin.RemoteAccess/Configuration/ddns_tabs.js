@@ -72,8 +72,13 @@ export function routerStateText(router) {
     if (!router) return '';
     if (router.BehindCgnat) return 'Your provider shares your public IP, so the internet cannot reach this server. Ask them for a public IP.';
     if (router.Mapped) {
+        // Any device on the network can answer a UPnP search, so the one that did is named for the person to check.
         var ports = (router.Ports || []).join(' and ');
-        return 'The router forwards ' + (ports ? 'ports ' + ports : 'the ports') + ' to this server' + (router.Method ? ' through ' + router.Method : '') + '.';
+        var who = router.Device ? 'The device at ' + router.Device : 'A device on your network';
+        var text = who + ' answered' + (router.Method ? ' through ' + router.Method : '') + ' and says it forwards ' +
+            (ports ? 'ports ' + ports : 'the ports') + ' to this server.';
+        if (router.Device && !router.DeviceIsGateway) text += ' It is not this server\'s default gateway, so check it is your router.';
+        return text + ' Confirm the rule on your router\'s port forwarding page.';
     }
     if (!router.Enabled) return 'Automatic port forwarding is off.';
     return 'The router did not open the ports automatically.';

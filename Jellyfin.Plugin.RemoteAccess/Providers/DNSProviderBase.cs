@@ -1,9 +1,11 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using Jellyfin.Plugin.DynamicDns.Models;
+using Jellyfin.Plugin.DynamicDns.Proxy;
 using JPKribs.Jellyfin.Base;
 using Microsoft.Extensions.Logging;
 
@@ -24,7 +26,9 @@ public abstract class DNSProviderBase : IDNSProvider
     /// <param name="logger">The logger.</param>
     protected DNSProviderBase(IHttpClientFactory httpClientFactory, ILogger logger)
     {
-        _httpClientFactory = httpClientFactory;
+        // Credentials ride in headers, so every provider request goes out on the client that never follows a
+        // redirect to another server. The plugin builds providers without a factory only to read their fields.
+        _httpClientFactory = httpClientFactory is null ? null! : new ProviderHttpClientFactory(httpClientFactory);
         Logger = logger;
     }
 
@@ -285,7 +289,9 @@ public abstract class DNSProviderBase : IDNSProvider
         ProviderAttempt.Current?.Observe(result.Status);
         if (result.Status == 0)
         {
-            Logger.LogWarning("{Provider} request failed: {Detail}", Kind, result.Body);
+            // The failure text can quote the request. Every credential it was sent with is masked, whatever form.
+            var secrets = (headers ?? Enumerable.Empty<KeyValuePair<string, string>>()).Select(h => (string?)h.Value).Append(login).Append(password);
+            Logger.LogWarning("{Provider} request failed: {Detail}", Kind, CredentialRedactor.Redact(result.Body, secrets));
         }
 
         return result;

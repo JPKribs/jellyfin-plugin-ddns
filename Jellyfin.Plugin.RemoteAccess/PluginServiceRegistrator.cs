@@ -36,6 +36,11 @@ public class PluginServiceRegistrator : IPluginServiceRegistrator
         // name. Otherwise a host launch-context change (app update, desktop-app vs service, Docker) shifts the
         // Data Protection discriminator (and default key location) and every stored secret fails to decrypt.
         serviceCollection.AddPluginSecretProtector(Plugin.SecretsName);
+
+        // Provider requests carry API keys in headers. Their client follows a redirect only on the same server.
+        serviceCollection.AddHttpClient(ProviderHttp.ClientName)
+            .ConfigurePrimaryHttpMessageHandler(ProviderHttp.PrimaryHandler)
+            .AddHttpMessageHandler(() => new SameHostRedirectHandler());
         serviceCollection.AddActivityLogger();
         serviceCollection.AddSingleton<IPDetectionService>();
         serviceCollection.AddSingleton<DNSLookupService>();

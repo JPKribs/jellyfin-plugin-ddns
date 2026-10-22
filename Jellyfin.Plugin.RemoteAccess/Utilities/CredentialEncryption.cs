@@ -13,6 +13,46 @@ namespace Jellyfin.Plugin.DynamicDns.Utilities;
 public static class CredentialEncryption
 {
     /// <summary>
+    /// What the person is told when credentials cannot be encrypted. They are never stored in the clear instead.
+    /// </summary>
+    public const string KeyStoreUnavailable = "Credentials cannot be saved because the plugin could not set up its encryption keys, and they are never stored unencrypted. "
+        + "Reinstall the plugin and try again. If it happens again, check that the account Jellyfin runs as can read and write the plugin's folders in Jellyfin's data folder, "
+        + "plugins/configurations/Jellyfin.Plugin.DynamicDns.Keys in particular.";
+
+    /// <summary>Whether a stored value is a credential in the clear: not empty and not encrypted.</summary>
+    /// <param name="value">The stored value.</param>
+    /// <returns>True for a plaintext credential.</returns>
+    public static bool IsPlaintext(string? value) => !string.IsNullOrEmpty(value) && !SecretProtector.IsProtected(value);
+
+    /// <summary>
+    /// Clears every credential held in the clear. Used while the key store is unavailable, so none stays on disk
+    /// unencrypted. Encrypted values are kept for when the keys are back.
+    /// </summary>
+    /// <param name="records">The records, changed in place.</param>
+    /// <returns>Whether any value was cleared.</returns>
+    public static bool DropPlaintext(IEnumerable<DNSRecord> records)
+    {
+        ArgumentNullException.ThrowIfNull(records);
+        var changed = false;
+        foreach (var record in records)
+        {
+            if (IsPlaintext(record.Login))
+            {
+                record.Login = string.Empty;
+                changed = true;
+            }
+
+            if (IsPlaintext(record.Password))
+            {
+                record.Password = string.Empty;
+                changed = true;
+            }
+        }
+
+        return changed;
+    }
+
+    /// <summary>
     /// Clears encrypted credentials a client sent that are not the stored value of that same record, still
     /// sent to the same provider and server. Encrypted text copied from another field, or kept on a record
     /// moved elsewhere, would otherwise be decrypted and sent wherever the record now points.

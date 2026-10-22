@@ -187,6 +187,12 @@ public class Plugin : PluginBase<Plugin, PluginConfiguration>
         CredentialEncryption.DropForeignCiphertext(incoming.Records, stored?.Records);
         CredentialEncryption.ProtectAll(incoming.Records, Secrets);
 
+        // Without the key store ProtectAll leaves values as they are, and a credential is never stored in the clear.
+        if (!Secrets.IsAvailable && incoming.Records.Any(r => CredentialEncryption.IsPlaintext(r.Login) || CredentialEncryption.IsPlaintext(r.Password)))
+        {
+            throw new ArgumentException(CredentialEncryption.KeyStoreUnavailable, nameof(incoming));
+        }
+
         // The dashboard save audits in its own endpoint, and this generic path is the only other
         // place records can change. Diffing after ProtectAll compares stored forms, so a ciphertext
         // echoed back by a client is unchanged while a newly entered credential is a fresh
@@ -213,6 +219,10 @@ public class Plugin : PluginBase<Plugin, PluginConfiguration>
             && string.Equals(incoming.Proxy.Certificate.KeyPath, storedCertificate.KeyPath, StringComparison.Ordinal);
         incoming.Proxy.Certificate.Password = Secrets.Protect(
             CredentialEncryption.OwnOrEmpty(incoming.Proxy.Certificate.Password, sameFile ? storedCertificate!.Password : null));
+        if (!Secrets.IsAvailable && CredentialEncryption.IsPlaintext(incoming.Proxy.Certificate.Password))
+        {
+            throw new ArgumentException(CredentialEncryption.KeyStoreUnavailable, nameof(incoming));
+        }
         ProxySettingsValidator.Normalize(incoming.Proxy);
         var errors = ProxySettingsValidator.Validate(incoming.Proxy, rawHostnames);
         if (!incoming.Proxy.Enabled && IsTakeoverActive())

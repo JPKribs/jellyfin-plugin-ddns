@@ -108,6 +108,14 @@ public class ProxyController : ControllerBase
             return BadRequest(new { Errors = new List<string> { "An encrypted value cannot be entered as the certificate password." } });
         }
 
+        // A new certificate password could only be stored in the clear without the key store, which is never done.
+        if (!_secrets.IsAvailable
+            && !string.IsNullOrEmpty(incoming.Certificate.Password)
+            && !string.Equals(incoming.Certificate.Password, SecretProtector.KeptSentinel, StringComparison.Ordinal))
+        {
+            return BadRequest(new { Errors = new List<string> { CredentialEncryption.KeyStoreUnavailable } });
+        }
+
         incoming.Certificate.Password = _secrets.ResolveIncoming(incoming.Certificate.Password, sameFile ? stored.Certificate.Password : string.Empty);
         ProxySettingsValidator.Normalize(incoming);
 

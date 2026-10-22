@@ -20,6 +20,8 @@ export default function (view) {
     var restartNote = '';
     var countries = null;
     var serverCountry = '';
+    // Assumed loaded until the status says otherwise, so the warning never flashes up on a working server.
+    var countryDatabaseLoaded = true;
     // The proxy settings as last loaded or saved, for the certificate request.
     var proxySettings = null;
     // The Dynamic DNS fine-tuning, saved through the DDNS configuration rather than the proxy settings. The form
@@ -79,10 +81,19 @@ export default function (view) {
         var effective = mode || (defaults && defaults.CountryMode) || 'ServerCountry';
         var html = Shared.escapeHtml(MODE_NOTES[effective] || '');
         // The server's country stands out in green, or the sentence turns yellow while it is still unknown.
-        if (effective === 'ServerCountry') {
+        // Without the database the country cannot be known, and the warning below says why.
+        if (effective === 'ServerCountry' && (serverCountry || countryDatabaseLoaded)) {
             html += serverCountry
                 ? ' This server is in <strong class="ddns-country-known">' + Shared.escapeHtml(serverCountry) + '</strong>.'
                 : ' <strong class="ddns-country-unknown">Until this server\'s country is known, everyone can connect.</strong>';
+        }
+        // Country rules need the location database. Without it they do nothing, or refuse everyone, so say which.
+        if (effective !== 'Off' && !countryDatabaseLoaded) {
+            var blocks = Shared.getEl('advBlockWithoutDatabase').value === 'true';
+            html += ' <strong class="ddns-country-unknown">' + (blocks
+                ? 'The location database is not loaded, so every internet connection is refused until it is.'
+                : 'The location database is not loaded, so country rules are not working and everyone can connect.') +
+                ' Select Refresh Locations under History to download it.</strong>';
         }
         Shared.getEl('countryModeDescription').innerHTML = html;
         Shared.setVisible('countryPickerField', effective !== 'Off');
@@ -93,6 +104,7 @@ export default function (view) {
             if (!st) return;
             showCertRequest(st, proxySettings);
             serverCountry = st.ServerCountry || '';
+            countryDatabaseLoaded = !!st.CountryDatabaseLoaded;
             showCountryMode();
             var refused = st.CountryRefused || {};
             var parts = Object.keys(refused).sort(function (a, b) { return refused[b] - refused[a]; }).map(function (code) {
@@ -101,7 +113,6 @@ export default function (view) {
             var text = parts.length
                 ? 'Refused since Jellyfin started: ' + parts.join(', ') + '.'
                 : 'Nothing has been refused since Jellyfin started.';
-            if (!st.CountryDatabaseLoaded) text += ' The location database is not loaded yet. It downloads when country rules are saved.';
             Shared.getEl('countryStatus').textContent = text;
         }).catch(function () { /* status is optional */ });
     }
@@ -626,6 +637,7 @@ export default function (view) {
         countries = createChipSelect({ options: countryOptions(), placeholder: 'Add a country' });
         Shared.getEl('countryPicker').appendChild(countries.element);
         Shared.getEl('advCountryMode').addEventListener('change', showCountryMode);
+        Shared.getEl('advBlockWithoutDatabase').addEventListener('change', showCountryMode);
         Shared.getEl('btnSaveAdvanced').addEventListener('click', save);
         Shared.getEl('btnResetAdvanced').addEventListener('click', reset);
         Shared.getEl('btnRestartProxy').addEventListener('click', restartProxy);
