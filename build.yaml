@@ -20,6 +20,7 @@ artifacts:
 - "MaxMind.Db.dll"
 - "Certes.dll"
 - "BouncyCastle.Cryptography.dll"
+- "QRCoder.dll"
 changelog:
   fixed:
   - INWX, ClouDNS and Directnic records can be saved again. They have no hostname field, and saving no longer asks for one.

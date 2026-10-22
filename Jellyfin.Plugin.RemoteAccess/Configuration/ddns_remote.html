@@ -127,8 +127,20 @@
                             <span class="jpk-collapsible-icon" aria-hidden="true">&#9660;</span>
                         </button>
                         <div id="secRouter" class="jpk-collapsible-content">
-                            <div id="routerInstruction" class="jpk-record-card"></div>
-                            <div class="fieldDescription">Called port forwarding or NAT on most routers.</div>
+                            <div class="selectContainer">
+                                <label class="selectLabel" for="autoPortForwarding">Open router ports automatically</label>
+                                <select id="autoPortForwarding" class="jpk-selector-dropdown">
+                                    <option value="true">On</option>
+                                    <option value="false">Off</option>
+                                </select>
+                                <div class="fieldDescription">Asks the router to forward ports 80 and 443 to this server through UPnP or NAT-PMP, when the router allows it.</div>
+                            </div>
+                            <div id="routerAuto" class="hidden" aria-live="polite"></div>
+                            <div id="routerError" class="jpk-error hidden"></div>
+                            <div id="routerManual">
+                                <div id="routerInstruction" class="jpk-record-card"></div>
+                                <div class="fieldDescription">Called port forwarding or NAT on most routers.</div>
+                            </div>
                         </div>
                     </div>
 

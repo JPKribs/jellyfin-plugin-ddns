@@ -499,7 +499,7 @@ export default function (view) {
         pluginId: PLUGIN_ID,
         apiPrefix: 'DynamicDns',
         tabsKey: 'ddns',
-        tabIndex: 1,
+        tabIndex: 2,
         tabs: TABS,
         bind: bind,
         load: load,

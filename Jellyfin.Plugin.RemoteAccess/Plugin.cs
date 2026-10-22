@@ -323,7 +323,20 @@ public class Plugin : PluginBase<Plugin, PluginConfiguration>
             EmbeddedResourcePath = $"{ns}.Configuration.ddns_dashboard.js"
         };
 
-        // Tab 2: Domains.
+        // Tab 2: Setup, the guided checklist for reaching Jellyfin from outside.
+        yield return new PluginPageInfo
+        {
+            Name = "ddns_setup",
+            EmbeddedResourcePath = $"{ns}.Configuration.ddns_setup.html"
+        };
+
+        yield return new PluginPageInfo
+        {
+            Name = "ddns_setup.js",
+            EmbeddedResourcePath = $"{ns}.Configuration.ddns_setup.js"
+        };
+
+        // Tab 3: Domains.
         yield return new PluginPageInfo
         {
             Name = "ddns_domains",
@@ -340,7 +353,7 @@ public class Plugin : PluginBase<Plugin, PluginConfiguration>
             EmbeddedResourcePath = $"{ns}.Configuration.ddns_domains.js"
         };
 
-        // Tab 3: Address.
+        // Tab 4: Address.
         yield return new PluginPageInfo
         {
             Name = "ddns_address",
@@ -353,8 +366,8 @@ public class Plugin : PluginBase<Plugin, PluginConfiguration>
             EmbeddedResourcePath = $"{ns}.Configuration.ddns_address.js"
         };
 
-        // Tabs 4 to 6: remote access through the built-in proxy.
-        foreach (var name in new[] { "ddns_remote", "ddns_services", "ddns_advanced" })
+        // Tabs 5 and 6: remote access through the built-in proxy.
+        foreach (var name in new[] { "ddns_remote", "ddns_advanced" })
         {
             yield return new PluginPageInfo
             {

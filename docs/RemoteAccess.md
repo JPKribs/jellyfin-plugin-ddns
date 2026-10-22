@@ -151,15 +151,14 @@ shows both defaults and which one applies.
 The **Dashboard** tab shows who connects, where from, and what was turned away, with bans you can lift and
 addresses you can block. See [Dashboard](Dashboard.md).
 
-## Services
+## Other apps
 
-The **Services** tab puts other apps on your network, such as a request manager, behind the same proxy on their own
-address, such as `requests.example.com`. Only add apps that have their own sign-in.
-
-Let's Encrypt adds each Service's address to the certificate. Services set to your network only, and names that
-only your own DNS knows, such as `nas.lan`, are left off, since Let's Encrypt can never check them.
-
-![Services tab](screenshots/Services.png)
+The proxy serves Jellyfin only. To reach other apps on your network from outside, such as a request manager, use a
+general reverse proxy instead, for example [NGINX](https://nginx.org), [Apache](https://httpd.apache.org) or
+[SWAG](https://docs.linuxserver.io/general/swag), which bundles NGINX with Let's Encrypt. Give it ports 80 and 443,
+turn Remote Access off, and point it at Jellyfin as Jellyfin's
+[networking guide](https://jellyfin.org/docs/general/post-install/networking/) describes. The plugin's Dynamic DNS
+keeps working alongside it.
 
 ## Only through the proxy
 

@@ -1,7 +1,7 @@
 # The Plugin's Pages
 
 Remote Access adds one entry, **Remote Access**, to the dashboard's side menu. Its pages share a
-tab bar along the top: **Dashboard**, **Domains**, **Address**, **Proxy**, **Services** and **Advanced**. Every
+tab bar along the top: **Dashboard**, **Setup**, **Domains**, **Address**, **Proxy** and **Advanced**. Every
 setting, with its default, is listed in the [Settings Reference](Settings.md).
 
 ## Dashboard
@@ -48,14 +48,6 @@ Remote access itself. The cards at the top show what is left to do, and each sec
 See [Remote Access](RemoteAccess.md).
 
 ![Proxy tab](screenshots/Proxy.png)
-
-## Services
-
-Other apps on your network, such as a request manager, reached through the proxy on their own address. Each
-Service has its names, the address it listens on, who may reach it, and its own overrides of the Advanced
-settings. Only add apps that have their own login. See [Services](RemoteAccess.md#services).
-
-![Services tab](screenshots/Services.png)
 
 ## Advanced
 

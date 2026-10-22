@@ -157,9 +157,8 @@ inside your home.
 * **Travelling abroad**: by default only visitors from your own country can connect. Before you go, add the
   countries you will visit in the **Countries** picker under **Advanced → Blocking**.
 * **Who is connecting**: the **Dashboard** tab shows visitors, failed sign-ins and bans.
-* **More apps**: the **Services** tab can put other apps on their own address, such as `requests.example.com`.
-  Add a Cloudflare record for each, as in step 2. Then keep it current: either add each name on the **Domains**
-  tab too, as in step 5, or make it a `CNAME` record pointing at `media.example.com`, which follows it.
+* **Other apps**: the plugin serves Jellyfin only. See [Other apps](RemoteAccess.md#other-apps) for reaching
+  other apps from outside.
 
 ## Troubleshooting
 

@@ -23,6 +23,6 @@ without Remote Access.
 ## Find it
 
 After the restart, the plugin has a **Remote Access** entry in the dashboard's side menu. It opens on the
-**Dashboard** tab. The other tabs are **Domains**, **Address**, **Proxy**, **Services** and **Advanced**.
+**Dashboard** tab. The other tabs are **Setup**, **Domains**, **Address**, **Proxy** and **Advanced**.
 
 Next: [Adding Records](Records.md).

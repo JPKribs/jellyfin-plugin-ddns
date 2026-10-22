@@ -1,6 +1,6 @@
 import { createConfigPage, confirmDialog } from './configurationpage?name=ddns_jpkribs_shared.js';
 import { createHostnamePicker } from './configurationpage?name=ddns_hostnames.js';
-import { PLUGIN_ID, TABS, errorText, showText } from './configurationpage?name=ddns_tabs.js';
+import { PLUGIN_ID, TABS, errorText, showText, trustTheProxy, routerInstructionHtml, autoForwardingOn, autoForwardingSetting, routerStateText } from './configurationpage?name=ddns_tabs.js';
 
 export default function (view) {
     'use strict';
@@ -15,6 +15,8 @@ export default function (view) {
 
     var Shared = null;
     var settings = null;
+    // The built-in defaults, for settings left unset. Empty until loaded, or on a server that has none.
+    var defaults = {};
     var hostnames = null;
     var arranged = false;
     // The last status shown, for the certificate actions.
@@ -87,7 +89,8 @@ export default function (view) {
         else if (soon(cert.NotAfterUtc)) parts.certificate = { done: true, badge: ['orange', 'Expires soon'] };
         else parts.certificate = { done: true, badge: ['green', 'Ready'] };
 
-        parts.router = { done: true };
+        // Open while the router has not forwarded the ports itself. An older server does not say, so it stays folded.
+        parts.router = { done: !st.Router || !!st.Router.Mapped };
 
         // What Jellyfin actually trusts decides, so a setting changed outside this page shows up here.
         if (st.TakeoverPhase === 'Managed' && st.JellyfinTrustsProxy === false) parts.jellyfin = { done: false, why: 'Jellyfin no longer trusts the proxy. Its network settings were changed since.' };
@@ -195,19 +198,7 @@ export default function (view) {
         lastStatus = st;
         showCertActions();
 
-        var lan = st.LanAddress || st.DetectedLanAddress || 'this server';
-        // The internet always uses 80 and 443; only a changed proxy port needs the router to translate.
-        var target = '<strong>' + Shared.escapeHtml(lan) + '</strong>';
-        var external = st.HttpPort === 80 && st.HttpsPort === 443
-            ? 'Forward TCP ports <strong>80</strong> and <strong>443</strong> to ' + target + '.'
-            : 'Forward TCP port <strong>443</strong> to ' + target + ' port <strong>' + st.HttpsPort + '</strong>, and port <strong>80</strong> to port <strong>' + st.HttpPort + '</strong>.';
-        var test = st.PublicUrl
-            ? '<br>Then open <span class="jpk-mono">' + Shared.escapeHtml(st.PublicUrl) + '</span> on a phone with Wi-Fi turned off.'
-            : '';
-        // Port 80 sends http:// links on to HTTPS, and is where Let's Encrypt checks the address.
-        var httpCheck = cert.Mode === 'Automatic' && (st.Acme || {}).Method !== 'Dns';
-        var port80 = '<br>Port 80 sends http:// links on to HTTPS' + (httpCheck ? ' and lets Let\'s Encrypt check your address.' : '.');
-        Shared.getEl('routerInstruction').innerHTML = external + port80 + test;
+        renderRouter(st);
 
         var phases = {
             Unmanaged: 'Jellyfin does not trust the proxy yet, so internet visitors are turned away.',
@@ -227,6 +218,17 @@ export default function (view) {
         Shared.setVisible('btnRestore', managed);
         // Trusting again keeps the original snapshot, so Undo still puts back what was there first.
         Shared.setVisible('btnMove', !managed || (st.TakeoverPhase === 'Managed' && st.JellyfinTrustsProxy === false));
+    }
+
+    // The router's automatic forwarding, with the manual steps kept for when it has not opened the ports.
+    function renderRouter(st) {
+        var router = st.Router;
+        var auto = Shared.getEl('routerAuto');
+        auto.textContent = routerStateText(router);
+        auto.className = !router ? 'hidden' : router.BehindCgnat ? 'jpk-error' : router.Mapped ? 'jpk-success' : 'jpk-info';
+        show('routerError', router && !router.BehindCgnat ? router.Error : '');
+        Shared.setVisible('routerManual', !(router && router.Mapped));
+        Shared.getEl('routerInstruction').innerHTML = routerInstructionHtml(Shared, st);
     }
 
     // What can be done with the certificate in use, shown only while its source is still the one picked above:
@@ -257,11 +259,11 @@ export default function (view) {
         showCertActions();
     }
 
-    // Whether these settings look like they were never saved: the proxy off, no address, no services and
+    // Whether these settings look like they were never saved: the proxy off, no address and
     // no certificate choice made. An empty address list saved on purpose has at least one of those set.
     function neverSaved(s) {
         var cert = s.Certificate || {};
-        return !s.Enabled && !(s.Hostnames || []).length && !(s.Routes || []).length
+        return !s.Enabled && !(s.Hostnames || []).length
             && !cert.AcceptTerms && !cert.Path && !cert.KeyPath && !cert.Password;
     }
 
@@ -287,6 +289,7 @@ export default function (view) {
         Shared.getEl('certPath').value = cert.Path || '';
         Shared.getEl('certKeyPath').value = cert.KeyPath || '';
         Shared.getEl('certTerms').checked = !!cert.AcceptTerms;
+        Shared.getEl('autoPortForwarding').value = autoForwardingOn(s, defaults) ? 'true' : 'false';
         Shared.bindSecretField('certPassword', !!cert.Password);
         showCertFields();
         baseline = formState();
@@ -301,6 +304,8 @@ export default function (view) {
         s.Certificate.KeyPath = Shared.getEl('certKeyPath').value.trim();
         s.Certificate.AcceptTerms = Shared.getEl('certTerms').checked;
         s.Certificate.Password = Shared.readSecretField('certPassword');
+        s.Advanced = s.Advanced || {};
+        s.Advanced.AutoPortForwarding = autoForwardingSetting(Shared.getEl('autoPortForwarding').value === 'true', defaults);
         return s;
     }
 
@@ -310,7 +315,10 @@ export default function (view) {
 
     function load() {
         baseline = null;
-        Promise.all([getSettings(), getStatus(), hostnames.load()]).then(function (results) {
+        // An older server without the defaults still loads, with each setting following its usual default.
+        var defaultsLoaded = Shared.apiRequest('Proxy/Defaults', 'GET').catch(function () { return null; });
+        Promise.all([getSettings(), getStatus(), hostnames.load(), defaultsLoaded]).then(function (results) {
+            defaults = (results[3] && results[3].Values) || {};
             // The DDNS names are loaded with the rest, so the suggested addresses are known before filling.
             if (results[0]) fill(results[0], true);
             renderStatus(results[1]);
@@ -349,22 +357,9 @@ export default function (view) {
         });
     }
 
+    // The form is saved first, so Jellyfin is trusted with the settings shown here.
     function move() {
-        var message = 'Jellyfin adds this machine to its known proxies, turns on remote access and restarts once. Its ports stay the same. ' +
-            'Forward only ports 80 and 443 to this server: anyone who can reach Jellyfin\'s own ports directly gets past the proxy.';
-        confirmDialog(message, { title: 'Trust the Proxy', confirmText: 'Trust' }).then(function (ok) {
-            if (!ok) return;
-            save().then(function (saved) {
-                if (!saved) return;
-                Shared.setStatus('moveStatus', 'Checking the proxy can reach Jellyfin...', false, { timeout: 0 });
-                Shared.apiRequest('Proxy/TakeOver', 'POST').then(function (result) {
-                    Shared.setStatus('moveStatus', (result && result.Message) || 'Done.', !(result && result.Success), { timeout: 0 });
-                    refreshStatus();
-                }).catch(function () {
-                    Shared.setStatus('moveStatus', 'Trusting the proxy failed.', true, { timeout: 0 });
-                });
-            });
-        });
+        trustTheProxy(Shared, 'moveStatus', save).then(refreshStatus);
     }
 
     function loadRoot() {
@@ -439,7 +434,7 @@ export default function (view) {
         pluginId: PLUGIN_ID,
         apiPrefix: 'DynamicDns',
         tabsKey: 'ddns',
-        tabIndex: 3,
+        tabIndex: 4,
         tabs: TABS,
         bind: bind,
         isDirty: isDirty,

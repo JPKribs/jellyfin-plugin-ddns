@@ -49,29 +49,6 @@ How often updates run is set on the **Update DDNS** scheduled task, every 15 min
 
 See [Remote Access](RemoteAccess.md).
 
-## Services
-
-Each Service is another app behind the proxy. The settings marked **Default** follow the Advanced tab unless set,
-and the page says what that currently is.
-
-| Setting | What it does | Default | Range |
-|---|---|---|---|
-| **Name** | A label for your own reference. | Empty | |
-| **Enabled** | Whether the proxy serves it. | On | |
-| **Addresses**, **Other addresses** | The names people use for this app. Each name belongs to one app only. | None | |
-| **Target** | Where the app listens on your network, such as `http://192.168.1.20:5055`. | Empty | |
-| **Reachable from** | **Anywhere**, or **Your network only**. | Anywhere | |
-| **Largest upload from the internet** | In MB, with 0 for unlimited. | Default, 100 MB | 0 or more |
-| **Largest upload from your network** | In MB, with 0 for unlimited. | Default, unlimited | 0 or more |
-| **App timeout** | How long the app may go silent before a request is dropped, in seconds. | Default, 300 | 61 to 86400 |
-| **Minimum read rate** | The slowest a visitor may read the app's pages, in bytes per second. | Off | 0 or more |
-| **Always use HTTPS** | Browsers that have visited once refuse plain HTTP. | Default, on | |
-| **HSTS duration** | How long browsers keep using HTTPS, in days. The same as **HTTPS memory** on the Advanced tab. | Default, 180 | 1 to 730 |
-| **Framing** | **Same site only**, or **Any site** may embed the app. The same as **Block embedding** on the Advanced tab. | Default, same site only | |
-| **Compression** | Shrinks pages and scripts. Turn it on only for apps that sign in with headers rather than cookies, since compressed pages can leak secrets. | Off | |
-| **Send the original address to the app** | Passes the name the visitor asked for, for apps that need it. | Off | |
-| **App certificate** | For an `https://` target: **Verify normally**, **Accept one pinned certificate** by its SHA-256 thumbprint, or **Accept any certificate**. | Verify normally | |
-
 ## Advanced
 
 ### Security
@@ -123,8 +100,7 @@ recorded. The **Refresh Locations** scheduled task also does this weekly.
 | **Connections per internet address** | Connections one internet address may hold open, with 0 for unlimited. | Auto: 64, or 32 on low memory | 0 or more |
 | **Total connections** | Connections the proxy holds open in all, with 0 for unlimited. | Auto: 2000, or 500 on low memory | 0 or more |
 
-Jellyfin compresses its own pages, through the proxy too, so the proxy leaves them as they are. Compression for
-other apps is set on each Service.
+Jellyfin compresses its own pages, through the proxy too, so the proxy leaves them as they are.
 
 ### Timeouts
 

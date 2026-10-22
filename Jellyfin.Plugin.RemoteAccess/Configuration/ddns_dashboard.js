@@ -366,6 +366,33 @@ export default function (view) {
         Shared.getEl('mapPeople').addEventListener('click', function () { toggleKind('people'); });
         Shared.getEl('mapFailed').addEventListener('click', function () { toggleKind('failed'); });
         Shared.getEl('mapBlocked').addEventListener('click', function () { toggleKind('blocked'); });
+        Shared.getEl('btnCopyShare').addEventListener('click', function () {
+            Shared.copyWithFeedback(this, Shared.getEl('shareUrl').href, { copiedText: 'Copied' });
+        });
+        Shared.getEl('btnShare').addEventListener('click', function () {
+            var url = Shared.getEl('shareUrl').href;
+            navigator.share({ title: 'Jellyfin', url: url }).catch(function () { /* closed without sharing */ });
+        });
+    }
+
+    // The address people use from the internet, with its QR code. Hidden until Remote Access has a public name.
+    function loadShare() {
+        return Shared.apiRequest('Share', 'GET').then(function (s) {
+            var url = s && s.Url;
+            Shared.setVisible('shareCard', !!url);
+            if (!url) return;
+            var link = Shared.getEl('shareUrl');
+            link.href = url;
+            link.textContent = url.replace(/^https:\/\//, '');
+            // Markup made by the server's own QR encoder from the address alone.
+            Shared.getEl('shareQr').innerHTML = s.QrSvg || '';
+            Shared.getEl('shareNote').textContent = s.HomeOnly
+                ? 'This address only works on your home network. Choose a public address on the Setup tab to share it outside.'
+                : 'Scan the code with a phone to open it, or send the address to family to add in their Jellyfin app.';
+            Shared.setVisible('btnShare', typeof navigator.share === 'function');
+        }).catch(function () {
+            Shared.setVisible('shareCard', false);
+        });
     }
 
     Shared = createConfigPage(view, {
@@ -376,6 +403,7 @@ export default function (view) {
         tabs: TABS,
         bind: bind,
         load: function (shared, page) {
+            loadShare();
             load();
             page.createPoller(load, 30000).start(false);
         }

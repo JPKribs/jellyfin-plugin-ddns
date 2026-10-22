@@ -5,6 +5,13 @@ It is the page the **Remote Access** entry in the dashboard's side menu opens on
 
 ![Dashboard tab](screenshots/Dashboard.png)
 
+## Share your server
+
+Once Remote Access has a public address, a card at the top shows it with a QR code. Scan the code with a phone
+camera to open the address, or select **Copy** or **Share** to send it to family, who add it as a server in their
+Jellyfin app. When the only address is one your home network alone knows, such as `nas.lan`, the card says so, since
+phones outside cannot open it. The card stays hidden while the proxy is off.
+
 ## Locations
 
 A world map and a table of countries.
