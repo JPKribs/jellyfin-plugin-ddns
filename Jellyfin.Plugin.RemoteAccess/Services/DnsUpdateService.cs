@@ -281,7 +281,7 @@ public sealed class DNSUpdateService : IDisposable
             {
                 result.Success = false;
                 result.Action = "Failed";
-                result.Message = "Stored credentials could not be decrypted. Please re-enter them on the Domains tab.";
+                result.Message = "Stored credentials could not be decrypted. Please re-enter them in step 2, Address, on the Configuration tab.";
                 statusUpdates[record.Id] = result;
                 outcome.Records.Add(result);
                 continue;

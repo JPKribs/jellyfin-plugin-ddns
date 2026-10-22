@@ -614,7 +614,7 @@ public sealed class ProxyManager : IAsyncDisposable
         };
     }
 
-    // The country rule is on by default, and someone travelling abroad is the first to meet it, so the Proxy tab
+    // The country rule is on by default, and someone travelling abroad is the first to meet it, so the Configuration tab
     // says in plain words who it lets in.
     internal static string DescribeCountryRule(ProxyOptions options, string serverCountry)
     {
@@ -743,7 +743,7 @@ public sealed class ProxyManager : IAsyncDisposable
         _activity?.Log(
             "Remote Access sees most visitors as local",
             "DynamicDNS.EveryoneLooksLocal",
-            $"Most of the last hour's requests for your public names, at least {LocalTrafficWatch.Threshold}, came from one local address. " + Why + " See the Proxy tab.",
+            $"Most of the last hour's requests for your public names, at least {LocalTrafficWatch.Threshold}, came from one local address. " + Why + " See the Configuration tab.",
             LogLevel.Warning);
     }
 

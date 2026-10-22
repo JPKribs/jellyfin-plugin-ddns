@@ -1,5 +1,5 @@
 import { createConfigPage, confirmDialog, createChipSelect } from './configurationpage?name=ddns_jpkribs_shared.js';
-import { PLUGIN_ID, TABS, errorText } from './configurationpage?name=ddns_tabs.js';
+import { PLUGIN_ID, TABS, errorText, showText } from './configurationpage?name=ddns_tabs.js';
 import { COUNTRY_CODES, WORLD } from './configurationpage?name=ddns_worldmap.js';
 
 export default function (view) {
@@ -20,6 +20,10 @@ export default function (view) {
     var restartNote = '';
     var countries = null;
     var serverCountry = '';
+    // The Dynamic DNS fine-tuning, saved through the DDNS configuration rather than the proxy settings. The form
+    // as last loaded or saved, to tell whether it changed. Null until loaded.
+    var ddnsBaseline = null;
+    var DDNS_IDS = ['ipv4Url', 'ipv6Url', 'forceUpdateHours', 'skipInternal', 'backoffAfterFailures', 'backoffHours', 'requestTimeout'];
 
     var MODE_NOTES = {
         ServerCountry: 'Only this server\'s country and any below can connect.',
@@ -218,16 +222,80 @@ export default function (view) {
         });
     }
 
+    function ddnsState() {
+        return JSON.stringify(DDNS_IDS.map(function (id) {
+            var el = Shared.getEl(id);
+            return el.type === 'checkbox' ? el.checked : el.value.trim();
+        }));
+    }
+
+    function ddnsDirty() {
+        return ddnsBaseline !== null && ddnsState() !== ddnsBaseline;
+    }
+
+    // Uses the plugin's own config endpoints, so credentials on the records are redacted in transit and kept as
+    // they are on save.
+    function loadDdns() {
+        ddnsBaseline = null;
+        return Shared.apiRequest('Configuration', 'GET').then(function (cfg) {
+            if (!cfg) { throw new Error('settings unavailable'); }
+            Shared.getEl('ipv4Url').value = cfg.IPv4DetectionUrl || '';
+            Shared.getEl('ipv6Url').value = cfg.IPv6DetectionUrl || '';
+            // Select the matching preset, falling back to Off when the stored value is not one of them.
+            var force = Shared.getEl('forceUpdateHours');
+            force.value = String(cfg.ForceUpdateHours || 0);
+            if (force.selectedIndex < 0) force.value = '0';
+            Shared.getEl('skipInternal').checked = cfg.SkipInternalAddresses !== false;
+            var bf = Shared.getEl('backoffAfterFailures');
+            bf.value = String(cfg.BackoffAfterFailures == null ? 3 : cfg.BackoffAfterFailures);
+            if (bf.selectedIndex < 0) bf.value = '3';
+            var bh = Shared.getEl('backoffHours');
+            bh.value = String(cfg.BackoffHours || 24);
+            if (bh.selectedIndex < 0) bh.value = '24';
+            Shared.getEl('requestTimeout').value = cfg.RequestTimeoutSeconds || 15;
+            ddnsBaseline = ddnsState();
+            showText(Shared, 'ddnsLoadError', '');
+        }).catch(function () {
+            showText(Shared, 'ddnsLoadError', 'Could not load the Dynamic DNS settings.');
+        });
+    }
+
+    // Saves the Dynamic DNS fields onto the freshest DDNS configuration, only when they changed. Resolves to an
+    // error message, or empty when it worked or there was nothing to save.
+    function saveDdns() {
+        if (!ddnsDirty()) return Promise.resolve('');
+        var posted = ddnsState();
+        return Shared.apiRequest('Configuration', 'GET').then(function (fresh) {
+            if (!fresh) { throw new Error('settings unavailable'); }
+            fresh.IPv4DetectionUrl = Shared.getEl('ipv4Url').value.trim();
+            fresh.IPv6DetectionUrl = Shared.getEl('ipv6Url').value.trim();
+            fresh.ForceUpdateHours = Math.max(0, parseInt(Shared.getEl('forceUpdateHours').value, 10) || 0);
+            fresh.SkipInternalAddresses = Shared.getEl('skipInternal').checked;
+            fresh.BackoffAfterFailures = Math.max(0, parseInt(Shared.getEl('backoffAfterFailures').value, 10) || 0);
+            fresh.BackoffHours = Math.max(1, parseInt(Shared.getEl('backoffHours').value, 10) || 24);
+            fresh.RequestTimeoutSeconds = Math.max(1, parseInt(Shared.getEl('requestTimeout').value, 10) || 15);
+            return Shared.apiRequest('Configuration', 'POST', fresh);
+        }).then(function (result) {
+            if (!result) { throw new Error('no reply'); }
+            ddnsBaseline = posted;
+            return '';
+        }).catch(function (err) {
+            return errorText(err, 'Save failed.');
+        });
+    }
+
     // Whether leaving now would lose changes, against the values last loaded or saved.
     function isDirty() {
         return (settingsLoaded && JSON.stringify(read()) !== JSON.stringify(loaded))
-            || (historyLoaded && JSON.stringify(readHistory()) !== historyBaseline);
+            || (historyLoaded && JSON.stringify(readHistory()) !== historyBaseline)
+            || ddnsDirty();
     }
 
     function load() {
         settingsLoaded = false;
         historyLoaded = false;
         loadHistory();
+        loadDdns();
         var defaultsLoaded = defaultSets ? Promise.resolve(defaultSets) : Shared.apiRequest('Proxy/Defaults', 'GET');
         Promise.all([defaultsLoaded, Shared.apiRequest('Proxy/Settings', 'GET')]).then(function (results) {
             defaultSets = results[0] || {};
@@ -267,7 +335,8 @@ export default function (view) {
         if (button.disabled) return;
         button.disabled = true;
         Shared.setStatus('advancedStatus', 'Saving...', false);
-        Shared.apiRequest('Proxy/Settings', 'GET').then(function (fresh) {
+        // The two saves go to different endpoints, so one failing never stops the other, and both are reported.
+        var proxySaved = Shared.apiRequest('Proxy/Settings', 'GET').then(function (fresh) {
             // Settings this page does not show, such as the ports, are kept as they are.
             // Only fields changed here are written. The block list and countries can also change from the
             // Dashboard while this page is open, and those changes must survive a save made here.
@@ -294,12 +363,26 @@ export default function (view) {
             var skipped = !historyLoaded;
             loadHistory();
             var text = 'Saved.' + (skipped ? ' The history settings did not load, so they were not saved.' : '') + (restartNote ? ' ' + restartNote : '');
-            var keep = skipped || !!restartNote;
-            Shared.setStatus('advancedStatus', text, skipped, keep ? { timeout: 0 } : undefined);
+            return { ok: true, bad: skipped, keep: skipped || !!restartNote, text: text };
         }).catch(function (err) {
             return errorText(err, 'Save failed.').then(function (text) {
-                Shared.setStatus('advancedStatus', text, true, { timeout: 0 });
+                return { ok: false, bad: true, keep: true, text: text };
             });
+        });
+
+        var ddnsChanged = ddnsDirty();
+        Promise.all([proxySaved, saveDdns()]).then(function (results) {
+            var proxy = results[0];
+            var ddnsError = results[1];
+            if (!ddnsError) {
+                var done = proxy.ok || !ddnsChanged ? proxy.text
+                    : 'The proxy settings were not saved. ' + proxy.text + ' The Dynamic DNS settings were saved.';
+                Shared.setStatus('advancedStatus', done, proxy.bad, proxy.keep ? { timeout: 0 } : undefined);
+                return;
+            }
+            var text = (proxy.ok ? proxy.text : 'The proxy settings were not saved. ' + proxy.text) +
+                ' The Dynamic DNS settings were not saved. ' + ddnsError;
+            Shared.setStatus('advancedStatus', text, true, { timeout: 0 });
         }).then(function () {
             button.disabled = false;
         });
@@ -309,7 +392,7 @@ export default function (view) {
     var KEPT_ON_RESET = ['TrustedNetworks', 'BlockedAddresses', 'CountryMode', 'Countries'];
 
     function reset() {
-        confirmDialog('Every limit and security setting goes back to its default, keeping trusted networks, the block list, country rules and history. Nothing changes until you save.', { title: 'Reset to Defaults', confirmText: 'Reset' }).then(function (ok) {
+        confirmDialog('Every limit and security setting goes back to its default, keeping trusted networks, the block list, country rules, history and Dynamic DNS. Nothing changes until you save.', { title: 'Reset to Defaults', confirmText: 'Reset' }).then(function (ok) {
             if (!ok) return;
             var current = read();
             var kept = {};
@@ -345,7 +428,7 @@ export default function (view) {
         pluginId: PLUGIN_ID,
         apiPrefix: 'DynamicDns',
         tabsKey: 'ddns',
-        tabIndex: 5,
+        tabIndex: 2,
         tabs: TABS,
         bind: bind,
         load: load,

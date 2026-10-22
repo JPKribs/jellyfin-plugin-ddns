@@ -387,7 +387,7 @@ export default function (view) {
             // Markup made by the server's own QR encoder from the address alone.
             Shared.getEl('shareQr').innerHTML = s.QrSvg || '';
             Shared.getEl('shareNote').textContent = s.HomeOnly
-                ? 'This address only works on your home network. Choose a public address on the Setup tab to share it outside.'
+                ? 'This address only works on your home network. Choose a public address in step 2, Address, of the Configuration tab to share it outside.'
                 : 'Scan the code with a phone to open it, or send the address to family to add in their Jellyfin app.';
             Shared.setVisible('btnShare', typeof navigator.share === 'function');
         }).catch(function () {

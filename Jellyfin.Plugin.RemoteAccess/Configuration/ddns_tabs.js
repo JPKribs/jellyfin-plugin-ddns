@@ -6,10 +6,7 @@ export const PLUGIN_ID = '8150dce5-6153-4924-a985-a6927be95baa';
 // The tab bar. Each page passes its own position here as its tabIndex.
 export const TABS = [
     { href: 'configurationpage?name=ddns_dashboard', name: 'Dashboard' },
-    { href: 'configurationpage?name=ddns_setup', name: 'Setup' },
-    { href: 'configurationpage?name=ddns_domains', name: 'Domains' },
-    { href: 'configurationpage?name=ddns_address', name: 'Address' },
-    { href: 'configurationpage?name=ddns_remote', name: 'Proxy' },
+    { href: 'configurationpage?name=ddns_configuration', name: 'Configuration' },
     { href: 'configurationpage?name=ddns_advanced', name: 'Advanced' }
 ];
 
@@ -30,7 +27,7 @@ export function showText(shared, id, text) {
     shared.setVisible(el, !!text);
 }
 
-// Trust the Proxy, as the Proxy and Setup tabs both offer it: confirm, run an optional step first such as saving
+// Trust the Proxy, as step 5 of the Configuration tab offers it: confirm, run an optional step first such as saving
 // the form, then ask Jellyfin to trust the proxy. Resolves to true once Jellyfin answered that it worked.
 export function trustTheProxy(shared, statusId, prepare) {
     var message = 'Jellyfin adds this machine to its known proxies, turns on remote access and restarts once. Its ports stay the same. ' +

@@ -85,7 +85,7 @@ public class PluginConfiguration : BasePluginConfiguration
     /// <summary>
     /// Gets or sets a warning from the most recent run when a wanted IP family could not be resolved to a
     /// public address, for example when the detected address looked internal. Empty when detection was
-    /// clean. Surfaced read only on the Address tab.
+    /// clean. Surfaced read only in step 2 of the Configuration tab.
     /// </summary>
     [XmlIgnore]
     public string LastDetectionMessage { get; set; } = string.Empty;

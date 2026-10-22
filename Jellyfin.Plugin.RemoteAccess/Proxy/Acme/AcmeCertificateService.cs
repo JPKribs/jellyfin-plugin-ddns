@@ -485,7 +485,7 @@ public sealed class AcmeCertificateService : IDisposable
         var password = _secrets?.Unprotect(record.Password) ?? record.Password;
         if ((SecretProtector.IsProtected(record.Login) && login.Length == 0) || (SecretProtector.IsProtected(record.Password) && password.Length == 0))
         {
-            throw new InvalidOperationException("The DDNS record's credentials could not be decrypted. Re-enter them on the Domains tab.");
+            throw new InvalidOperationException("The DDNS record's credentials could not be decrypted. Re-enter them in step 2, Address, on the Configuration tab.");
         }
 
         return record.WithSecrets(login, password);

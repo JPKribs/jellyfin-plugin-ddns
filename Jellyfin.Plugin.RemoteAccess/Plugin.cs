@@ -327,51 +327,9 @@ public class Plugin : PluginBase<Plugin, PluginConfiguration>
             EmbeddedResourcePath = $"{ns}.Configuration.ddns_dashboard.js"
         };
 
-        // Tab 2: Setup, the guided checklist for reaching Jellyfin from outside.
-        yield return new PluginPageInfo
-        {
-            Name = "ddns_setup",
-            EmbeddedResourcePath = $"{ns}.Configuration.ddns_setup.html"
-        };
-
-        yield return new PluginPageInfo
-        {
-            Name = "ddns_setup.js",
-            EmbeddedResourcePath = $"{ns}.Configuration.ddns_setup.js"
-        };
-
-        // Tab 3: Domains.
-        yield return new PluginPageInfo
-        {
-            Name = "ddns_domains",
-            EmbeddedResourcePath = $"{ns}.Configuration.ddns_domains.html",
-            MenuSection = "server",
-            DisplayName = "Dynamic DNS",
-            EnableInMainMenu = false,
-            MenuIcon = "dns"
-        };
-
-        yield return new PluginPageInfo
-        {
-            Name = "ddns_domains.js",
-            EmbeddedResourcePath = $"{ns}.Configuration.ddns_domains.js"
-        };
-
-        // Tab 4: Address.
-        yield return new PluginPageInfo
-        {
-            Name = "ddns_address",
-            EmbeddedResourcePath = $"{ns}.Configuration.ddns_address.html"
-        };
-
-        yield return new PluginPageInfo
-        {
-            Name = "ddns_address.js",
-            EmbeddedResourcePath = $"{ns}.Configuration.ddns_address.js"
-        };
-
-        // Tabs 5 and 6: remote access through the built-in proxy.
-        foreach (var name in new[] { "ddns_remote", "ddns_advanced" })
+        // Tabs 2 and 3: Configuration, the numbered steps holding every setting needed to reach Jellyfin from
+        // outside, from the DDNS records to the proxy, and Advanced, the fine-tuning.
+        foreach (var name in new[] { "ddns_configuration", "ddns_advanced" })
         {
             yield return new PluginPageInfo
             {

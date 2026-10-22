@@ -1,7 +1,7 @@
 import { createCheckboxList } from './configurationpage?name=ddns_jpkribs_shared.js';
 
-// A hostname picker shared by the Proxy and Setup tabs: a checklist of the names the DDNS records keep
-// pointed at this server, plus a box for any other names. Both save into the same hostname list, so a
+// The hostname picker in step 2, Address, of the Configuration tab: a checklist of the names the DDNS records
+// keep pointed at this server, plus a box for any other names. Both save into the same hostname list, so a
 // name checked here and a name typed below are treated alike by the proxy.
 export function createHostnamePicker(shared, containerId, customId) {
     'use strict';
@@ -11,7 +11,7 @@ export function createHostnamePicker(shared, containerId, customId) {
         search: false,
         idKey: 'Hostname',
         fetchItems: function () { return choices; },
-        emptyMessage: 'No DDNS records yet. Add one on the Domains tab, or type hostnames below.',
+        emptyMessage: 'No DDNS records yet. Add one above, or type hostnames below.',
         renderRow: function (h) {
             return { label: h.Hostname, sublabel: h.Enabled ? 'From ' + h.Record : 'From ' + h.Record + ', which is disabled' };
         }

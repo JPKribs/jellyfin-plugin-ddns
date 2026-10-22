@@ -16,7 +16,7 @@ using Xunit;
 namespace Jellyfin.Plugin.DynamicDns.Tests;
 
 /// <summary>
-/// Covers the save paths behind the Domains and Address tabs and the generic configuration endpoint: a
+/// Covers the save paths behind the DDNS records, the Dynamic DNS section of Advanced and the generic configuration endpoint: a
 /// provider that hides the hostname field can be saved, client-sent runtime status is ignored, intervals
 /// are clamped, the generic endpoint understands the dashboard's credential placeholders and resets a
 /// retargeted record's status, and stored provider replies are always XML safe.

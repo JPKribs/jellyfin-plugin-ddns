@@ -356,11 +356,11 @@ public sealed class CertificateStore : IDisposable
         Interlocked.Exchange(ref _root, new RootCertificate(root.ExportCertificatePem(), LocalAuthority.Fingerprint(root), root.NotAfter.ToUniversalTime()));
         if (created)
         {
-            _logger.LogInformation("Created the root certificate for self-signed HTTPS; install it on each device from the Proxy tab");
+            _logger.LogInformation("Created the root certificate for self-signed HTTPS; install it on each device from step 3, Certificate, on the Configuration tab");
             _activity?.Log(
                 "Remote Access created a root certificate",
                 "DynamicDNS.RootCertificateCreated",
-                "Devices that should trust the self-signed certificate need this root installed once. Download it from the Proxy tab.");
+                "Devices that should trust the self-signed certificate need this root installed once. Download it from step 3, Certificate, on the Configuration tab.");
         }
 
         using (root)

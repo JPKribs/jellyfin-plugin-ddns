@@ -16,7 +16,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace Jellyfin.Plugin.DynamicDns.Api;
 
 /// <summary>
-/// Administrative endpoints backing the Domains and Address tabs.
+/// Administrative endpoints backing the DDNS records on the Configuration tab and the Dynamic DNS section of Advanced.
 /// </summary>
 [ApiController]
 [Authorize(Policy = "RequiresElevation")]
