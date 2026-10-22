@@ -3,7 +3,7 @@
 The plugin needs **Jellyfin 12.2**. Servers on Jellyfin 10.11, 12.0 or 12.1 are offered an earlier version
 without Remote Access.
 
-1. In Jellyfin, open **Dashboard → Plugins → Repositories**, select **Add Repository**, enter this URL and select
+1. In Jellyfin, open **Dashboard > Plugins > Repositories**, select **Add Repository**, enter this URL and select
    **Save**:
 
     ```

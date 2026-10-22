@@ -40,7 +40,7 @@
                                         <input type="checkbox" is="emby-checkbox" id="enabled" />
                                         <span class="checkboxLabel">Enabled</span>
                                     </label>
-                                    <div class="fieldDescription checkboxFieldDescription">Starts the proxy once saved, and Jellyfin is untouched until you select Trust the Proxy in step 5.</div>
+                                    <div class="fieldDescription checkboxFieldDescription">Starts the proxy when you save.</div>
                                 </div>
                             </div>
                         </div>
@@ -62,7 +62,7 @@
 
                                 <div id="extraRecords" class="jpk-warn hidden"></div>
                                 <div id="loadError" class="jpk-error hidden"></div>
-                                <div class="ddns-step-text">This record keeps your address pointed at this server's public IP, even with the proxy off. Credentials are stored encrypted, but <strong>use the most limited token your provider allows</strong>.</div>
+                                <div class="ddns-step-text"><strong>Use the most limited token your provider allows.</strong></div>
 
                                 <div class="selectContainer">
                                     <label class="selectLabel" for="recProvider">Provider</label>
@@ -72,7 +72,7 @@
                                 <div class="inputContainer">
                                     <label for="recHostname">Hostname / domain</label>
                                     <input is="emby-input" type="text" id="recHostname" autocomplete="off" placeholder="home.example.com" />
-                                    <div id="recHostnameDescription" class="fieldDescription">The name people use to reach Jellyfin, which is also the proxy's address.</div>
+                                    <div id="recHostnameDescription" class="fieldDescription">The name people use to reach Jellyfin.</div>
                                 </div>
                                 <div class="inputContainer">
                                     <label for="recLogin">Login / username / key</label>
@@ -135,7 +135,7 @@
                                         <input type="checkbox" is="emby-checkbox" id="certTerms" />
                                         <span class="checkboxLabel">I accept the Let's Encrypt terms</span>
                                     </label>
-                                    <div class="fieldDescription checkboxFieldDescription">Nothing is requested until you accept the <a href="https://letsencrypt.org/repository/" target="_blank" rel="noopener noreferrer" class="button-link">Let's Encrypt Subscriber Agreement</a>.</div>
+                                    <div class="fieldDescription checkboxFieldDescription">Required before a certificate is requested. Read the <a href="https://letsencrypt.org/repository/" target="_blank" rel="noopener noreferrer" class="button-link">Let's Encrypt Subscriber Agreement</a>.</div>
                                 </div>
                                 <div id="certMethod" class="jpk-info hidden"></div>
                                 <div id="certFileFields">
@@ -164,7 +164,7 @@
                                 </div>
                                 <div id="certProblem" class="jpk-warn hidden"></div>
                                 <div id="certRootField" class="hidden">
-                                    <div class="fieldDescription">Install it once on each device that should trust this server, after checking it shows the same SHA-256 fingerprint.</div>
+                                    <div class="fieldDescription">Install it on each device that should trust this server.</div>
                                     <div class="ddns-button-row">
                                         <button is="emby-button" type="button" id="btnDownloadRoot" class="raised jpk-secondary jpk-button-small">
                                             <span>Download Root Certificate</span>
@@ -186,7 +186,6 @@
                                 <div id="routerError" class="jpk-error hidden"></div>
                                 <div id="routerManual" class="hidden">
                                     <div id="routerInstruction" class="jpk-record-card"></div>
-                                    <div class="fieldDescription">Called port forwarding or NAT on most routers.</div>
                                 </div>
                                 <div class="ddns-button-row">
                                     <button is="emby-button" type="button" id="btnRouterRetry" class="raised jpk-secondary jpk-button-small">
@@ -206,7 +205,7 @@
                             </button>
                             <div class="jpk-collapsible-content" id="bodyTrust">
                                 <div class="ddns-step-text" id="textTrust" aria-live="polite"></div>
-                                <div class="fieldDescription">Lets Jellyfin see each visitor's real address while keeping its own ports, and restarts Jellyfin once.</div>
+                                <div class="fieldDescription">Restarts Jellyfin once.</div>
                                 <div id="trustError" class="jpk-error hidden"></div>
                                 <div id="jellyfinExposed" class="jpk-warn hidden"></div>
                                 <div class="ddns-button-row">
@@ -231,7 +230,7 @@
                             <div class="jpk-collapsible-content" id="bodyReach">
                                 <div class="ddns-step-text" id="textReach" aria-live="polite"></div>
                                 <div id="reachNodes" class="jpk-record-card hidden"></div>
-                                <div class="fieldDescription">This asks check-host.net to connect to your address from other countries, so your address is sent to that service.</div>
+                                <div class="fieldDescription">Sends your address to check-host.net, which tries it from other countries.</div>
                                 <div class="ddns-button-row">
                                     <button is="emby-button" type="button" id="btnReach" class="raised jpk-secondary jpk-button-small">
                                         <span>Test from Outside</span>

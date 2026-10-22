@@ -32,9 +32,9 @@ never sent somewhere new. Enter them again before you save.
 
 ## Finer settings
 
-The rest of the record is under **Advanced → Dynamic DNS**, in the **Record** group: pausing it, IPv4 and IPv6,
+The rest of the record is under **Advanced > Dynamic DNS**, in the **Record** group: pausing it, IPv4 and IPv6,
 **Server override**, **TTL**, **Treat as proxied address**, the DynDNS family options and **Remove Record**.
-**Other addresses** under **Advanced → Addresses** lists more names the proxy answers on, for names whose DNS you
+**Other addresses** under **Advanced > Addresses** lists more names the proxy answers on, for names whose DNS you
 keep some other way. The [Settings Reference](Settings.md#ddns-record) describes each one.
 
 ![Advanced options for DynDNS v2](screenshots/Advanced%20Options.png)
@@ -48,7 +48,7 @@ now and then in case it was changed elsewhere.
 
 ## How your public IP is found
 
-* **IPv4 Detection URLs** and **IPv6 Detection URLs** under **Advanced → Dynamic DNS** list services that reply
+* **IPv4 Detection URLs** and **IPv6 Detection URLs** under **Advanced > Dynamic DNS** list services that reply
   with your address. Leave them empty to use the built-in list. Only `https` addresses are used, since a tampered
   reply could point your DNS somewhere else.
 * Two services must agree on the address before it is used. If only one answers, its answer is used. If services
@@ -61,7 +61,7 @@ now and then in case it was changed elsewhere.
 ## How updates run
 
 A scheduled task named **Update DDNS** runs when Jellyfin starts and every 15 minutes after. Change how often under
-**Dashboard → Scheduled Tasks**. Each run:
+**Dashboard > Scheduled Tasks**. Each run:
 
 1. Finds your public IP.
 2. Looks up what the record's name points at right now.

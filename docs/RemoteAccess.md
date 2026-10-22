@@ -45,7 +45,7 @@ A name behind Cloudflare's orange cloud points at Cloudflare, so it shows as **N
 
 ## Automatic port forwarding
 
-**Automatic port forwarding**, under **Advanced → Addresses**, asks your router to forward the ports for you. It is
+**Automatic port forwarding**, under **Advanced > Addresses**, asks your router to forward the ports for you. It is
 on by default. Step 4, **Router**, shows how it went.
 
 * The plugin asks the router through NAT-PMP first, then UPnP. Most home routers support one of them, though some
@@ -81,7 +81,7 @@ the public IP the internet sees, and shows **Shared address** when:
 
 Ask your provider for a public IP. Many give one for free or a small monthly fee. The check needs a router that
 answers over UPnP or NAT-PMP. Without one, compare the addresses yourself as in
-[Check you are not behind CGNAT](BeginnersGuide.md#0-check-you-are-not-behind-cgnat).
+[Check you are not behind CGNAT](BeginnersGuide.md#0-check-for-cgnat).
 
 ![Step 4 behind a shared address](screenshots/CGNAT.png)
 
@@ -137,7 +137,7 @@ If Let's Encrypt refuses, the reason shows in step 3, **Certificate**, and in th
 doubling up to a day, to stay within Let's Encrypt's limits. Changing the address tries again at once.
 
 To replace a certificate now, for example if its key may have leaked, select **Request a New Certificate** under
-**Advanced → Security**. Let's Encrypt allows five copies of the same certificate a week.
+**Advanced > Security**. Let's Encrypt allows five copies of the same certificate a week.
 
 !!! tip "Testing first"
     Set the environment variable `DDNS_ACME_DIRECTORY` to
@@ -159,9 +159,9 @@ the root trusts every renewal, so you only install the root once per device.
 |---|---|
 | Windows | Open the file, select **Install Certificate**, choose **Place all certificates in the following store**, and pick **Trusted Root Certification Authorities**. Edge and Chrome use this store. |
 | macOS | Open the file to add it to Keychain Access, open it there, and set **When using this certificate** to **Always Trust**. |
-| iPhone and iPad | Send it to the device and open it, install it under **Settings → Profile Downloaded**, then turn it on under **Settings → General → About → Certificate Trust Settings**. |
-| Android | Install it under **Settings → Security → Encryption & credentials → Install a certificate → CA certificate**. Browsers trust it, but most apps ignore certificates you install, so check the Jellyfin app. |
-| Firefox | Firefox can keep its own list: **Settings → Privacy & Security → Certificates → View Certificates → Authorities → Import**. |
+| iPhone and iPad | Send it to the device and open it, install it under **Settings > Profile Downloaded**, then turn it on under **Settings > General > About > Certificate Trust Settings**. |
+| Android | Install it under **Settings > Security > Encryption & credentials > Install a certificate > CA certificate**. Browsers trust it, but most apps ignore certificates you install, so check the Jellyfin app. |
+| Firefox | Firefox can keep its own list: **Settings > Privacy & Security > Certificates > View Certificates > Authorities > Import**. |
 | TVs and streaming boxes | Roku, Fire TV, Android TV and most smart TVs cannot install a certificate, so their Jellyfin apps refuse the connection. Use Let's Encrypt for them. |
 
 The root is only replaced if its file is lost or damaged, or within a year of its end. The activity log says when
@@ -209,7 +209,7 @@ keeps working alongside it.
 
 ## Only through the proxy
 
-**Advanced → Security → Only through the proxy** makes the proxy the only way into Jellyfin. While Jellyfin
+**Advanced > Security > Only through the proxy** makes the proxy the only way into Jellyfin. While Jellyfin
 trusts the proxy, it listens on this server alone, so even a port left forwarded on the router, or a public
 address on the server, cannot reach it directly.
 

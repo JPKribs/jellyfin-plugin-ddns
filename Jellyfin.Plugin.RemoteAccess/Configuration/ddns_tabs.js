@@ -70,7 +70,7 @@ export function routerInstructionHtml(shared, st) {
 // What the router's automatic forwarding is doing, in a sentence or two. Empty when the server does not say.
 export function routerStateText(router) {
     if (!router) return '';
-    if (router.BehindCgnat) return 'Your internet provider shares one public address between many homes, so the internet cannot reach this server. ' + (router.CgnatReason || '');
+    if (router.BehindCgnat) return 'Your provider shares your public IP, so the internet cannot reach this server. Ask them for a public IP.';
     if (router.Mapped) {
         var ports = (router.Ports || []).join(' and ');
         return 'The router forwards ' + (ports ? 'ports ' + ports : 'the ports') + ' to this server' + (router.Method ? ' through ' + router.Method : '') + '.';

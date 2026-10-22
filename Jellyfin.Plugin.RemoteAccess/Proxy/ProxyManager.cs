@@ -231,7 +231,7 @@ public sealed class ProxyManager : IAsyncDisposable
             if (clash.Count > 0)
             {
                 await StopHostAsync().ConfigureAwait(false);
-                _error = $"Jellyfin itself uses port {string.Join(" and ", clash)}, which the proxy needs. Change Jellyfin's ports under Dashboard → Networking.";
+                _error = $"Jellyfin itself uses port {string.Join(" and ", clash)}, which the proxy needs. Change Jellyfin's ports under Dashboard > Networking.";
                 return;
             }
 

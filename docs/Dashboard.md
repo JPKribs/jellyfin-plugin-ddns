@@ -37,7 +37,7 @@ A world map and a table of countries.
 Addresses banned for failed sign-ins: the **IP**, its country, how many failures, when it was banned and when the
 ban ends. **Unban** lifts it straight away, together with any wider ban on the same IPv6 network.
 
-How many failures ban an address, and for how long, is set under **Advanced → Blocking**. See
+How many failures ban an address, and for how long, is set under **Advanced > Blocking**. See
 [Protection](RemoteAccess.md#protection).
 
 ## Activity
@@ -67,7 +67,7 @@ The button at the end of a row acts on it:
 
 ## What is recorded
 
-History is on by default and kept for 90 days. Change it under **Advanced → History**, listed in the
+History is on by default and kept for 90 days. Change it under **Advanced > History**, listed in the
 [Settings Reference](Settings.md#history). With **Recording** off the Dashboard stays empty, but bans and blocks
 still work. **Clear History** deletes everything recorded and keeps the block list.
 
@@ -85,7 +85,7 @@ The status card in step 2, **Address**, of the **Configuration** tab shows how t
 * **Public IP**: the address the server was last seen at.
 * **Last update**: when the record was last checked.
 * **Result**: what the last check did, in green when it worked and red when it failed, or **Paused** when updates
-  are off under **Advanced → Dynamic DNS**.
+  are off under **Advanced > Dynamic DNS**.
 
 When the proxy is off, the step's badge says **Up to date** once the last check worked within the last 24 hours,
 **Failing** when it did not, and **Not updated yet** before the first one.
@@ -118,7 +118,7 @@ record is already current writes nothing.
 * **Update works again**: a record that was failing updated.
 * **Updates paused**: a record was paused after repeated failures, once per streak.
 * **Detection unhealthy**: no public IP was found for about an hour, with an entry when it is found again.
-* **Configuration changes**: the record was added, changed or removed, or the settings under **Advanced → Dynamic DNS** changed.
+* **Configuration changes**: the record was added, changed or removed, or the settings under **Advanced > Dynamic DNS** changed.
 * **Plaintext credentials**: credentials cannot be encrypted on this server, once per outage.
 * **Remote Access cannot use its own files**: an error when Jellyfin runs as an account that cannot open the
   plugin's folders, naming the command that fixes it. See [Recovery](RemoteAccess.md#recovery).

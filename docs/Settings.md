@@ -18,7 +18,7 @@ Everything needed to reach Jellyfin from outside, as six numbered steps. Each st
 such as **Ready** or **Forward by hand**, and opens to show its settings. Steps that are not done yet open on their
 own. The summary at the top counts the steps that are done, with a bar for each step in its colour. It explains
 the first step that needs attention, with **Open step** to jump to it, or says **Ready to share** once all six are
-done. Under it, a note names the countries that can connect, with a link to change them in **Advanced → Blocking**.
+done. Under it, a note names the countries that can connect, with a link to change them in **Advanced > Blocking**.
 
 ![Configuration tab](screenshots/Configuration.png)
 
@@ -52,7 +52,7 @@ The defaults favour safety. Three of them can surprise you, and each is one chan
 * **Country rule: Server country only.** Only visitors from the country this server is in can connect from the
   internet. The **Configuration** tab names the countries that can connect, in green. Family abroad or a phone on a
   VPN in another country is refused, so add their countries in the **Countries** picker under
-  **Advanced → Blocking**, or set **Country rule** to **Off**. Until the server's own country is known, shown in
+  **Advanced > Blocking**, or set **Country rule** to **Off**. Until the server's own country is known, shown in
   yellow, everyone can connect.
 * **HTTPS memory: 180 days.** A browser that visited once keeps using HTTPS for your address for 180 days, which
   stops anyone downgrading the connection. If you later turn the proxy off, those browsers refuse `http://` for
@@ -72,7 +72,7 @@ In step 2, **Address**, of the **Configuration** tab:
 | **Provider** | The DNS company, out of 45. | Cloudflare |
 | Hostname, login, password and zone fields | What the provider needs. Their labels change per provider. | Empty |
 
-Under **Advanced → Dynamic DNS**, in the **Record** group:
+Under **Advanced > Dynamic DNS**, in the **Record** group:
 
 | Setting | What it does | Default |
 |---|---|---|
@@ -195,7 +195,7 @@ the listener without restarting Jellyfin.
 
 ## Scheduled tasks
 
-Under **Dashboard → Scheduled Tasks**:
+Under **Dashboard > Scheduled Tasks**:
 
 | Task | What it does | Runs |
 |---|---|---|
