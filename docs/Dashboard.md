@@ -100,8 +100,8 @@ plugin's **Dashboard** tab. Changes you make are credited to you.
 Each entry has a level:
 
 * **Error**: something people rely on is broken. A record is left on an old address, the proxy did not start,
-  there is no working certificate, Jellyfin does not answer through the proxy, or the plugin cannot use its own
-  files.
+  there is no working certificate, Jellyfin does not answer through the proxy, the proxy cannot be reached from
+  outside, or the plugin cannot use its own files.
 * **Warning**: something needs attention but still works. A certificate expires soon, a renewal failed while the
   current certificate is still valid, a record is paused, an address was banned, the router did not open the
   ports, or a Let's Encrypt TXT record was left at the provider.
@@ -140,6 +140,9 @@ record is already current writes nothing.
     * **Remote Access could not open ports on your router**: a warning with the router's reason, such as a port
       another device already holds.
     * **Remote Access found no router that opens ports**: a warning that no router answered over UPnP or NAT-PMP.
+* **Cannot be reached from outside**: an error when the **Verify External Access** task finds that no outside
+  place can connect to port 443, naming each place and why it failed, with an entry when it works again. A check
+  the outside service could not run, such as when it is busy, only goes to the server log.
 * **Certificates**: a certificate was issued, renewed, could not be, could not be loaded, or expires soon. Asking
   for a new one is logged with who asked.
 * **Root certificate created**: the plugin made a new self-signed root, naming what it may vouch for. Every device

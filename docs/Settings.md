@@ -202,3 +202,4 @@ Under **Dashboard > Scheduled Tasks**:
 | **Update DDNS** | Checks and updates the DDNS record. | At startup and every 15 minutes |
 | **Refresh Certificate** | Requests a Let's Encrypt certificate when one is missing, no longer covers your addresses, or expires within 30 days. Reloads certificate files and replaces a self-signed one before it expires. | Daily at 3:00 |
 | **Refresh Locations** | Downloads the newest DB-IP location database. | Weekly |
+| **Verify External Access** | Runs step 6's outside check on your public address and port 443, and writes an error to the activity log when no place can connect. Skipped while the proxy is off. | Every hour |

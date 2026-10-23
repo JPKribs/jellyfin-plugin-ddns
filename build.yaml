@@ -1,7 +1,7 @@
 ---
 name: "Dynamic DNS"
 guid: "8150dce5-6153-4924-a985-a6927be95baa"
-version: "12.2.4.3"
+version: "12.2.4.4"
 targetAbi: "12.2.0.0"
 framework: "net10.0"
 overview: "Reach your server from anywhere: Dynamic DNS and a secure HTTPS proxy, inside Jellyfin."
@@ -22,16 +22,7 @@ artifacts:
 - "BouncyCastle.Cryptography.dll"
 - "QRCoder.dll"
 changelog:
-  fixed:
-  - A DNS provider that redirects to another server is no longer followed there, so API keys sent in headers only ever reach the server they were entered for.
-  - The logs, the activity log and saved status mask many more kinds of credentials, such as keys, passwords and hashes in addresses, provider replies and errors, and never show the credentials a request was sent with.
-  - A location database that will not open falls back to the one it replaced, and a damaged one no longer stays locked so it can be replaced.
-  changed:
-  - The self-signed root can only vouch for your proxy's names, localhost and private addresses, and lasts three years. A root from an older version is replaced once, so install the new one on each device and remove the old one.
-  - With Only through the proxy on, Jellyfin stays on this server alone when the proxy stops working, instead of opening up on its own. The server log says how to turn the proxy off by hand, and to close the router's ports first.
-  - Credentials are never stored unencrypted. When the plugin cannot set up its encryption keys, saving a credential is refused with the steps to fix it.
-  - Step 4 names the device that says it forwarded the ports, and warns when it is not this server's default gateway.
-  - Advanced > Blocking warns under Country rule when the location database is not loaded, and says whether everyone or nobody can connect.
+  added:
+  - A Verify External Access scheduled task runs the outside check every hour and writes an error to the activity log when no place on the internet can connect to port 443, with an entry when it works again.
   developer:
-  - The Beginner's Guide compares Free and Recommended in a table, with one pair of tabs for the only step that differs.
-  - The docs cover checking a router's forward and what to do if the proxy stops working with Only through the proxy on.
+  - The docs list the new task and its activity log entries.
