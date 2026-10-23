@@ -114,8 +114,15 @@ the world. It can take 20 seconds.
 The test needs a public name for the proxy. A connection counts even when the country rule closes it at
 once, since the test is about the port.
 
+The **Verify External Access** scheduled task runs the same test every hour while the proxy is on, and updates
+step 6 with its result. When no place can connect, it writes an error to Jellyfin's activity log, once when the
+problem starts and once more when it clears. A test check-host.net could not run only goes to the server log.
+Change how often it runs, or disable it, under **Dashboard > Scheduled Tasks**. See
+[Scheduled tasks](Settings.md#scheduled-tasks).
+
 !!! note "What is sent"
-    Only the hostname and the port are sent to check-host.net, and only when you select **Test from Outside**.
+    Only the hostname and the port are sent to check-host.net, when you select **Test from Outside** and each
+    time the **Verify External Access** task runs. Disable the task to send them only when you ask.
 
 ![Step 6, Reachable from outside](screenshots/Outside%20Test.png)
 

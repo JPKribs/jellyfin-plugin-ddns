@@ -36,7 +36,9 @@
   network. See [Protection](RemoteAccess.md#protection).
 * **The router**: with **Automatic port forwarding** on, the plugin asks the router on your own network to forward
   ports 80 and 443, and nothing else. See [Automatic port forwarding](RemoteAccess.md#automatic-port-forwarding).
-* **Test from Outside** sends the hostname and port 443 to check-host.net, and only when you select it.
+* **Test from Outside** sends the hostname and port 443 to check-host.net when you select it, and the
+  **Verify External Access** task sends the same every hour while the proxy is on. Disable the task under
+  **Dashboard > Scheduled Tasks** to send them only when you ask.
 
 ## Storage
 
